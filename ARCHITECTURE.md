@@ -1,6 +1,6 @@
 # SR Conecta — Arquitectura Técnica Definitiva
 
-> Documento de arquitectura para el repositorio. Versión 1.2 · 24 de septiembre de 2026 (v1.0 y v1.1: 23–24/09/2026)
+> Documento de arquitectura para el repositorio. Versión 1.3 · 24 de septiembre de 2026 (v1.0–v1.2: 23–24/09/2026)
 > Alcance: desde el MVP del reto TechEmprende SR Conecta 2026 hasta producción municipal y escala regional.
 > Fuentes oficiales y precios consultados el **23/09/2026** (ver §31 y Anexo E). Todo precio debe re-verificarse antes de presupuestar.
 > **v1.1** corrige contradicciones internas de seguridad, datos e infraestructura detectadas en revisión y añade decisiones de **evolución sin rupturas** (§5.1) para que las Fases 2 y 3 se construyan agregando piezas, no reescribiendo. Registro completo en el Anexo F.
@@ -26,7 +26,7 @@ Antes de decidir, estos hechos del reto condicionan la arquitectura más que cua
 
 SR Conecta se construye como un **monolito modular** en **Next.js 16 (App Router) + TypeScript**, desplegado en **Vercel**, con **Supabase** como plataforma de datos (PostgreSQL + PostGIS + Auth + Storage). El mapa base es **Google Maps JavaScript API** con marcadores avanzados y clustering, pero **todos los datos de negocio viven en PostgreSQL/PostGIS**. Google aporta mapa base, autocompletado de direcciones puntual y navegación vía enlace profundo; nunca es la base de datos de negocios.
 
-Las operaciones críticas (completar misión, reclamar y canjear recompensa, cambiar estado de consulta, asignar roles) se ejecutan como **funciones transaccionales en PostgreSQL** que validan por sí mismas todo lo que importa. El flujo normal pasa por Next.js, pero **cada RPC se diseña asumiendo que un usuario autenticado puede invocarla directamente** con la anon key y su JWT (PostgREST es público por diseño). El frontend nunca decide si una misión se completó ni si queda inventario, y Next.js tampoco es la barrera de seguridad: lo es Postgres.
+Las operaciones críticas (cambiar el estado de una consulta o reporte, moderar, aprobar negocios, asignar roles) se ejecutan como **funciones transaccionales en PostgreSQL** que validan por sí mismas todo lo que importa. El flujo normal pasa por Next.js, pero **cada RPC se diseña asumiendo que un usuario autenticado puede invocarla directamente** con la anon key y su JWT (PostgREST es público por diseño). El frontend nunca decide un estado ni un permiso, y Next.js tampoco es la barrera de seguridad: lo es Postgres.
 
 Del stack propuesto se mantiene cerca del 80%. Los cambios importantes: se elimina Firebase Cloud Messaging (Web Push + VAPID es suficiente), se reemplaza el uso de Routes API por enlaces de navegación de Google Maps y rutas propias en PostGIS, Realtime se limita a uno o dos casos, y se agregan `pg_trgm`/`unaccent` para búsqueda, Serwist para el service worker y Sentry para errores. Desde v1.1 se incorporan además una **cola de trabajos en Postgres** (`pg_cron` + `pg_net`) para todo lo asíncrono (push, email, imágenes, PDF), un **proveedor SMTP transaccional** y un modelo de datos preparado para multi-provincia desde el MVP.
 
@@ -71,7 +71,7 @@ Tres cuestionamientos directos a decisiones del documento original:
 | Archivos | Supabase Storage (buckets privados + URLs firmadas) | [OBLIGATORIA] |
 | Lógica crítica | Funciones PL/pgSQL (RPC) + RLS | [OBLIGATORIA] |
 | Trabajos asíncronos | Tabla `private.jobs` (outbox) + `pg_cron` (planificador) + `pg_net` (dispara el worker HTTP en Next.js) | [OBLIGATORIA] |
-| Secretos en base | Supabase Vault (secretos de QR, pepper de cupones, credenciales de `pg_net`) | [RECOMENDADA] |
+| Secretos en base | Supabase Vault (secreto del worker, credenciales de `pg_net`) | [RECOMENDADA] |
 | Realtime | Supabase Realtime (solo panel admin y estado propio) | [OPCIONAL] |
 | Edge Functions | — | [FUTURA] |
 | PWA | Web App Manifest + Serwist | [OBLIGATORIA] |
@@ -107,7 +107,7 @@ Tres cuestionamientos directos a decisiones del documento original:
 6. **RLS siempre activo**, incluso cuando el acceso pasa por el servidor. Defensa en profundidad.
 7. **Privacidad por defecto.** Ubicación puntual, con propósito, nunca rastreo continuo.
 8. **Todo cambio de estado relevante deja rastro** (historial + auditoría).
-9. **Idempotencia en todo lo que se puede reintentar** (cron, canjes, cola offline).
+9. **Idempotencia en todo lo que se puede reintentar** (cron, creación de reportes, cola offline).
 10. **Diseñar para transferencia.** Otro equipo debe poder operar esto con la documentación del repo.
 11. **Evolución aditiva.** Esquema, API y eventos cambian agregando (columnas, endpoints, tipos de job), nunca renombrando ni borrando en el mismo release. Lo que se sabe que vendrá (multi-provincia, idiomas, particiones, colas) se prepara desde el MVP cuando cuesta poco hoy y mucho después (§5.1).
 12. **Asíncrono por cola, no inline.** Todo efecto secundario lento o externo (push, email, procesamiento de imágenes, PDF) se encola en la misma transacción que lo origina y lo ejecuta un worker con reintentos. Así ningún efecto se pierde si falla un proveedor, y la cola se puede cambiar de motor sin tocar a quien produce los trabajos.
@@ -128,7 +128,7 @@ Decisiones que cuestan horas en el MVP y evitan migraciones grandes o reescritur
 | Rutas de Storage con convención `{bucket}/{province}/{entity}/{id}/{uuid}.{ext}`; en base solo se guardan `bucket` + `path`, nunca URLs | Migración de URLs al cambiar de dominio, CDN o proveedor de storage | Ninguno |
 | API versionada `/api/v1` con reglas de compatibilidad: solo cambios aditivos; lo incompatible va a `/v2` en paralelo | Romper PWAs instaladas con código viejo en caché | Disciplina en revisión de PR |
 | Adaptadores en las fronteras: mapa (`modules/map/provider`), búsqueda de direcciones, canales de notificación (`push`, `email`, futuro `native`) | Cambiar Google, SMTP o agregar app nativa sin tocar dominio | Una interfaz por frontera |
-| Feature flags en tabla `feature_flags` (por provincia/municipio) | Deploys o ramas largas para activar capas, misiones o pilotos por municipio | Una tabla y un helper |
+| Feature flags en tabla `feature_flags` (por provincia/municipio) | Deploys o ramas largas para activar capas o pilotos por municipio | Una tabla y un helper |
 | Identificadores públicos estables (`slug` en negocios, lugares y rutas) separados del `uuid` | Romper enlaces compartidos e indexados al cambiar nombres o migrar datos | Una columna única |
 
 ## 6. System Architecture
@@ -182,8 +182,8 @@ Estilo: **monolito modular** (§12, ADR-008). Un despliegue, un repositorio, una
 | App Router + layouts | `(public)`, `(app)` (mapa, requiere o no login), `(admin)`, `(business)` como route groups con layouts propios |
 | Server Components | Páginas públicas, listados, ficha de lugar, todas las vistas del panel admin (lectura) |
 | Client Components | Mapa, geolocalización, cámara/QR, formularios interactivos, gráficos Recharts |
-| Route Handlers `/api/v1/*` | Todo lo que llama el mapa y la PWA (features por viewport, crear reporte, check-in de misión, reclamo de recompensa), webhooks, cron y el worker de la cola (`/api/v1/internal/jobs/run`, protegido por secreto). Motivo: la cola offline del service worker reintenta **requests HTTP**, no Server Actions |
-| Server Actions | Mutaciones de formularios del panel admin y del panel de negocio (moderar, crear misión, editar negocio). Siempre validan sesión y rol dentro de la acción |
+| Route Handlers `/api/v1/*` | Todo lo que llama el mapa y la PWA (features por viewport, crear reporte o consulta), webhooks, cron y el worker de la cola (`/api/v1/internal/jobs/run`, protegido por secreto). Motivo: la cola offline del service worker reintenta **requests HTTP**, no Server Actions |
+| Server Actions | Mutaciones de formularios del panel admin y del panel de negocio (moderar, cambiar estados, editar negocio). Siempre validan sesión y rol dentro de la acción |
 | `proxy.ts` | (Next 16 renombró `middleware.ts` a `proxy.ts`, runtime Node). Solo refresca la sesión Supabase y hace redirecciones gruesas (`/admin` sin sesión → login). **No es la capa de autorización** |
 | Caching | Tres clases de respuesta, **nunca mezcladas en un mismo endpoint**: (1) catálogos públicos estables (turismo, rutas, categorías, límites) con `use cache`/`revalidateTag` y CDN larga; (2) capas públicas volátiles (reportes de tránsito activos, negocios por viewport) con `s-maxage` ≤ 30 s y sin cookies; (3) datos por usuario o por rol con `Cache-Control: private, no-store`. Ver §9.3 |
 | loading.tsx / error.tsx | Por route group; `error.tsx` reporta a Sentry |
@@ -193,9 +193,9 @@ Estilo: **monolito modular** (§12, ADR-008). Un despliegue, un repositorio, una
 
 | Capa | Responsabilidad |
 |---|---|
-| Cliente | Render, UX, obtener ubicación, leer QR, comprimir imágenes, cola offline, validación temprana (Zod) |
+| Cliente | Render, UX, obtener ubicación, comprimir imágenes, cola offline, validación temprana (Zod) |
 | Servidor Next | Autenticación de la request, validación Zod (defensa temprana y mensajes de error claros), orquestación, llamadas server-to-server, firma de URLs, worker de la cola (push, email, imágenes), PDF |
-| PostgreSQL | **Barrera autoritativa**: reglas de negocio críticas, validación de entradas que importan (rangos, longitudes, pertenencia), geocercas, completitud de misión, inventario, transiciones de estado, historial, auditoría, RLS, rate limits, encolado de efectos secundarios |
+| PostgreSQL | **Barrera autoritativa**: reglas de negocio críticas, validación de entradas que importan (rangos, longitudes, pertenencia), pertenencia territorial, transiciones de estado, historial, auditoría, RLS, rate limits, encolado de efectos secundarios |
 | Google APIs | Mapa base, autocompletado de direcciones, (opcional) dirección legible |
 | Supabase | Auth, Storage, Realtime (limitado) |
 
@@ -211,8 +211,6 @@ Estilo: **monolito modular** (§12, ADR-008). Un despliegue, un repositorio, una
 | Negocios | Point | cientos → miles | **Por viewport** + filtros |
 | Reportes de tránsito activos | Point | decenas | Por viewport en el endpoint **público** (sin autor), solo `status in (active, verified)` y `expires_at > now()`, `s-maxage=30`, refresco cada 60 s |
 | Consultas ciudadanas | Point | cientos | Endpoint **autenticado** (`/api/v1/me/map/features`, `no-store`): el panel admin ve las de su alcance; el ciudadano, las suyas. Las públicas aprobadas (`is_public`) sí van al endpoint público |
-| Misiones | Point (paso) | decenas | Por viewport, solo activas y vigentes |
-| Recompensas | — | — | No son capa: se muestran dentro del negocio o misión |
 
 ### 9.2 Zoom
 
@@ -282,7 +280,7 @@ Detalle (fotos, horario, descripción) **nunca** viaja en la consulta de viewpor
 | `place_id` de Google | `businesses.google_place_id` | Puede almacenarse indefinidamente (exento de restricciones de caché según las políticas de Places) |
 | Lat/lng obtenidos de Google | No se usan como coordenada oficial | La caché de coordenadas de Google está limitada a 30 días; por eso **la coordenada oficial del negocio la confirma el dueño/moderador arrastrando el pin** y se guarda como dato propio |
 | Nombre, dirección, horario, fotos, reseñas de Google | No se almacenan | Se piden en vivo si se muestran, con atribución de Google |
-| Todo lo demás (negocios, rutas, reportes, misiones) | PostgreSQL | Fuente de verdad propia |
+| Todo lo demás (negocios, rutas, reportes, consultas) | PostgreSQL | Fuente de verdad propia |
 
 ### 10.4 Claves y costos
 
@@ -316,9 +314,7 @@ Alternativa aceptable: almacenar en UTM zona 19N (EPSG:32619) para cálculos mé
 | municipalities | MultiPolygon |
 | businesses, tourism_places, traffic_reports | Point (obligatorio) |
 | citizen_requests | Point opcional (municipio obligatorio si no hay punto) |
-| mission_steps | Point + `radius_m` si `kind = 'location'`; sin geometría si `kind = 'virtual'` (§19.1) |
 | eco_routes | MultiLineString (un sendero puede tener tramos) |
-| geocercas de misiones | Point + `radius_m` (no polígono) en MVP; Polygon opcional en Fase 2 |
 
 ### 11.3 Consultas tipo (patrones)
 
@@ -328,7 +324,6 @@ Alternativa aceptable: almacenar en UTM zona 19N (EPSG:32619) para cálculos mé
 | Lugares turísticos a 2 km | Igual con 2000 |
 | Reportes dentro de esta zona | `ST_Intersects(r.geom, :zona)` |
 | Rutas cercanas | `ST_DWithin(route.geom::geography, :p::geography, 3000)` |
-| Dentro de la geocerca de un paso | `ST_DWithin(step.geom::geography, :p::geography, step.radius_m + LEAST(:accuracy, 50))` **dentro de la RPC de check-in** (misma fórmula que §19.3) |
 | Objetos visibles | `geom && ST_MakeEnvelope(...)` + filtros + `LIMIT 500` |
 | Clustering servidor (si hace falta) | `ST_SnapToGrid(geom, tamaño_por_zoom)` + `count(*)` agrupado |
 
@@ -346,7 +341,7 @@ Regla: **si una operación modifica inventario, estado o permisos, termina en un
 
 **Contrato de las RPC** (aplica a todas las funciones invocables por usuarios):
 - **Autosuficientes:** validan `auth.uid()`, rol, alcance y *todas* las entradas que importan (rangos de lat/lng, `accuracy`, longitudes de texto, tipos permitidos). Asumen que pueden ser llamadas directamente sin Next.js.
-- **Rechazo de negocio ≠ excepción:** un rechazo esperado (fuera de radio, sin stock, límite alcanzado) **devuelve** `{status: 'rejected', reason}` y hace commit, para que el contador de rate limit, el intento rechazado y la auditoría persistan. `RAISE EXCEPTION` solo para errores de programación, datos corruptos o acceso no autorizado.
+- **Rechazo de negocio ≠ excepción:** un rechazo esperado (límite alcanzado, transición no permitida, ubicación fuera de la provincia) **devuelve** `{status: 'rejected', reason}` y hace commit, para que el contador de rate limit, el intento rechazado y la auditoría persistan. `RAISE EXCEPTION` solo para errores de programación, datos corruptos o acceso no autorizado.
 - **Idempotentes:** toda RPC de creación acepta `p_idempotency_key` y devuelve el mismo resultado si se repite.
 - **Efectos secundarios encolados:** notificaciones, push, email y procesamiento de archivos se insertan en `private.jobs` dentro de la misma transacción; nunca se llaman servicios externos desde SQL de forma síncrona.
 
@@ -360,14 +355,14 @@ No se agrega Express, NestJS ni un broker de mensajes. Lo asíncrono va por una 
 | PostGIS, pg_trgm, unaccent | Sí | Extensiones habilitadas por migración |
 | Auth | Sí | Email+OTP/magic link; Google OAuth opcional. Teléfono/SMS postergado (costo). **SMTP propio obligatorio** antes de abrir registro a ciudadanos. Captcha (Turnstile) con la integración nativa de Supabase Auth, que se valida en el servidor de Auth y no se puede saltar llamando la API directo |
 | RLS | Sí, en **todas** las tablas | Tablas sin política = inaccesibles |
-| Database Functions (RPC) | Sí | Check-in, completar misión, reclamar/canjear recompensa, transición de estado, asignar rol, rate limit. Las RPC invocables viven en `public` (el único esquema expuesto); los helpers internos, en `private` (§14) |
+| Database Functions (RPC) | Sí | Crear reporte o consulta, transición de estado, moderación, asignar rol, rate limit. Las RPC invocables viven en `public` (el único esquema expuesto); los helpers internos, en `private` (§14) |
 | Triggers | Sí | `updated_at`, municipio y provincia por `ST_Covers` (§11.1), historial de estados, auditoría, encolado de jobs |
-| Storage | Sí | Buckets privados: `report-evidence`, `mission-evidence`, `reports-pdf`; bucket público solo `public-media` (fotos aprobadas de lugares/negocios) |
+| Storage | Sí | Buckets privados: `report-evidence`, `reports-pdf`; bucket público solo `public-media` (fotos aprobadas de lugares/negocios) |
 | Realtime | Limitado | Ver §26 |
 | Edge Functions | No en MVP | Todo lo resuelve Next.js; evitar dos runtimes de servidor |
-| pg_cron | **Sí (obligatorio)** | Único planificador sub-diario disponible sin Vercel Pro: cada minuto dispara el worker de la cola; cada hora expira reportes y cupones (con devolución de stock); cada noche aplica la retención de §32 y limpia uploads huérfanos |
+| pg_cron | **Sí (obligatorio)** | Único planificador sub-diario disponible sin Vercel Pro: cada minuto dispara el worker de la cola; cada hora expira reportes de tránsito y archiva consultas resueltas; cada noche aplica la retención de §32 y limpia uploads huérfanos |
 | pg_net | Sí | Llamadas HTTP asíncronas desde Postgres, usadas solo para despertar al worker (`/api/v1/internal/jobs/run`) con un secreto guardado en Vault |
-| Vault | Sí | Secretos que la base necesita en claro: secretos de QR de misiones, pepper de cupones, secreto del worker |
+| Vault | Sí | Secretos que la base necesita en claro: secreto del worker y credenciales de `pg_net` |
 | Branching | Fase 2 (plan Pro) | Una base efímera por PR con sus migraciones aplicadas (§36) |
 | Migraciones | Sí | Supabase CLI, SQL versionado en `supabase/migrations`, nunca cambios manuales en producción |
 
@@ -384,13 +379,13 @@ Nota a verificar: fuentes secundarias reportan que en 2026 Supabase exige `GRANT
 - Borrado lógico (`deleted_at`) en entidades de contenido; borrado físico para datos personales cuando el usuario lo pide (§32).
 - **Tres clases de tablas de rastro**, con reglas distintas:
   - *Inmutables* (`request_status_history`, `moderation_actions`, `audit_logs`): solo `INSERT`. La única excepción es la retención de §32, ejecutada por una función de sistema en `private`.
-  - *De estado controlado* (`mission_step_checkins`, `reward_redemptions`, `report_runs`): filas que cambian de estado, pero **solo mediante RPC**. Sin `UPDATE`/`DELETE` para usuarios y cada transición auditada. No son append-only.
+  - *De estado controlado* (`traffic_reports`, `citizen_requests`, `report_runs`): filas que cambian de estado, pero **solo mediante RPC**. Sin `UPDATE`/`DELETE` para usuarios y cada transición auditada. No son append-only.
   - *Redactables por privacidad*: la retención de §32 anula columnas sensibles (coordenadas exactas, autor) mediante una función de sistema, nunca borra la fila, para no romper los KPIs.
-- **Idempotencia en el esquema:** `idempotency_key text` con `UNIQUE (user_id, idempotency_key)` en toda tabla creada por una operación reintentable (`traffic_reports`, `citizen_requests`, `mission_step_checkins`, `reward_redemptions`).
+- **Idempotencia en el esquema:** `idempotency_key text` con `UNIQUE (user_id, idempotency_key)` en toda tabla creada por una operación reintentable (`traffic_reports`, `citizen_requests`).
 - **Unicidad con `NULL`:** toda restricción `UNIQUE` que incluye una columna donde `NULL` tiene significado (p. ej. `municipality_id NULL` = provincia) se declara `UNIQUE NULLS NOT DISTINCT` (PostgreSQL 15+). Sin eso, dos `NULL` no chocan y se duplican filas.
 - **Política de claves foráneas hacia `profiles`** (necesaria para "eliminar mi cuenta", §32):
   - `ON DELETE CASCADE` para los datos propios y privados del usuario: `notification_preferences`, `push_subscriptions`, `notifications`, `business_members`, `user_roles`.
-  - `ON DELETE SET NULL` (columna nullable) para las referencias históricas que deben sobrevivir: `traffic_reports.reporter_id`, `citizen_requests.requester_id`, `assigned_to`, `mission_step_checkins.user_id`, `mission_completions.user_id`, `reward_redemptions.user_id`, `redeemed_by`, `request_status_history.changed_by`, `moderation_actions.moderator_id`, `audit_logs.actor_id`, `user_roles.granted_by`.
+  - `ON DELETE SET NULL` (columna nullable) para las referencias históricas que deben sobrevivir: `traffic_reports.reporter_id`, `citizen_requests.requester_id`, `assigned_to`, `request_status_history.changed_by`, `moderation_actions.moderator_id`, `audit_logs.actor_id`, `user_roles.granted_by`.
 - **Preparado para particionar:** `audit_logs` y los históricos grandes usan PK `(created_at, id)` desde el MVP. Se particionan (mensual) en Fase 3 sin reescribir la tabla.
 
 ## 15. ERD
@@ -413,19 +408,6 @@ erDiagram
     profiles ||--o{ citizen_requests : "crea"
     citizen_requests ||--o{ request_status_history : "registra"
     profiles ||--o{ citizen_requests : "asignado a"
-    missions ||--|{ mission_steps : "compone"
-    businesses ||--o{ mission_steps : "puede apuntar a"
-    tourism_places ||--o{ mission_steps : "puede apuntar a"
-    eco_routes ||--o{ mission_steps : "puede apuntar a"
-    profiles ||--o{ mission_step_checkins : "realiza"
-    mission_steps ||--o{ mission_step_checkins : "recibe"
-    missions ||--o{ mission_completions : "se completa"
-    profiles ||--o{ mission_completions : "logra"
-    businesses ||--o{ rewards : "ofrece"
-    missions |o--o{ rewards : "exclusiva (opcional)"
-    rewards ||--o{ reward_redemptions : "emite"
-    mission_completions ||--o| reward_redemptions : "habilita"
-    profiles ||--o{ reward_redemptions : "posee"
     profiles ||--o{ notifications : "recibe"
     profiles ||--|| notification_preferences : "configura"
     profiles ||--o{ push_subscriptions : "registra"
@@ -561,80 +543,6 @@ erDiagram
         text note
         timestamptz created_at
     }
-    missions {
-        uuid id PK
-        uuid province_id FK
-        uuid municipality_id FK "nullable = toda la provincia"
-        text title
-        text level "CHECK: easy|medium|hard|special"
-        text verification "CHECK: gps|gps_qr|gps_qr_evidence"
-        timestamptz starts_at
-        timestamptz ends_at
-        int max_completions "null = ilimitado"
-        int completions_count "contador atómico"
-        uuid created_by FK
-        text status "CHECK: draft|active|paused|ended"
-    }
-    mission_steps {
-        uuid id PK
-        uuid mission_id FK
-        smallint position
-        text kind "CHECK: location|virtual"
-        text virtual_rule "si kind = virtual, p. ej. traffic_report_verified o citizen_request_approved"
-        uuid business_id FK "nullable"
-        uuid tourism_place_id FK "nullable"
-        uuid eco_route_id FK "nullable"
-        geometry geom "Point 4326, NOT NULL si kind = location"
-        int radius_m "CHECK >= 50 si kind = location"
-        uuid qr_secret_id "ref. a Vault, si aplica"
-    }
-    mission_step_checkins {
-        uuid id PK
-        uuid user_id FK "ON DELETE SET NULL"
-        uuid mission_step_id FK
-        geometry claimed_geom "Point 4326, nullable (paso virtual o redactado a 90 días)"
-        int accuracy_m
-        text method "CHECK: gps|gps_qr|evidence|virtual"
-        text status "CHECK: accepted|pending_review|rejected"
-        text reject_reason
-        text idempotency_key "UNIQUE (user_id, idempotency_key)"
-        timestamptz created_at
-    }
-    mission_completions {
-        uuid id PK
-        uuid mission_id FK
-        uuid user_id FK "ON DELETE SET NULL"
-        timestamptz completed_at
-    }
-    rewards {
-        uuid id PK
-        uuid province_id FK
-        uuid business_id FK
-        uuid mission_id FK "nullable: null = disponible para cualquier misión del nivel"
-        text title
-        text min_level "CHECK: easy|medium|hard|special"
-        int total_stock
-        int remaining_stock "CHECK >= 0"
-        int per_user_limit "cuenta canjes del usuario en esta recompensa, entre misiones distintas"
-        timestamptz valid_from
-        timestamptz valid_until
-        int redeem_window_days
-        bool restock_on_expiry
-        text status "CHECK: pending_approval|active|paused|ended"
-    }
-    reward_redemptions {
-        uuid id PK
-        uuid reward_id FK
-        uuid user_id FK "ON DELETE SET NULL"
-        uuid mission_completion_id FK "UNIQUE"
-        text code_hash "UNIQUE, HMAC-SHA256(pepper, código)"
-        bytea code_ciphertext "código cifrado, para volver a entregarlo"
-        text status "CHECK: issued|redeemed|expired|revoked"
-        text idempotency_key "UNIQUE (user_id, idempotency_key)"
-        timestamptz expires_at
-        timestamptz redeemed_at
-        uuid redeemed_by FK "ON DELETE SET NULL"
-    }
     notifications {
         uuid id PK
         uuid user_id FK "ON DELETE CASCADE"
@@ -730,7 +638,7 @@ erDiagram
     }
 ```
 
-Tablas añadidas a la lista original y por qué son necesarias: `user_roles` (reemplaza `roles`: los roles se asignan, no se definen; PK sustituta porque `municipality_id` puede ser `NULL` y una PK no admite `NULL`. Unicidad con `UNIQUE NULLS NOT DISTINCT (user_id, role, province_id, municipality_id)`, que permite a un moderador tener alcance en varios municipios), `business_members` (quién administra cada negocio), `mission_step_checkins` (misiones de varios pasos y trazabilidad antifraude), `push_subscriptions` (un usuario tiene varios dispositivos). Añadidas en v1.1: `provinces` (multi-provincia sin migración), `traffic_report_types` (reglas operativas configurables), `jobs` (cola asíncrona, esquema `private`) y `feature_flags` (activación por territorio).
+Tablas añadidas a la lista original y por qué son necesarias: `user_roles` (reemplaza `roles`: los roles se asignan, no se definen; PK sustituta porque `municipality_id` puede ser `NULL` y una PK no admite `NULL`. Unicidad con `UNIQUE NULLS NOT DISTINCT (user_id, role, province_id, municipality_id)`, que permite a un moderador tener alcance en varios municipios), `business_members` (quién administra cada negocio), `push_subscriptions` (un usuario tiene varios dispositivos). Añadidas en v1.1: `provinces` (multi-provincia sin migración), `traffic_report_types` (reglas operativas configurables), `jobs` (cola asíncrona, esquema `private`) y `feature_flags` (activación por territorio).
 
 ## 16. Authentication & Authorization
 
@@ -749,13 +657,11 @@ Tablas añadidas a la lista original y por qué son necesarias: `user_roles` (re
 | Ver mapa, turismo, negocios aprobados | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Crear reportes de tránsito, incidencias y consultas | — | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Ver estado de sus propios reportes y consultas | — | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Participar en misiones / reclamar recompensas | — | ✓ | ✓ | ✓* | ✓* | ✓* |
-| Gestionar su negocio, promociones y stock de recompensas | — | — | ✓ (solo los suyos) | — | — | — |
-| Canjear cupones en su negocio | — | — | ✓ (solo los suyos) | — | — | — |
+| Gestionar su negocio y sus promociones | — | — | ✓ (solo los suyos) | — | — | — |
 | Aprobar, suspender o archivar negocios | — | — | — | ✓ (su municipio) | ✓ (su municipio) | ✓ |
-| Moderar reportes, fotos, rutas y recompensas | — | — | — | ✓ (su municipio) | ✓ (su municipio) | ✓ |
+| Moderar reportes, fotos, rutas y promociones | — | — | — | ✓ (su municipio) | ✓ (su municipio) | ✓ |
 | Gestionar consultas (asignar, cambiar estado) | — | — | — | ✓ (su municipio) | ✓ (su municipio) | ✓ |
-| Crear misiones, ver KPIs, generar PDF | — | — | — | — | ✓ (su municipio) | ✓ |
+| Ver KPIs, generar PDF | — | — | — | — | ✓ (su municipio) | ✓ |
 | Asignar rol `moderator` | — | — | — | — | ✓ (su municipio) | ✓ |
 | Asignar `municipal_admin` de municipio | — | — | — | — | — | ✓ |
 | Asignar `municipal_admin` provincial | — | — | — | — | — | — (script de operación auditado) |
@@ -764,7 +670,6 @@ Tablas añadidas a la lista original y por qué son necesarias: `user_roles` (re
 
 "Su municipio" = los municipios de sus filas en `user_roles`. Un administrador provincial no puede auto-asignarse más poder: la única vía para crear otro administrador provincial es el script de operación, que exige una revisión en PR.
 
-\* El personal municipal puede participar como ciudadano, pero la RPC `claim_reward` rechaza recompensas de misiones de su propio alcance y de misiones o recompensas que haya creado o aprobado (`missions.created_by`, aprobación registrada en `moderation_actions`). Un comercio no puede editar el stock de recompensas del negocio de otro, y un administrador tampoco edita el stock de un comercio: solo aprueba, pausa o rechaza.
 
 **Implementación:** tabla `user_roles` sin políticas de escritura para usuarios; asignación solo por RPC `assign_role()`, que aplica la tabla anterior y escribe auditoría. Función `private.has_role(role, municipality_id)` usada por RLS (con `GRANT EXECUTE` a `authenticated`, §14). Opcional: Custom Access Token Hook de Supabase para incluir roles en el JWT (evita consultas repetidas); si se usa, asumir que un cambio de rol tarda hasta la expiración del token.
 
@@ -775,20 +680,20 @@ Tablas añadidas a la lista original y por qué son necesarias: `user_roles` (re
 | Tema | Diseño |
 |---|---|
 | RLS | Activo en todas las tablas `public`. Políticas por rol y propiedad (`auth.uid()`), con alcance municipal vía `has_role()`. Tests automáticos de RLS en CI (§35) |
-| Superficie de API directa | La anon key es pública y PostgREST expone `public`: **cualquier usuario autenticado puede llamar RPC y tablas sin pasar por Next.js**. Por eso: (1) las tablas críticas (`rewards.remaining_stock`, `reward_redemptions`, `mission_*`, `user_roles`, `status` de consultas y reportes) no tienen políticas de `INSERT`/`UPDATE` para usuarios, solo se modifican por RPC; (2) cada RPC valida todo por sí misma (§12); (3) nada de lo que haga Next.js (Zod, captcha, IP) se considera garantía. Tests de CI que llaman las RPC directamente con un JWT de prueba (§35) |
+| Superficie de API directa | La anon key es pública y PostgREST expone `public`: **cualquier usuario autenticado puede llamar RPC y tablas sin pasar por Next.js**. Por eso: (1) las tablas críticas (`user_roles`, `status` de consultas, reportes y negocios) no tienen políticas de `INSERT`/`UPDATE` para usuarios, solo se modifican por RPC; (2) cada RPC valida todo por sí misma (§12); (3) nada de lo que haga Next.js (Zod, captcha, IP) se considera garantía. Tests de CI que llaman las RPC directamente con un JWT de prueba (§35) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Solo en variables de entorno de servidor (sin prefijo `NEXT_PUBLIC_`). Usada **únicamente** por el worker de la cola (procesamiento de imágenes, envío de push y email, PDF) y por el cron. Nunca en un request iniciado por un usuario. Módulo `lib/supabase/admin.ts` con `import 'server-only'` para que el build falle si se importa en cliente |
 | Requests de usuario | Siempre con el cliente Supabase autenticado con el JWT del usuario, para que RLS aplique incluso desde el servidor |
 | Funciones `SECURITY DEFINER` | `search_path = ''` y nombres calificados; validan `auth.uid()` y rol dentro de la función. RPC invocables: en `public`, con `GRANT EXECUTE` solo al rol que corresponde (`authenticated`, o `anon` si son públicas). Helpers de RLS: en `private` (no expuesto) **con** `GRANT USAGE`/`EXECUTE` a `authenticated`/`anon`, porque las políticas se evalúan con el rol del usuario. Funciones de sistema (retención, worker): en `private` con `REVOKE EXECUTE FROM anon, authenticated` (§14) |
 | Uploads | URL de subida firmada generada por el servidor tras validar sesión y cuota. El archivo llega a una ruta `incoming/` del bucket privado y se registra en `attachments` como `pending`. Un job `image_process` (worker con `service_role`) verifica los magic bytes, rechaza lo que no sea `image/jpeg`/`png`/`webp` o supere 5 MB, **quita EXIF** (contiene GPS y datos del dispositivo), limita dimensiones (máx. 4096 px por lado y 40 MP, para evitar bombas de descompresión), **re-codifica** la imagen (descarta metadatos y cualquier contenido extra incrustado, como archivos políglotas), genera WebP en tamaños estándar y mueve el resultado a su ruta final. El nombre final lo genera el servidor (`{uuid}.webp`): el nombre que envía el cliente nunca se usa en rutas (sin path traversal ni nombres maliciosos). No se confía en el MIME ni en la extensión que declara el navegador. Solo tras aprobación de moderación se copia a `public-media`. Uploads `pending` con más de 24 h se borran por `pg_cron` |
 | Descargas | Buckets privados + `createSignedUrl` de corta duración (p. ej. 5 min) tras verificar permiso; PDFs solo para roles admin |
-| Rate limiting | Tabla `private.rate_limits` (ventana deslizante por `user_id` + acción; límites configurables en tabla) consultada dentro de cada RPC sensible (p. ej. máx. 5 reportes/hora, 20 check-ins/hora, 10 reclamos/día, 10 intentos de canje fallidos/hora por dependiente). **Los intentos rechazados también cuentan**: como las RPC devuelven los rechazos en lugar de lanzar excepción (§12), el incremento del contador hace commit. Sin proveedor adicional en MVP. Vercel Firewall como capa extra en Fase 2 |
+| Rate limiting | Tabla `private.rate_limits` (ventana deslizante por `user_id` + acción; límites configurables en tabla) consultada dentro de cada RPC sensible (p. ej. máx. 5 reportes/hora, 5 consultas/hora, 3 solicitudes de alta de negocio/día). **Los intentos rechazados también cuentan**: como las RPC devuelven los rechazos en lugar de lanzar excepción (§12), el incremento del contador hace commit. Sin proveedor adicional en MVP. Vercel Firewall como capa extra en Fase 2 |
 | Anti-abuso | Captcha (Turnstile) vía integración nativa de Supabase Auth en registro. Los reportes de cuentas nuevas o con baja reputación entran como `pending` (moderación) en vez de depender de un captcha que se podría saltar. Reputación simple por usuario: los reportes rechazados reducen los límites |
 | Escalamiento de privilegios | Usuario no puede escribir `user_roles` ni columnas sensibles de `profiles`; `UPDATE` de perfil limitado por `GRANT` de columnas |
 | Panel admin | Verificación de rol en layout de servidor **y** en cada acción; RLS como red final; 2FA (TOTP de Supabase Auth) obligatorio para `municipal_admin` en Fase 2 (desde el MVP para el alcance provincial) |
-| Auditoría | Toda acción administrativa y de recompensas → `audit_logs` (§33) |
+| Auditoría | Toda acción administrativa → `audit_logs` (§33) |
 | Cabeceras | CSP estricta con nonce (dominios de Google Maps, Supabase y Sentry permitidos; sin `unsafe-inline` en scripts; `frame-ancestors 'none'`), `X-Frame-Options: DENY`, HSTS (Vercel), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: geolocation=(self), camera=(self), microphone=(), payment=()`. CORS: las Route Handlers no envían `Access-Control-Allow-Origin` (solo mismo origen), salvo `/api/v1/map/features` pública (`GET`, sin credenciales). Es la mitigación principal de XSS, ya que las cookies de sesión son legibles por JS |
 | Auth: abuso y enumeración | Límites de Supabase Auth configurados (registro, OTP, magic link, recuperación de contraseña, verificación) + captcha en registro y recuperación. Respuestas genéricas en recuperación y login ("si el correo existe, te enviamos un enlace") para no permitir enumerar usuarios. Redirecciones post-login solo a rutas internas (lista blanca; sin open redirect) |
-| Secretos | Vercel Environment Variables por entorno; `.env.example` sin valores; GitHub secret scanning activado. Secretos que la base necesita en claro (secretos de QR, pepper de cupones, secreto del worker): **Supabase Vault**, nunca en columnas normales |
+| Secretos | Vercel Environment Variables por entorno; `.env.example` sin valores; GitHub secret scanning activado. Secretos que la base necesita en claro (secreto del worker, credenciales de `pg_net`): **Supabase Vault**, nunca en columnas normales |
 | Claves Google | Restringidas por referrer y por API (§10.4) |
 
 ## 18. PWA Architecture
@@ -801,9 +706,9 @@ Tablas añadidas a la lista original y por qué son necesarias: `user_roles` (re
 |---|---|---|
 | Shell de la app, navegación, pantallas visitadas | Mapa base de Google | Los términos de Google no permiten cachear tiles para uso offline; además pesaría demasiado |
 | Última lista de lugares turísticos y rutas vistas (sin mapa, en lista) | Búsqueda, Autocomplete | Requieren servidor/Google |
-| **Borradores** de reporte y consulta (IndexedDB, con foto comprimida) | Check-in de misión | La verificación es en servidor y con hora del servidor; aceptar check-ins offline abre fraude |
-| **Cola de reintento**: el reporte se envía al volver la conexión (Background Sync donde exista; reintento al abrir la app en iOS) | Reclamar/canjear recompensa | Operación transaccional con inventario |
-| Ver cupones ya emitidos (código y QR guardados localmente; si se pierden, se recuperan online desde "Mis cupones", §20.3) | Panel admin | No aporta valor offline y amplía superficie de riesgo |
+| **Borradores** de reporte y consulta (IndexedDB, con foto comprimida) | Moderación y cambios de estado | Transacciones con historial y auditoría en el servidor |
+| **Cola de reintento**: el reporte se envía al volver la conexión (Background Sync donde exista; reintento al abrir la app en iOS) | Alta de negocio | Requiere verificación del moderador y subida de fotos |
+| Ver mis reportes y consultas ya enviados (último estado sincronizado) | Panel admin | No aporta valor offline y amplía superficie de riesgo |
 
 **Tres modos explícitos, siempre visibles para el usuario** (indicador en la barra superior; nunca se simula una experiencia offline que no existe):
 
@@ -811,103 +716,22 @@ Tablas añadidas a la lista original y por qué son necesarias: `user_roles` (re
 |---|---|---|---|
 | **ONLINE** | Red y API responden | Todo | — |
 | **DEGRADED** | Hay red pero falla un servicio (Google Maps, API propia lenta o con error 5xx, Storage) | Lista de lugares en lugar de mapa si Google falla; lectura desde caché con aviso "datos de hace X min"; borradores y cola | Acciones que dependen del servicio caído, con mensaje concreto |
-| **OFFLINE** | Sin red | Lo de la tabla anterior: shell, contenido visto, borradores, cola de reportes, cupones guardados | Check-ins, reclamos, canjes, búsqueda, panel admin (botones desactivados con explicación) |
+| **OFFLINE** | Sin red | Lo de la tabla anterior: shell, contenido visto, borradores, cola de reportes, mis reportes | Búsqueda, alta de negocios, panel admin (botones desactivados con explicación) |
 
 - Cada item de la cola lleva `idempotency_key` generado en cliente para evitar duplicados al reintentar. El servidor lo persiste en la fila creada (`UNIQUE (user_id, idempotency_key)`, §14).
 - Si al reintentar la sesión expiró, el item queda en la cola con estado "requiere iniciar sesión" y se reenvía tras el login; nunca se descarta en silencio.
 - **Actualizaciones:** estrategia "nueva versión disponible → recargar", sin `skipWaiting` silencioso durante un formulario.
 - **Caching:** estáticos con `CacheFirst` versionado; APIs públicas de catálogo con `StaleWhileRevalidate`; APIs de usuario con `NetworkOnly`.
 
-## 19. Missions Architecture
+## 19. Missions Architecture — retirada
 
-### 19.1 Modelo
+**Fuera de alcance desde v1.3 (24/09/2026).** Por decisión del proyecto, SR Conecta no incluye misiones ni recompensas (ADR-010 y ADR-011 retirados). Se eliminaron del modelo de datos, la API, la seguridad, las pruebas y el alcance del MVP. La numeración de secciones se conserva para no romper referencias.
 
-`missions` (nivel, método de verificación, vigencia, cupo) → `mission_steps` (1..n) → `mission_step_checkins` (evidencia por paso) → `mission_completions` (cuando todos los pasos requeridos están `accepted`).
+Si se retoman en el futuro, entran como **módulo aditivo** según §5.1: tablas y endpoints nuevos en `/api/v1`, sin modificar las tablas existentes. El diseño retirado (check-ins con GPS/QR, stock atómico, cupones cifrados) queda en el historial de Git (v1.2 de este documento) como punto de partida.
 
-Dos clases de paso, distinguidas por `mission_steps.kind`:
-- **`location`**: punto + `radius_m` (≥ 50 m) y, opcionalmente, un negocio, lugar o ruta. Se cumple con check-in presencial (§19.3).
-- **`virtual`**: sin geometría; `virtual_rule` indica el evento que lo cumple (p. ej. `traffic_report_verified` o `citizen_request_approved`). Un trigger sobre la entidad origen inserta el check-in con `method = 'virtual'` y `claimed_geom = NULL`, y luego evalúa si la misión quedó completa con la misma función que usa `mission_checkin`.
+## 20. Rewards Architecture — retirada
 
-Tipos soportados con el mismo modelo: visitar un lugar (1 paso), visitar varios (n pasos), completar ruta (pasos en inicio, punto medio y fin), visitar comercios (pasos en negocios), reportar incidencia válida (paso virtual), combinaciones.
-
-### 19.2 Verificación por nivel
-
-Cuatro niveles, ordenados `easy < medium < hard < special` (el mismo orden rige `min_level` en §20.2):
-
-| Nivel | Método mínimo | Justificación |
-|---|---|---|
-| Fácil (`easy`) | GPS dentro del radio | Bajo valor de recompensa; fraude tolerable |
-| Media (`medium`) | GPS + QR del lugar | El QR prueba presencia física; el GPS evita compartir fotos del QR |
-| Difícil (`hard`) | GPS + QR dinámico mostrado por el comercio | Alto valor; el QR rota y no se puede reutilizar |
-| Especial (`special`) | GPS + QR dinámico + evidencia moderada, o validación presencial del comercio | Recompensas de proveedor de alto valor (p. ej. una noche de hotel): verificación humana obligatoria y cupo bajo |
-
-La RPC que publica una misión rechaza combinaciones inconsistentes (p. ej. `special` con `verification = 'gps'`): el nivel exige un método mínimo, y ese método lo decide el servidor, no el formulario.
-
-### 19.3 Flujo de check-in
-
-1. Usuario abre la misión; la app pide ubicación **en ese momento** (`getCurrentPosition`, `enableHighAccuracy`, `maximumAge: 0`, timeout 15 s). No hay rastreo continuo.
-2. Cliente envía `POST /api/v1/missions/:id/checkins` con `{step_id, lat, lng, accuracy, qr_token?, idempotency_key}`.
-3. Servidor valida Zod (defensa temprana) y llama RPC `mission_checkin()`, que **revalida todo** (la RPC también puede ser invocada directamente, §17) y en una transacción:
-   - si ya existe un check-in con ese `(user_id, idempotency_key)` → devuelve el mismo resultado;
-   - registra el intento en `private.rate_limits` y, si se excede, devuelve `rejected: rate_limited`;
-   - valida rangos (`lat`/`lng` válidos, `accuracy` entre 0 y 100 m; si `accuracy > 100` → `rejected: low_accuracy`, pide reintentar al aire libre);
-   - verifica misión activa y vigente, paso perteneciente a la misión y usuario elegible (regla de §16 sobre personal municipal);
-   - `ST_DWithin(step.geom::geography, claimed::geography, radius_m + LEAST(accuracy, 50))`;
-   - valida QR: recalcula `HMAC(secreto, step_id ‖ ventana_de_tiempo)` con el secreto **leído de Vault** (`qr_secret_id`) y compara en tiempo constante. Para QR dinámico se aceptan la ventana actual y la anterior. Un hash del secreto no sirve para verificar un HMAC: por eso se guarda el secreto cifrado y no su hash;
-   - **velocidad imposible** (distancia/tiempo contra el check-in anterior del usuario > 150 km/h → `pending_review`);
-   - inserta el check-in (aceptado, rechazado o `pending_review`: **los rechazos también se guardan**, son evidencia antifraude). Los rechazos se **devuelven** como resultado y la transacción hace commit (§12);
-   - si todos los pasos están aceptados: reserva cupo con `UPDATE missions SET completions_count = completions_count + 1 WHERE id = :id AND (max_completions IS NULL OR completions_count < max_completions) RETURNING id`. Sin fila → `rejected: mission_full`. Con fila → inserta `mission_completions` (UNIQUE `(mission_id, user_id)`) y encola la notificación.
-4. Respuesta `200` con `{status, reason?, step_status, progress, completed}`; los rechazos de negocio no son errores HTTP.
-
-### 19.4 Límites del GPS y ataques
-
-| Problema/ataque | Mitigación |
-|---|---|
-| Precisión de 20–100 m en exteriores, peor bajo techo o en montaña | Radio mínimo 50 m; tolerancia por `accuracy` con tope; QR en lugares cerrados |
-| Spoofing (apps de ubicación falsa, DevTools "sensors") | Imposible de detectar al 100% en web → **no confiar solo en GPS para recompensas de valor**: QR/evidencia |
-| Replay de request | `idempotency_key` + UNIQUE por paso/usuario + timestamp del servidor |
-| QR fotografiado y compartido | GPS + QR combinados; QR dinámico (rota cada X minutos, generado por la app del comercio) para misiones premium |
-| Multi-cuenta | Límite por cuenta verificada por email, captcha, revisión de patrones (mismo dispositivo/IP) en Fase 2 |
-| PWA sin segundo plano | No se promete "detección automática al llegar": el usuario debe abrir la app y tocar "Estoy aquí" |
-
-## 20. Rewards Architecture
-
-### 20.1 Dos momentos distintos
-
-- **Reclamar (claim):** el usuario, con una misión completada, obtiene un cupón. Consume inventario.
-- **Canjear (redeem):** el comercio valida el cupón en su local y lo marca usado.
-
-### 20.2 Escalado de recompensas
-
-Cada `reward` define `min_level` (easy/medium/hard), `total_stock`, `remaining_stock`, `per_user_limit`, vigencia (`valid_from/valid_until`) y ventana de uso (`redeem_window_days`). El comercio define todo esto desde su panel; un moderador aprueba antes de publicarse (`pending_approval` → `active`).
-
-**Regla de elegibilidad (única):** una `mission_completion` de nivel N puede canjearse por **una** recompensa activa con `min_level ≤ N`. Si la recompensa tiene `mission_id`, es exclusiva de esa misión; si `mission_id` es `NULL`, está disponible para cualquier misión del nivel suficiente. Cada completion se usa una sola vez (UNIQUE `mission_completion_id`). `per_user_limit` cuenta cuántas veces un mismo usuario obtuvo **esa** recompensa usando completions de misiones distintas; como cada misión solo se completa una vez por usuario, un límite > 1 exige recompensas no exclusivas.
-
-### 20.3 Reclamo transaccional (RPC `claim_reward`)
-
-Patrón (descriptivo, no implementación final):
-
-1. Si ya existe `reward_redemptions` con ese `(user_id, idempotency_key)` → devolver **el mismo resultado, incluido el código**, descifrado desde `code_ciphertext` (doble clic, retry, respuesta perdida por la red).
-2. Verificar que `mission_completion_id` pertenece a `auth.uid()`, no fue usada (UNIQUE `mission_completion_id`) y cumple la regla de elegibilidad de §20.2 y la de personal municipal de §16.
-3. Verificar `per_user_limit` **antes** de tocar el stock (conteo con `SELECT ... FOR UPDATE` sobre la fila del perfil para serializar reclamos del mismo usuario, o índice único parcial si el límite es 1). Así la fila caliente de `rewards` se bloquea el menor tiempo posible.
-4. **Update atómico condicional:**
-   `UPDATE rewards SET remaining_stock = remaining_stock - 1 WHERE id = :id AND status = 'active' AND remaining_stock > 0 AND now() BETWEEN valid_from AND valid_until RETURNING ...`
-   Si no devuelve fila → agotado o vencido (se devuelve `rejected`, no excepción). El `UPDATE` bloquea la fila: dos usuarios por la última unidad → uno gana, el otro recibe "agotado". Sin `SELECT` previo + `UPDATE` separado.
-5. **Código:** 10 caracteres Crockford Base32 generados con `gen_random_bytes` (~50 bits; legible y dictable sin ambigüedad `0/O`, `1/I/L`). Se guarda:
-   - `code_hash = HMAC-SHA256(pepper, código)` para buscarlo al canjear. El pepper vive en Vault, así que un volcado de la tabla no permite fuerza bruta offline;
-   - `code_ciphertext`: el código cifrado con una clave en Vault, para volver a entregarlo (paso 1 y pantalla "Mis cupones").
-   Ya no depende de que el cliente conserve el código: lo guarda localmente solo para uso offline.
-6. Insertar `reward_redemptions(status='issued', expires_at = least(valid_until, now() + redeem_window))`, auditoría y job de notificación. Todo en una transacción.
-
-Restricciones: `CHECK (remaining_stock >= 0)`, UNIQUE `(user_id, idempotency_key)`, UNIQUE `(mission_completion_id)`, UNIQUE `(code_hash)`.
-
-### 20.4 Canje en el comercio (RPC `redeem_coupon`)
-
-El dependiente (miembro del negocio) escanea el QR del cupón o escribe el código → `UPDATE reward_redemptions SET status='redeemed', redeemed_at=now(), redeemed_by=auth.uid() WHERE code_hash = :h AND status='issued' AND expires_at > now() AND reward.business_id ∈ negocios del actor`. Condicional y atómico: un cupón no se canjea dos veces. El código se normaliza (mayúsculas, sin guiones, `O→0`, `I/L→1`) antes de calcular el HMAC. Los intentos fallidos cuentan en el rate limit del dependiente (10/hora), lo que junto a los ~50 bits del código hace inviable la fuerza bruta desde el mostrador.
-
-### 20.5 Expiración y devolución de stock
-
-Job horario de `pg_cron` (obligatorio, §13) marca `issued` vencidos como `expired`. Política por recompensa: si `restock_on_expiry`, devuelve la unidad (`remaining_stock + 1`) en la misma transacción. Nunca se decide en el frontend.
+Ver §19. Los comercios conservan **promociones informativas** (texto con vigencia, moderadas antes de publicarse, §23), sin stock, códigos ni canje.
 
 ## 21. Citizen Reports Architecture
 
@@ -939,7 +763,6 @@ pending → under_review → approved → in_progress → resolved → archived
 
 - Las transiciones válidas viven en la tabla `request_transitions (from_status, to_status, min_role)`. La RPC `change_request_status(id, to, note)` solo permite **un paso por llamada** según esa tabla, actualiza, inserta en `request_status_history`, audita y encola la notificación al ciudadano. Un trigger impide el `UPDATE` directo de `status`. **Ningún ciudadano puede mover su propio reporte**, y nadie puede saltar de `pending` a `resolved`.
 - Asignación: `assigned_to` debe tener rol `moderator`/`municipal_admin` en el municipio de la consulta.
-- Las misiones que premian reportar se cumplen al llegar a `approved`, nunca al enviar (§19.1).
 - `is_public`: la consulta solo aparece en el mapa público si un moderador la aprueba (y sin datos personales).
 - Tiempo de resolución = `resolved.created_at - pending.created_at` desde el historial.
 
@@ -967,10 +790,10 @@ pending → under_review → approved → in_progress → resolved → archived
 
 ## 23. Business Architecture
 
-- **Alta:** usuario solicita → formulario (nombre, categoría, contacto, WhatsApp, horario, fotos, ubicación por pin) → opcional "vincular con Google" (Autocomplete, se guarda solo `google_place_id`) → `status = pending` → `under_review` (el moderador verifica por llamada o visita) → `approved` (el solicitante recibe el rol `entrepreneur` y una fila en `business_members`) o `rejected` con motivo. Después: `suspended` (reversible) o `archived` (cierre). Solo `approved` aparece en el mapa, participa en misiones y ofrece recompensas.
-- **Negocio registrado vs Google Place:** solo los negocios **registrados y aprobados** aparecen en la capa "Negocios", participan en misiones y ofrecen recompensas. Un Google Place sin registro puede aparecer solo como resultado de búsqueda de dirección, nunca como negocio de SR Conecta.
-- **Panel del negocio:** editar perfil, fotos, horario, promociones (texto con vigencia), recompensas (stock y reglas), escáner de cupones, estadísticas propias (vistas, canjes).
-- **Suspensión:** moderador puede suspender; las recompensas activas pasan a `paused` y los cupones emitidos se respetan o revocan según política documentada.
+- **Alta:** usuario solicita → formulario (nombre, categoría, contacto, WhatsApp, horario, fotos, ubicación por pin) → opcional "vincular con Google" (Autocomplete, se guarda solo `google_place_id`) → `status = pending` → `under_review` (el moderador verifica por llamada o visita) → `approved` (el solicitante recibe el rol `entrepreneur` y una fila en `business_members`) o `rejected` con motivo. Después: `suspended` (reversible) o `archived` (cierre). Solo `approved` aparece en el mapa y en la búsqueda.
+- **Negocio registrado vs Google Place:** solo los negocios **registrados y aprobados** aparecen en la capa "Negocios" y pueden publicar promociones. Un Google Place sin registro puede aparecer solo como resultado de búsqueda de dirección, nunca como negocio de SR Conecta.
+- **Panel del negocio:** editar perfil, fotos, horario, promociones (texto con vigencia, moderadas antes de publicarse), estadísticas propias (vistas de la ficha, clics en «Cómo llegar» y en WhatsApp).
+- **Suspensión:** moderador puede suspender (el negocio sale del mapa y sus promociones se pausan), con motivo registrado en `moderation_actions`.
 
 ## 24. Admin Dashboard Architecture
 
@@ -983,8 +806,7 @@ Ruta `/admin`, Server Components, filtros en URL (`?desde&hasta&municipio&catego
 | Reportes / Consultas | Bandeja con filtros, detalle, cambio de estado, asignación, historial |
 | Negocios | Solicitudes pendientes, verificados, suspendidos |
 | Turismo / Rutas | CRUD, carga de GPX/GeoJSON, previsualización |
-| Misiones / Recompensas | CRUD de misiones, aprobación de recompensas de comercios, inventario, canjes |
-| Validaciones | Cola unificada de moderación (fotos, reportes, check-ins `pending_review`) |
+| Validaciones | Cola unificada de moderación (fotos, reportes, consultas, negocios y promociones) |
 | Usuarios | Búsqueda, roles según la tabla de §16, suspensión |
 | Auditoría | Consulta de `audit_logs` con filtros |
 | PDF | Historial de `report_runs`, descarga (signed URL), regenerar |
@@ -1008,9 +830,9 @@ FCM solo se justificaría si en Fase 3 existe una app nativa; aun así se usarí
 
 **Diseño:**
 - `notifications` es la fuente de verdad (centro de notificaciones in-app, estado leído `read_at`). Push es un canal de entrega (`push_status`).
-- `notification_preferences`: por tema (estado de mis consultas, reportes cerca de mi municipio, nuevas misiones, recompensas por vencer) y municipios de interés.
+- `notification_preferences`: por tema (estado de mis consultas, reportes cerca de mi municipio, novedades de turismo y rutas) y municipios de interés.
 - `push_subscriptions`: una por dispositivo; si el envío responde 404/410, se elimina.
-- **Envío por cola (desde el MVP):** quien origina el evento (una RPC, un trigger o un job de `pg_cron`) inserta en la misma transacción la fila de `notifications` (`push_status = 'pending'` si el usuario tiene push activo) y un job `push` en `private.jobs`. El worker (§12) envía con `web-push`, marca `sent`/`failed` y reintenta con backoff. Esto cubre **todos** los orígenes (reportes verificados por trigger, cupones por vencer desde `pg_cron`, cambios de estado desde Server Actions), cosa que un envío inline "después del commit" no garantiza. La latencia es de ≤ 1 minuto con el disparo por minuto de `pg_cron`; si hace falta inmediatez, la RPC puede además llamar a `pg_net` para despertar al worker en el acto.
+- **Envío por cola (desde el MVP):** quien origina el evento (una RPC, un trigger o un job de `pg_cron`) inserta en la misma transacción la fila de `notifications` (`push_status = 'pending'` si el usuario tiene push activo) y un job `push` en `private.jobs`. El worker (§12) envía con `web-push`, marca `sent`/`failed` y reintenta con backoff. Esto cubre **todos** los orígenes (reportes verificados por trigger, avisos programados desde `pg_cron`, cambios de estado desde Server Actions), cosa que un envío inline "después del commit" no garantiza. La latencia es de ≤ 1 minuto con el disparo por minuto de `pg_cron`; si hace falta inmediatez, la RPC puede además llamar a `pg_net` para despertar al worker en el acto.
 - **Canales detrás de una interfaz** (`modules/notifications/channels/`): `in_app` (siempre), `push` (Web Push), `email` (SMTP propio, para eventos importantes y para usuarios iOS sin PWA instalada) y, en el futuro, `native`. Agregar un canal no toca a los productores.
 - **"Notificaciones sobre el mapa"** (requisito del reto): alertas por municipio de interés (no por ubicación en vivo), p. ej. "Derrumbe reportado en la carretera Sabaneta–Monción". Se implementan como un job `fanout_alert` que divide a los destinatarios en lotes de ~500 y encola un job `push` por lote, para no superar el tiempo máximo de una función serverless.
 
@@ -1022,7 +844,6 @@ FCM solo se justificaría si en Fase 3 existe una app nativa; aun así se usarí
 | Reportes de tránsito en el mapa | Polling cada 60 s mientras la pestaña está visible | Cambian poco; polling es simple y cacheable |
 | Estado de mi consulta | Notificación in-app + push | El usuario no está mirando la pantalla |
 | Bandeja del panel admin (nuevos reportes/consultas) | **Supabase Realtime** (Postgres Changes o Broadcast) con RLS | Único caso donde "en vivo" mejora el trabajo |
-| Canje de cupón (pantalla del usuario se actualiza al canjear) | Realtime opcional o polling corto | Detalle de UX, no crítico |
 | Alertas a ciudadanos | Push | Fuera de la app |
 
 Todo lo demás: sin realtime.
@@ -1053,11 +874,11 @@ Vercel Cron DIARIO 10:00 UTC (= 06:00 America/Santo_Domingo)  — compatible con
 - **Regeneración:** botón admin crea `version = max + 1` (no sobrescribe; historial completo). Auditoría registra quién regeneró.
 - **Plan Hobby de Vercel:** los cron solo pueden correr una vez al día y con precisión de una hora; alcanza porque el diseño es un chequeo diario que genera si falta. Todo lo que necesita más frecuencia vive en `pg_cron` (§13). Hobby es solo para uso no comercial → producción municipal en Vercel Pro. Respaldo: GitHub Actions `schedule` llamando al mismo endpoint.
 - **Límite de ejecución:** si el PDF crece (mapas estáticos, muchas páginas), mover la generación a un job con más tiempo; en MVP un PDF de 4–8 páginas con tablas y gráficos SVG es rápido.
-- Contenido: portada, resumen ejecutivo, KPIs por municipio, reportes de tránsito por tipo/gravedad, consultas y tiempos de resolución, turismo, economía y gamificación, anexos.
+- Contenido: portada, resumen ejecutivo, KPIs por municipio, reportes de tránsito por tipo/gravedad, consultas y tiempos de resolución, turismo, economía local (negocios y promociones), anexos.
 
 ## 28. API Architecture
 
-Convenciones: `/api/v1`, JSON, errores `{ error: { code, message, details } }`, validación Zod, paginación por cursor, `Idempotency-Key` en POST críticos, respuestas GeoJSON para capas de mapa. Los rechazos de negocio (sin stock, fuera de radio, límite alcanzado) responden `200` con `{status: 'rejected', reason}`; los códigos 4xx/5xx quedan para errores de protocolo, autenticación o servidor.
+Convenciones: `/api/v1`, JSON, errores `{ error: { code, message, details } }`, validación Zod, paginación por cursor, `Idempotency-Key` en POST críticos, respuestas GeoJSON para capas de mapa. Los rechazos de negocio (límite alcanzado, transición no permitida, fuera de la provincia) responden `200` con `{status: 'rejected', reason}`; los códigos 4xx/5xx quedan para errores de protocolo, autenticación o servidor.
 
 **Compatibilidad (§5.1):** en `/v1` solo se hacen cambios aditivos (campos nuevos opcionales, endpoints nuevos). Un cambio incompatible crea `/v2` en paralelo y `/v1` se mantiene hasta que la versión mínima de la PWA en uso lo permita (el service worker informa su versión en un header `X-App-Version`).
 
@@ -1076,11 +897,6 @@ Convenciones: `/api/v1`, JSON, errores `{ error: { code, message, details } }`, 
 | `POST /api/v1/requests` | Route Handler → RPC `create_citizen_request` | Idempotente |
 | `GET /api/v1/me/requests` | Route Handler → SQL con RLS | — |
 | `POST /api/v1/uploads/sign` | Route Handler → Storage | URL firmada de subida |
-| `GET /api/v1/missions` | Route Handler → SQL | Cercanas/activas |
-| `POST /api/v1/missions/:id/checkins` | Route Handler → RPC `mission_checkin` | Reemplaza a `/complete`: la completitud la decide la base |
-| `POST /api/v1/rewards/:id/claim` | Route Handler → RPC `claim_reward` | Idempotente |
-| `POST /api/v1/business/coupons/redeem` | Route Handler → RPC `redeem_coupon` | Solo miembros del negocio |
-| `GET /api/v1/me/rewards` | Route Handler → SQL con RLS | "Mis cupones", incluido el código descifrado de los `issued` |
 | `POST /api/v1/push/subscribe` / `DELETE` | Route Handler | — |
 | `GET /api/v1/cron/weekly-report` | Route Handler protegido por `CRON_SECRET` | Idempotente (§27) |
 | `POST /api/v1/internal/jobs/run` | Route Handler protegido por `JOBS_SECRET` (en Vault del lado de Postgres) | Worker de la cola; lo despierta `pg_net` |
@@ -1118,7 +934,7 @@ Convenciones: `/api/v1`, JSON, errores `{ error: { code, message, details } }`, 
 | JS inicial propio (gzip, sin Google) | < 200 KB | < 200 KB |
 | `GET /map/features` p95 en servidor | < 300 ms | — |
 
-Técnicas: import dinámico del mapa y de Recharts/PDF/escáner QR; Server Components para todo lo que no es interactivo; `next/image` con tamaños responsivos y fotos convertidas a WebP al subir; payload de features mínimo; geometrías simplificadas por zoom; índices GIST/GIN; región de Vercel Functions y de Supabase **cercanas entre sí** (p. ej. ambas en us-east); CDN para catálogos públicos; medir con Vercel Speed Insights o Lighthouse CI.
+Técnicas: import dinámico del mapa y de Recharts/PDF; Server Components para todo lo que no es interactivo; `next/image` con tamaños responsivos y fotos convertidas a WebP al subir; payload de features mínimo; geometrías simplificadas por zoom; índices GIST/GIN; región de Vercel Functions y de Supabase **cercanas entre sí** (p. ej. ambas en us-east); CDN para catálogos públicos; medir con Vercel Speed Insights o Lighthouse CI.
 
 ## 31. Cost Architecture
 
@@ -1145,9 +961,9 @@ Marco: Ley 172-13 de protección de datos personales de República Dominicana (v
 | Principio | Aplicación |
 |---|---|
 | Consentimiento | Permiso de ubicación solicitado **en contexto** (al tocar "Estoy aquí" o "Reportar aquí"), con explicación. `profiles.location_consent` para funciones que lo requieran. Términos y política de privacidad aceptados al registrarse |
-| Minimización | Solo se guarda ubicación puntual ligada a una acción (reporte, check-in). Nunca trayectorias. Sin teléfono obligatorio |
-| Retención | Ejecutada cada noche por `pg_cron` mediante una función de sistema en `private` (la única autorizada a modificar tablas de rastro, §14). Check-ins: `claimed_geom` se pone en `NULL` a los 90 días (se conservan estado, método y municipio). Reportes de tránsito: coordenadas se mantienen (dato público), `reporter_id` se pone en `NULL` a los 12 meses. Logs de auditoría: 2 años (definir con el municipio); con la PK `(created_at, id)` la retención será un `DROP PARTITION` cuando se particione (Fase 3) |
-| Eliminación | "Eliminar mi cuenta" = borrar el usuario de `auth.users`. Por la política de claves foráneas de §14: se borran en cascada perfil, suscripciones, preferencias, notificaciones, membresías y roles; quedan anonimizados (`SET NULL`) reportes, consultas, check-ins, completions, cupones, historial y auditoría, así las estadísticas no se rompen. Antes, un job borra los adjuntos privados del usuario en Storage. Si el usuario es el único `owner` de un negocio, la baja se bloquea hasta transferirlo |
+| Minimización | Solo se guarda ubicación puntual ligada a una acción (reporte o consulta). Nunca trayectorias. Sin teléfono obligatorio |
+| Retención | Ejecutada cada noche por `pg_cron` mediante una función de sistema en `private` (la única autorizada a modificar tablas de rastro, §14). Reportes de tránsito: coordenadas se mantienen (dato público), `reporter_id` se pone en `NULL` a los 12 meses. Logs de auditoría: 2 años (definir con el municipio); con la PK `(created_at, id)` la retención será un `DROP PARTITION` cuando se particione (Fase 3) |
+| Eliminación | "Eliminar mi cuenta" = borrar el usuario de `auth.users`. Por la política de claves foráneas de §14: se borran en cascada perfil, suscripciones, preferencias, notificaciones, membresías y roles; quedan anonimizados (`SET NULL`) reportes, consultas, historial y auditoría, así las estadísticas no se rompen. Antes, un job borra los adjuntos privados del usuario en Storage. Si el usuario es el único `owner` de un negocio, la baja se bloquea hasta transferirlo |
 | Acceso | "Descargar mis datos" (JSON) en Fase 2 |
 | Anonimización | Mapa público nunca muestra autor de reportes/consultas; KPIs agregados; EXIF eliminado de fotos |
 | Menores | Registro solo mayores de edad o con consentimiento; no se piden datos de edad más allá de una casilla |
@@ -1157,7 +973,7 @@ Marco: Ley 172-13 de protección de datos personales de República Dominicana (v
 `audit_logs(created_at, id, province_id, actor_id, actor_role, action, entity_type, entity_id, before jsonb, after jsonb, ip_observed inet, ip_declared inet, user_agent)`, con PK `(created_at, id)` lista para particionar (§14).
 
 - Se escribe **desde las RPC y triggers**, no desde el cliente. Tabla inmutable: sin políticas de `UPDATE`/`DELETE` para nadie; la retención automática la hace una función de sistema (§32).
-- Acciones auditadas: cambios de rol, moderación, cambios de estado de consultas/reportes, verificación/suspensión de negocios, CRUD de misiones y recompensas, reclamos y canjes de cupones, regeneración de PDF, descargas de PDF, eliminación de cuentas.
+- Acciones auditadas: cambios de rol, moderación, cambios de estado de consultas/reportes, verificación/suspensión de negocios, regeneración de PDF, descargas de PDF, eliminación de cuentas.
 - `before/after` solo con campos relevantes (no volcar filas completas con datos personales).
 - IP, en dos columnas y **ninguna probatoria**:
   - `ip_observed`: la IP con la que Supabase vio la llamada (leída de `request.headers` en PostgREST). Si la llamada vino de Next.js será una IP de Vercel; si fue directa, la del cliente.
@@ -1185,8 +1001,8 @@ No se introduce stack propio de métricas (Grafana/Prometheus) antes de Fase 3.
 | Nivel | Herramienta | Qué cubre |
 |---|---|---|
 | Unit | Vitest | Esquemas Zod, cálculo de periodos/zona horaria, generación de datos del PDF, utilidades de bbox/rejilla, transiciones de estado |
-| Base de datos | Vitest contra Supabase local (CLI + Docker), o pgTAP | **RLS por rol** (visitor no ve consultas privadas, entrepreneur no edita negocio ajeno, citizen no escribe `user_roles`); **ataque directo a la API**: con un JWT de ciudadano, llamar por PostgREST cada RPC y tabla crítica saltando Next.js con entradas inválidas (coordenadas fuera de rango, `accuracy` negativa, textos enormes, stock manipulado) → todo rechazado; RPC de misiones; **concurrencia de recompensas** (N claims paralelos sobre stock 1 → exactamente 1 éxito) y **de cupo de misión** (`max_completions`); idempotencia (el mismo `idempotency_key` devuelve el mismo código de cupón); **rate limit con rechazos** (N intentos fuera de radio agotan el límite); unicidad con `NULL` (`weekly_kpi_snapshots`, `user_roles`); eliminación de cuenta sin romper claves foráneas; expiración y retención; helpers de RLS con `GRANT` correctos (las políticas no fallan por permisos) |
-| E2E | Playwright | Login/registro, crear reporte con foto, flujo de consulta hasta resuelta, misión con **geolocalización simulada** (`context.setGeolocation`) dentro/fuera del radio, QR (token de prueba inyectado), reclamo y canje de cupón, filtros del dashboard, descarga de PDF, modo offline (cola de reportes) |
+| Base de datos | Vitest contra Supabase local (CLI + Docker), o pgTAP | **RLS por rol** (visitor no ve consultas privadas, entrepreneur no edita negocio ajeno, citizen no escribe `user_roles`); **ataque directo a la API**: con un JWT de ciudadano, llamar por PostgREST cada RPC y tabla crítica saltando Next.js con entradas inválidas (coordenadas fuera de rango, textos enormes, estados inventados, `municipality_id` ajeno) → todo rechazado; **transiciones de estado** (nadie salta de `pending` a `resolved`; un ciudadano no mueve su propio reporte; dos moderadores que cambian el mismo estado a la vez → solo una transición válida); idempotencia (el mismo `idempotency_key` devuelve el mismo reporte); **rate limit con rechazos** (N intentos rechazados agotan el límite); unicidad con `NULL` (`weekly_kpi_snapshots`, `user_roles`); eliminación de cuenta sin romper claves foráneas; expiración y retención; helpers de RLS con `GRANT` correctos (las políticas no fallan por permisos) |
+| E2E | Playwright | Login/registro, crear reporte con foto, flujo de consulta hasta resuelta, reporte con **geolocalización simulada** (`context.setGeolocation`) dentro y fuera de la provincia, alta y aprobación de negocio, filtros del dashboard, descarga de PDF, modo offline (cola de reportes) |
 | PDF | Vitest | Snapshot de datos de entrada + verificación de que el PDF se genera y tiene N páginas |
 | Visual/manual | Checklist en dispositivos reales | Android gama media, iPhone con PWA instalada, tablet |
 
@@ -1235,7 +1051,7 @@ los previews siguen automáticos.
 
 En Hobby, los despliegues provocados por commits de otros colaboradores en repos privados pueden quedar bloqueados (verificar la política vigente). Por eso el despliegue de producción lo hace siempre la Action con el token de la cuenta de la organización.
 
-- **Variables:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (o publishable key), `SUPABASE_SERVICE_ROLE_KEY` (solo server), `NEXT_PUBLIC_GOOGLE_MAPS_KEY`, `NEXT_PUBLIC_GOOGLE_MAP_ID`, `GOOGLE_MAPS_SERVER_KEY` (opcional), `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `CRON_SECRET`, `JOBS_SECRET`, `SMTP_*` o `RESEND_API_KEY`, `SENTRY_DSN`, `APP_TIMEZONE=America/Santo_Domingo`, `DEFAULT_PROVINCE_CODE`. Validadas al arrancar con Zod (`config/env.ts`). Los secretos que usa Postgres (`JOBS_SECRET`, pepper de cupones, clave de cifrado de códigos) se cargan además en Vault por un script de despliegue.
+- **Variables:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (o publishable key), `SUPABASE_SERVICE_ROLE_KEY` (solo server), `NEXT_PUBLIC_GOOGLE_MAPS_KEY`, `NEXT_PUBLIC_GOOGLE_MAP_ID`, `GOOGLE_MAPS_SERVER_KEY` (opcional), `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `CRON_SECRET`, `JOBS_SECRET`, `SMTP_*` o `RESEND_API_KEY`, `SENTRY_DSN`, `APP_TIMEZONE=America/Santo_Domingo`, `DEFAULT_PROVINCE_CODE`. Validadas al arrancar con Zod (`config/env.ts`). Los secretos que usa Postgres (`JOBS_SECRET`) se cargan además en Vault por un script de despliegue.
 - **Auth en previews:** agregar `https://*-<equipo>.vercel.app/**` a las Redirect URLs de Supabase Auth del proyecto `staging`, para que los magic links y el login OAuth funcionen en cada preview.
 - **Migraciones:** solo hacia adelante y **siempre compatibles con el código anterior**, porque durante el release conviven esquema nuevo y código viejo unos minutos: patrón expandir → migrar datos → contraer (agregar columna → desplegar código que la usa → eliminar la vieja en un release posterior). Cada PR con migración se prueba desde cero en CI. En producción la Action aplica la migración **antes** de desplegar el código (§36).
 - **Backups:** con el plan Free **no hay backups**. Desde el primer dato real: `pg_dump` diario por GitHub Action a almacenamiento de la organización. Con Pro se suman los backups diarios de Supabase. La conexión de la Action usa el **pooler de Supabase (Supavisor, modo sesión)**, porque la conexión directa es solo IPv6 y los runners de GitHub no tienen IPv6 (verificar). Probar restauración una vez por trimestre.
@@ -1250,7 +1066,6 @@ sr-conecta/
 │  ├─ app/
 │  │  ├─ (public)/            # inicio, turismo, negocios, fichas (SSR)
 │  │  ├─ (app)/mapa/          # mapa principal
-│  │  ├─ (app)/misiones/      # misiones y cupones del usuario
 │  │  ├─ (app)/cuenta/        # perfil, notificaciones, privacidad
 │  │  ├─ (business)/negocio/  # panel del comercio
 │  │  ├─ (admin)/admin/       # panel municipal
@@ -1264,8 +1079,6 @@ sr-conecta/
 │  │  ├─ routes/              # eco-rutas (no confundir con rutas HTTP)
 │  │  ├─ traffic/
 │  │  ├─ citizen-reports/     # consultas ciudadanas
-│  │  ├─ missions/
-│  │  ├─ rewards/
 │  │  ├─ notifications/       # channels/: in_app, push, email (futuro: native)
 │  │  ├─ jobs/                # worker de la cola, registro de handlers por `kind`
 │  │  ├─ media/               # procesamiento de imágenes (EXIF, WebP), rutas de Storage
@@ -1302,8 +1115,6 @@ sr-conecta/
 | routes | Eco-rutas: importación, geometría, cálculo de distancia |
 | traffic | Reportes de tránsito y su ciclo de vida |
 | citizen-reports | Consultas ciudadanas, estados, historial |
-| missions | Definición, check-ins, verificación, completitud |
-| rewards | Inventario, reclamo, canje, expiración |
 | notifications | In-app, preferencias, suscripciones y canales de entrega (push, email) |
 | jobs | Worker de `private.jobs`: toma de lotes, reintentos, registro de handlers por `kind`. Los módulos registran sus handlers; `jobs` no conoce reglas de negocio |
 | media | Validación y procesamiento de imágenes, convención de rutas de Storage (§5.1) |
@@ -1332,11 +1143,6 @@ Resumen por tabla (el detalle de columnas está en el ERD §15; `DATABASE.md` te
 | traffic_reports | Incidencias viales | GIST, (status, expires_at), municipality_id, UNIQUE (reporter_id, idempotency_key) | Público activos sin autor; autor ve los suyos; sin INSERT/UPDATE directo (solo RPC) |
 | citizen_requests | Consultas | GIST, (status, municipality_id), requester_id, UNIQUE (requester_id, idempotency_key) | Autor, asignados, moderadores del municipio; público si `is_public`; sin INSERT/UPDATE directo |
 | request_status_history | Historial | (request_id, created_at) | Igual que la consulta |
-| missions / mission_steps | Gamificación | GIST(steps.geom), (status, ends_at); CHECK de coherencia `kind`/`geom` | Público activas (sin exponer `qr_secret_id`); admins editan |
-| mission_step_checkins | Evidencias (aceptadas y rechazadas) | UNIQUE parcial (user_id, mission_step_id) WHERE status='accepted'; UNIQUE (user_id, idempotency_key) | Propio + moderadores; escritura solo por RPC |
-| mission_completions | Logros | UNIQUE (mission_id, user_id) | Propio + admins |
-| rewards | Oferta e inventario | (business_id, status) | Público activas; comercio edita la suya (stock solo vía RPC) |
-| reward_redemptions | Cupones | UNIQUE (user_id, idempotency_key), UNIQUE mission_completion_id, UNIQUE code_hash | Propio (el código se lee por `/me/rewards`, nunca la columna cifrada); comercio ve los de su negocio sin el código |
 | notifications | Centro de notificaciones | (user_id, read_at, created_at) | Propio |
 | notification_preferences | Preferencias | PK | Propio |
 | push_subscriptions | Dispositivos | UNIQUE endpoint | Propio |
@@ -1354,68 +1160,7 @@ KPIs de "visualizaciones": contador diario agregado (`daily_view_counts` en Fase
 
 ## 40. Sequence Diagrams
 
-### 40.1 Check-in de misión
-
-```mermaid
-sequenceDiagram
-    actor U as Usuario
-    participant C as PWA
-    participant N as Next.js /api/v1
-    participant DB as PostgreSQL (RPC)
-    U->>C: Toca "Estoy aquí"
-    C->>C: getCurrentPosition (alta precisión, maximumAge 0)
-    opt Misión con QR
-        U->>C: Escanea QR del lugar
-    end
-    C->>N: POST /missions/:id/checkins {step, lat, lng, accuracy, qr?, idempotency_key}
-    N->>N: getUser() + Zod
-    N->>DB: rpc mission_checkin(...)
-    DB->>DB: idempotencia, rate limit (cuenta aunque se rechace), rangos
-    DB->>DB: vigencia, ST_DWithin, QR HMAC (secreto desde Vault), velocidad
-    DB->>DB: INSERT checkin (aceptado o rechazado)
-    opt Todos los pasos aceptados
-        DB->>DB: UPDATE missions completions_count (cupo atómico)
-        DB->>DB: INSERT completion + notification + job push
-    end
-    DB-->>N: {status, reason?, step_status, progress, completed} (commit)
-    N-->>C: 200 (también en rechazos de negocio)
-    C-->>U: Paso completado / misión completada
-```
-
-### 40.2 Reclamo y canje de recompensa
-
-```mermaid
-sequenceDiagram
-    actor U as Usuario
-    actor S as Comercio
-    participant N as Next.js
-    participant DB as PostgreSQL
-    U->>N: POST /rewards/:id/claim {completion_id, idempotency_key}
-    N->>DB: rpc claim_reward
-    alt Idempotency key ya usada
-        DB->>DB: descifrar code_ciphertext
-        DB-->>N: mismo cupón y mismo código
-    else Nueva
-        DB->>DB: elegibilidad + per_user_limit
-        DB->>DB: UPDATE rewards SET remaining_stock-1 WHERE >0 AND vigente
-        alt Sin stock o vencida
-            DB-->>N: {status: rejected, reason: sold_out}
-        else OK
-            DB->>DB: INSERT redemption(issued, code_hash HMAC, code_ciphertext) + audit + job
-            DB-->>N: código
-        end
-    end
-    N-->>U: Cupón + QR (copia local; recuperable en "Mis cupones")
-    U->>S: Muestra QR en el local
-    S->>N: POST /business/coupons/redeem {code}
-    N->>DB: rpc redeem_coupon
-    DB->>DB: rate limit del dependiente; normalizar código; HMAC(pepper)
-    DB->>DB: UPDATE ... WHERE code_hash AND status='issued' AND no vencido AND negocio del actor
-    DB-->>N: canjeado / inválido
-    N-->>S: Resultado
-```
-
-### 40.3 Reporte de tránsito offline
+### 40.1 Reporte de tránsito offline
 
 ```mermaid
 sequenceDiagram
@@ -1439,7 +1184,7 @@ sequenceDiagram
     Note over DB,N: El worker procesa la foto (EXIF, WebP) y envía los avisos
 ```
 
-### 40.4 PDF semanal
+### 40.2 PDF semanal
 
 ```mermaid
 sequenceDiagram
@@ -1464,7 +1209,7 @@ sequenceDiagram
 
 ## 41. ADRs
 
-> Cada ADR se guardará como archivo independiente en `docs/decisions/ADR-XXX-*.md`. Estado de todos: **Aceptado** (ADR-001 a 015: 23/09/2026; revisados y ADR-016 a 019 añadidos: 24/09/2026).
+> Cada ADR se guardará como archivo independiente en `docs/decisions/ADR-XXX-*.md`. Estado: **Aceptado** salvo ADR-010 y ADR-011, **Retirados** el 24/09/2026 (ADR-001 a 015: 23/09/2026; revisados y ADR-016 a 020 añadidos: 24/09/2026).
 
 ### ADR-001 Frontend: React
 - **Contexto/Problema:** interfaz rica de mapa, formularios, paneles; equipo pequeño.
@@ -1509,7 +1254,7 @@ sequenceDiagram
 
 ### ADR-006 PostgreSQL como única base de datos
 - **Decisión:** una sola base relacional; nada de Firestore/Mongo/Redis en MVP.
-- **Pros:** transacciones ACID para recompensas, joins, reporting, una sola copia de la verdad.
+- **Pros:** transacciones ACID para estados y auditoría, joins, reporting, una sola copia de la verdad.
 - **Contras:** escalar escrituras masivas requiere trabajo (irrelevante a esta escala).
 - **Riesgos:** consultas lentas → índices, advisors, `EXPLAIN` en PR de consultas nuevas.
 
@@ -1535,19 +1280,14 @@ sequenceDiagram
 - **Contras:** sin GPS en segundo plano, push en iOS solo instalada, instalación manual en iOS.
 - **Riesgos:** usuarios iOS sin push → notificaciones in-app + email para eventos importantes.
 
-### ADR-010 Misiones
-- **Decisión:** misiones de n pasos (`location` o `virtual`) con verificación escalonada (GPS / GPS+QR / GPS+QR dinámico o evidencia moderada), completitud y cupo (`completions_count`) decididos atómicamente en RPC; secretos de QR en Vault.
-- **Alternativas:** solo GPS; solo QR; tracking continuo.
-- **Pros:** balance fraude/fricción proporcional al valor de la recompensa.
-- **Contras:** logística de QR en campo.
-- **Riesgos:** spoofing GPS → no usar solo GPS para recompensas de valor.
+### ADR-010 Misiones — **Retirado** (24/09/2026)
+- **Decisión:** las misiones quedan fuera del alcance de SR Conecta. Se retira el diseño aceptado el 23/09/2026 (misiones de n pasos con verificación GPS/QR).
+- **Motivo:** decisión del proyecto de concentrar el alcance.
+- **Consecuencias:** sin tablas, endpoints ni pantallas de misiones; menos superficie de fraude y de mantenimiento. Si se retoma, será un módulo aditivo (§5.1, §19).
 
-### ADR-011 Recompensas
-- **Decisión:** separar reclamo (consume stock) y canje (en comercio); ambos con `UPDATE` condicional atómico, idempotency keys y restricciones UNIQUE. Código de 10 caracteres Crockford Base32 (~50 bits, legible), buscado por `HMAC(pepper)` y guardado además cifrado para poder volver a entregarlo. Recompensas por nivel, con `mission_id` opcional (exclusividad).
-- **Alternativas:** stock en JS; colas; cupones estáticos compartidos; solo hash (descartado: rompe la idempotencia si se pierde la respuesta); UUID como código (descartado: no se puede dictar).
-- **Pros:** sin sobreventa ni doble canje, auditable, recuperable por el usuario, dictable en el mostrador.
-- **Contras:** los comercios deben usar el escáner o el panel; gestión de claves en Vault.
-- **Riesgos:** fuerza bruta de códigos → pepper fuera de la tabla + rate limit de intentos fallidos por dependiente.
+### ADR-011 Recompensas — **Retirado** (24/09/2026)
+- **Decisión:** el sistema de recompensas y cupones queda fuera del alcance. Los comercios mantienen promociones informativas (texto con vigencia, moderadas), sin stock, códigos ni canje.
+- **Consecuencias:** desaparecen `rewards`, `reward_redemptions`, el pepper y la clave de cifrado de cupones en Vault, y el escáner de cupones del panel del comercio.
 
 ### ADR-012 Realtime limitado
 - **Decisión:** Realtime solo para la bandeja del panel admin (y opcionalmente pantalla de cupón); polling para tránsito; push para alertas.
@@ -1627,9 +1367,7 @@ sequenceDiagram
 | Cobertura de tráfico/Places pobre en zonas rurales de SR | Alta | Medio | Reportes ciudadanos propios como fuente principal | Traffic Layer desactivado |
 | Clave de Google robada | Media | Medio | Restricción por referrer y API, cuotas | Rotación de clave |
 | Abuso/spam de reportes | Alta | Medio | Rate limit, captcha, moderación, reputación | Requerir aprobación previa para todos |
-| Fraude en misiones (GPS falso) | Alta | Medio | QR, evidencia, velocidad imposible, límites | Solo recompensas de bajo valor con GPS |
-| Fraude en recompensas (doble canje, sobreventa) | Media | Alto | Transacciones atómicas, UNIQUE, idempotencia, auditoría | Revocación de cupones y auditoría |
-| GPS impreciso en montaña/bajo techo | Alta | Medio | Radio mínimo 50 m, tolerancia por accuracy, QR | Validación manual |
+| GPS impreciso en montaña/bajo techo | Alta | Medio | Pin ajustable por el usuario y precisión mostrada al reportar | Validación del moderador |
 | Datos falsos de negocios | Media | Medio | Verificación por moderador antes de publicar | Suspensión y auditoría |
 | Saturación del mapa | Media | Medio | Clustering, zoom, límites por request | Vector tiles (Fase 2) |
 | Crecimiento de la base | Baja | Medio | Retención, compresión de imágenes | Plan superior, particiones |
@@ -1659,20 +1397,19 @@ Objetivo: cubrir las **6 funcionalidades obligatorias** del reto con calidad dem
 
 | # | Alcance | Obligatoria (bases) | ¿Se puede recortar? |
 |---|---|---|---|
-| 1 | Mapa con capas: municipios, turismo, rutas, negocios, reportes de tránsito, misiones; clustering; filtros; búsqueda propia | ☐ | No (es el producto) |
+| 1 | Mapa con capas: municipios, turismo, rutas, negocios, reportes de tránsito y consultas públicas; clustering; filtros; búsqueda propia | ☐ | No (es el producto) |
 | 2 | Negocios: alta con verificación, ficha, panel básico | ☐ | Solo si no es obligatoria |
 | 3 | Rutas de ecoturismo: importación GeoJSON/GPX, ficha, "cómo llegar" | ☐ | Solo si no es obligatoria |
 | 4 | Reportes de tránsito: creación con foto, moderación, expiración, mapa | ☐ | Solo si no es obligatoria |
 | 5 | Consultas ciudadanas: ciclo de estados completo con historial y notificación | ☐ | Solo si no es obligatoria |
 | 6 | PDF semanal automático + regeneración manual | ☐ | No (marcado [OBLIGATORIA] en §3) |
 | 7 | Panel admin: resumen KPIs, bandejas, moderación, PDF | ☐ | No (lo necesitan 4, 5 y 6) |
-| 8 | Misiones: 1..n pasos con GPS y QR; recompensas con reclamo/canje transaccional | ☐ | Solo si no es obligatoria |
-| 9a | Notificaciones **in-app** (centro de notificaciones) | ☐ | **No** (requisito explícito de §0) |
-| 9b | Web Push + email por la cola | ☐ | Push sí puede degradarse; el email de OTP no |
-| 10 | PWA instalable, offline shell y cola de reportes | ☐ | La cola offline sí; instalable no |
-| 11 | Roles: visitor, citizen, entrepreneur, moderator, municipal_admin (municipio o provincia) | — | No (seguridad) |
-| 12 | Repositorio con documentación mínima, ADRs, CI | — | No (transferencia) |
-| 13 | Cimientos de §5.1 (`province_id`, cola de jobs, estados `text`, PK particionables) | — | **No**: su costo sube cada semana que se postergan |
+| 8a | Notificaciones **in-app** (centro de notificaciones) | ☐ | **No** (requisito explícito de §0) |
+| 8b | Web Push + email por la cola | ☐ | Push sí puede degradarse; el email de OTP no |
+| 9 | PWA instalable, offline shell y cola de reportes | ☐ | La cola offline sí; instalable no |
+| 10 | Roles: visitor, citizen, entrepreneur, moderator, municipal_admin (municipio o provincia) | — | No (seguridad) |
+| 11 | Repositorio con documentación mínima, ADRs, CI | — | No (transferencia) |
+| 12 | Cimientos de §5.1 (`province_id`, cola de jobs, estados `text`, PK particionables) | — | **No**: su costo sube cada semana que se postergan |
 
 **Fuera (explícitamente):** Routes API en app, vector tiles, mapas offline, inglés, exportación de datos del usuario, 2FA obligatorio, verificación por N confirmaciones, analítica avanzada, app nativa.
 
@@ -1680,7 +1417,7 @@ Objetivo: cubrir las **6 funcionalidades obligatorias** del reto con calidad dem
 
 - **Usuarios:** miles a decenas de miles registrados; cientos a pocos miles activos diarios; picos en eventos/temporada turística.
 - **Datos:** miles de negocios y reportes/año; fotos en GB.
-- **Arquitectura:** misma, sin migraciones estructurales (los cimientos de §5.1 ya existen). Se agrega: Supabase Pro + Branching, Vercel Team Pro, backups de Supabase además del `pg_dump`, 2FA admin, Vercel Firewall, vistas materializadas para KPIs lentos, confirmaciones comunitarias de reportes, `daily_view_counts`, inglés para turistas (se rellenan las `translations` ya existentes), exportación de datos del usuario, QR dinámico para comercios, vector tiles si negocios > ~20k.
+- **Arquitectura:** misma, sin migraciones estructurales (los cimientos de §5.1 ya existen). Se agrega: Supabase Pro + Branching, Vercel Team Pro, backups de Supabase además del `pg_dump`, 2FA admin, Vercel Firewall, vistas materializadas para KPIs lentos, confirmaciones comunitarias de reportes, `daily_view_counts`, inglés para turistas (se rellenan las `translations` ya existentes), exportación de datos del usuario, vector tiles si negocios > ~20k.
 - **Costos:** base mensual en decenas de USD + Google según uso.
 - **Cambios organizativos:** proceso de moderación con responsables por municipio, SLA de consultas, acuerdo de datos con el municipio.
 
@@ -1747,10 +1484,9 @@ Orden de construcción sugerido para el reto:
 - **(2)** Mapa con capas (endpoint público y autenticado) y búsqueda.
 - **(3)** Reportes y consultas con panel.
 - **(4)** Negocios y turismo.
-- **(5)** Misiones y recompensas.
-- **(6)** PDF y KPIs.
-- **(7)** PWA y push.
-- **(8)** Pulido de la demo y documentación.
+- **(5)** PDF y KPIs.
+- **(6)** PWA y push.
+- **(7)** Pulido de la demo y documentación.
 
 **Regla de recorte:** lo que se corte por tiempo sale solo de ítems **no marcados como obligatorios** en §43 y nunca de (0), de la seguridad, de las notificaciones in-app ni del PDF semanal. Push y la cola offline se pueden degradar; los cimientos no, porque postergarlos es exactamente el "cambio brusco" que este documento busca evitar.
 
@@ -1766,14 +1502,12 @@ Orden de construcción sugerido para el reto:
 | Geodatos | PostGIS (4326) | Consultas espaciales indexadas y gratis | Geometrías inválidas | Validación en importación | Turf en JS |
 | Arquitectura | Monolito modular | Velocidad y simplicidad | Acoplamiento | Reglas de lint de módulos | Microservicios |
 | Autorización | RLS + RPC autosuficientes + roles en tabla con alcance territorial | Seguridad junto a los datos; la API directa no puede saltarla | Políticas mal escritas; grants de helpers | Tests de RLS y de ataque directo en CI | Autorización solo en API (inviable con PostgREST expuesto) |
-| Recompensas | UPDATE condicional atómico + UNIQUE + idempotencia + código HMAC/cifrado | Evita sobreventa y doble canje; cupón recuperable | Bug en RPC | Tests de concurrencia e idempotencia | Colas |
 | Asincronía | Cola `private.jobs` + `pg_cron` + `pg_net` | Atomicidad evento–efecto, sin proveedor extra | Cola detenida | `/health`, alertas, panel | pgmq / Inngest |
 | Evolución | Cimientos de §5.1 | Fases 2–3 aditivas | Sobre-diseño | Solo medidas de costo casi nulo | Migrar después (caro) |
 | Despliegue | Action: migrar → desplegar | Nunca código sobre esquema viejo | Fallo intermedio | Migraciones compatibles hacia atrás | Auto-deploy de Vercel |
-| Verificación de misiones | GPS / GPS+QR / evidencia por nivel | Fraude proporcional al valor | Spoofing | QR y límites | Solo QR |
 | Rutas ecoturísticas | LineString propios en PostGIS | Senderos no existen en Google | Datos incompletos | Carga GPX por admin | Routes API (no sirve para senderos) |
 | Navegación | Deep links Google Maps | Costo cero | Sale de la app | UX clara | Routes API |
-| Tráfico | Reportes ciudadanos + Traffic Layer opcional | Cobertura rural incierta de Google | Pocos reportes | Misiones que premian reportes válidos | Solo Traffic Layer |
+| Tráfico | Reportes ciudadanos + Traffic Layer opcional | Cobertura rural incierta de Google | Pocos reportes | Confirmaciones comunitarias (Fase 2) | Solo Traffic Layer |
 | Búsqueda | FTS español + trigram | Datos propios primero, gratis | Relevancia | Pesos y pruebas | Algolia/Meilisearch |
 | Notificaciones | In-app + Web Push VAPID | Sin segundo proveedor | iOS requiere instalación | In-app + email | FCM |
 | Realtime | Solo panel admin | Evitar complejidad | Retraso de 60 s en mapa | Polling | Realtime total |
@@ -1789,13 +1523,9 @@ Orden de construcción sugerido para el reto:
 | Usar Google Places como base de negocios | Términos prohíben almacenar su contenido; no controlas los datos | Tabla `businesses` propia; guardar solo `google_place_id` |
 | Llamar Places/Geocoding en cada movimiento del mapa | Facturación explosiva | Consultar PostGIS por viewport; Google solo por intención |
 | Cargar todos los puntos de la provincia que crecen | Payload y render lentos | Viewport + zoom + clustering (salvo capas pequeñas estáticas) |
-| Decidir la completitud de misión en el frontend | Manipulable | RPC transaccional en Postgres |
-| `SELECT stock` y luego `UPDATE` en JS | Race conditions, sobreventa | `UPDATE ... WHERE remaining_stock > 0 RETURNING` |
 | Exponer `service_role` o usarla para requests de usuario | Salta RLS | Cliente con JWT del usuario; `service_role` solo en el worker y el cron `server-only` |
 | Confiar en que Next.js valida | La API de Supabase se puede llamar directamente | Validación autoritativa dentro de cada RPC (ADR-018) |
 | `RAISE EXCEPTION` en rechazos de negocio | El rollback borra el contador de rate limit y la evidencia | Devolver `{status: 'rejected'}` y hacer commit |
-| Guardar solo el hash de un código que hay que volver a entregar | Rompe la idempotencia y pierde cupones | HMAC para buscar + copia cifrada para volver a entregar |
-| Verificar un HMAC contra el hash del secreto | Matemáticamente imposible | Secreto en Vault |
 | `enum` de Postgres para estados que evolucionan | No se pueden quitar ni renombrar valores | `text` + `CHECK` o tabla catálogo |
 | `UNIQUE` con columnas `NULL` significativas | Los `NULL` no chocan: duplicados silenciosos | `UNIQUE NULLS NOT DISTINCT` |
 | Revocar permisos a los helpers de RLS | Las políticas fallan con "permission denied" | Esquema no expuesto + `GRANT EXECUTE` al rol |
@@ -1806,7 +1536,6 @@ Orden de construcción sugerido para el reto:
 | Posponer `province_id` "hasta que haya otra provincia" | Backfill y reescritura de todo el RLS | `province_id` desde el MVP (§5.1) |
 | Confiar en `proxy.ts` como autorización | Se puede omitir en ciertos caminos | Verificar sesión y rol en cada handler/acción + RLS |
 | Tracking GPS continuo | Invasivo, no viable en PWA, drena batería | Ubicación puntual por acción |
-| Aceptar check-ins offline | Fraude con hora/ubicación manipuladas | Check-in solo online con hora del servidor |
 | Firebase + Supabase | Dos fuentes de verdad | Solo Supabase; Web Push para notificaciones |
 | Microservicios/Kubernetes en MVP | Costo operativo sin beneficio | Monolito modular |
 | Redux por costumbre | Complejidad sin necesidad | Estado local, Zustand para el mapa, TanStack Query |
@@ -1828,8 +1557,6 @@ Orden de construcción sugerido para el reto:
 | Turismo y rutas | Lugares, rutas GeoJSON/GPX | Inglés, descarga GPX, elevación | Paquetes regionales |
 | Tránsito | Reportes + moderación + expiración | Confirmaciones comunitarias | Integración con datos oficiales (INTRANT/COE) si existen |
 | Consultas | Ciclo completo + historial | SLA, asignación automática por categoría | Integración con sistemas municipales |
-| Misiones | GPS + QR | QR dinámico, evidencia moderada | Temporadas, eventos regionales |
-| Recompensas | Reclamo/canje transaccional | Reglas comerciales avanzadas | Red de comercios regional |
 | Notificaciones | In-app + Web Push + email por cola | Preferencias avanzadas, digest | Canal nativo si hay app (misma interfaz) |
 | Cola de trabajos | `private.jobs` + `pg_cron` + `pg_net` | Más tipos de job | `pgmq`/Inngest (mismo contrato) |
 | Territorio | 1 provincia con `province_id` | Feature flags por municipio | Varias provincias sin migración |
@@ -1883,11 +1610,8 @@ flowchart TD
 
     PGC -->|despierta| WK
 
-    RLS --> MIS[Misiones: check-in GPS/QR]
-    RLS --> REW[Recompensas: claim / redeem atómicos]
     RLS --> REP[Reportes de tránsito y consultas]
     RLS --> BIZ[Negocios y turismo]
-    MIS --> REW
 
     RT --> ADM[Panel municipal]
     RSC --> ADM
@@ -1967,3 +1691,16 @@ Mejoras de evolución añadidas: §5.1, principios 11–12, ADR-016 a ADR-019, t
 | Subidas: límite de dimensiones, re-codificación, nombre generado por el servidor | Archivos maliciosos y path traversal | §17 |
 | Modos ONLINE / DEGRADED / OFFLINE | No declarar un offline que no existe | §18 |
 | Estados obligatorios por pantalla, formularios, responsive y accesibilidad | UX y WCAG exigidos por el prompt | §7 |
+
+Las filas de v1.1 y v1.2 que mencionan misiones o recompensas se conservan como historial; ese diseño fue retirado en v1.3.
+
+### v1.3 (24/09/2026): misiones y recompensas fuera de alcance
+
+| Cambio | Dónde |
+|---|---|
+| Retirados misiones y recompensas (ADR-010 y ADR-011 pasan a "Retirado"); §19 y §20 quedan como secciones retiradas para conservar la numeración | §19, §20, §41 |
+| Eliminadas del ERD y del modelo de datos: `missions`, `mission_steps`, `mission_step_checkins`, `mission_completions`, `rewards`, `reward_redemptions` | §15, §39 |
+| Eliminados los endpoints de misiones, check-ins, reclamo y canje; los diagramas de secuencia pasan de 4 a 2 | §28, §40 |
+| Vault queda solo para el secreto del worker y credenciales de `pg_net` (sin pepper ni clave de cupones) | §3, §13, §17, §37 |
+| Los comercios conservan promociones informativas y moderadas, sin stock ni canje; su panel mide vistas y clics | §20, §23 |
+| Ajustados roles, rate limits, offline, notificaciones, PDF, auditoría, retención, pruebas, riesgos, alcance del MVP y orden de construcción | §7–§48, anexos |
