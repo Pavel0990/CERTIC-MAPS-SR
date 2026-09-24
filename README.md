@@ -50,10 +50,12 @@ Next.js 16 + TypeScript · Tailwind + shadcn/ui · Google Maps JavaScript API ·
 
 ## Pendiente antes de programar
 
-1. Copiar en ARCHITECTURE.md §43 las 6 funcionalidades obligatorias de las bases del reto (conectasr.com).
+1. **Hacer público este repositorio** antes de la entrega: las bases exigen un "repositorio público en GitHub".
 2. Verificar en la documentación oficial los puntos marcados en el Anexo E.
 3. Crear las cuentas de Google Cloud, Supabase y Vercel **a nombre de la organización**, no de un integrante.
-4. Empezar por el paso (0) "Cimientos" del orden de construcción (§48).
+4. Empezar por el paso (0) "Cimientos" del plan por semanas (§48). Calendario de las bases: desarrollo hasta el 27/10/2026, demo del 28 al 30/10/2026.
+
+Las seis funcionalidades obligatorias, los entregables y los criterios de evaluación de las bases están citados en ARCHITECTURE.md §0 y §43.
 
 La instalación, las variables de entorno, las migraciones, las pruebas y el despliegue se documentarán aquí cuando exista el código. Su diseño ya está en ARCHITECTURE.md §36 y §37.
 

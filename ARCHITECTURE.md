@@ -1,6 +1,6 @@
 # SR Conecta — Arquitectura Técnica Definitiva
 
-> Documento de arquitectura para el repositorio. Versión 1.4 · 24 de septiembre de 2026 (v1.0–v1.3: 23–24/09/2026)
+> Documento de arquitectura para el repositorio. Versión 1.5 · 24 de septiembre de 2026 (v1.0–v1.4: 23–24/09/2026)
 > Alcance: desde el MVP del reto TechEmprende SR Conecta 2026 hasta producción municipal y escala regional.
 > Fuentes oficiales y precios consultados el **23/09/2026** (ver §31 y Anexo E). Todo precio debe re-verificarse antes de presupuestar.
 > **v1.1** corrige contradicciones internas de seguridad, datos e infraestructura detectadas en revisión y añade decisiones de **evolución sin rupturas** (§5.1) para que las Fases 2 y 3 se construyan agregando piezas, no reescribiendo. Registro completo en el Anexo F.
@@ -19,6 +19,14 @@ Antes de decidir, estos hechos del reto condicionan la arquitectura más que cua
 | El proyecto ganador se libera bajo **MIT o Apache 2.0** y pasa a los patrocinadores (FUNDESER) | Todas las dependencias deben ser compatibles en licencia. La cuenta de Google Cloud, Supabase y Vercel deben poder **transferirse**. Nada de claves ni cuentas personales incrustadas. |
 | Stack libre; se evalúa el resultado | Priorizar lo que el equipo domina y lo que se demuestra bien, no lo más sofisticado. |
 | "Cualquier ciudadano ingresa datos y **recibe notificaciones** sobre el mapa" | Notificaciones in-app son obligatorias; push es un canal adicional. |
+| "Mapa **en tiempo real** donde cualquier usuario puede ver **y agregar** puntos de interés, negocios, rutas y alertas" | Los ciudadanos **proponen** lugares y rutas (moderados antes de publicarse, §22) y las alertas de tránsito aparecen en vivo en el mapa (Realtime, §26) |
+| Reporte de tránsito incluye "accidentes, cierres, **baches**, semáforos dañados y **desvíos**" | Esos tipos pertenecen a `traffic_report_types`, no a servicios municipales (§21.2) |
+| Consultas ciudadanas: "reportar problemas comunitarios, **votar prioridades** y dar seguimiento" | Votos de apoyo por consulta, uno por usuario (§21.1) |
+| Criterios (100 pts): MVP 25 · UX/UI para **baja alfabetización digital** 20 · innovación (geolocalización, tiempo real, IA o automatización) 20 · pertinencia territorial 15 · **sostenibilidad**: el municipio opera sin el equipo 10 · código y documentación 10 | UX de lenguaje simple (§7); tiempo real y automatización visibles en la demo; manual administrativo y de operación como entregable |
+| Entregables: MVP, mapa integrado, panel municipal, PDF semanal, **repositorio público en GitHub** con documentación técnica y manual de despliegue, demo de 25 min | El repositorio debe ser público antes de la entrega |
+| Calendario: inscripción hasta el **24/09/2026**; desarrollo del 14/09 al **27/10/2026**; demo del **28 al 30/10/2026** | Alcance del MVP ajustado a ~5 semanas (§43, §48) |
+
+Fuente: bases oficiales publicadas en conectasr.com (endpoint público `/api/convocatoria`), consultadas el 24/09/2026. Las seis funcionalidades obligatorias se citan textualmente en §43.
 
 ---
 
@@ -174,6 +182,7 @@ Estilo: **monolito modular** (§12, ADR-008). Un despliegue, un repositorio, una
 - **Formularios:** botón de envío desactivado durante el envío (sin doble submit, reforzado por `idempotency_key`), errores por campo asociados con `aria-describedby`, foco al primer error.
 - **Responsive:** mobile-first con cortes en 640 / 768 / 1024 / 1280 px. Móvil: mapa a pantalla completa, barra inferior y bottom sheets. Tablet: panel lateral colapsable. Escritorio: panel lateral fijo y, en el panel admin, tablas con paginación por cursor. Objetivos táctiles de al menos 44×44 px. La lógica de negocio es la misma en todos los tamaños; solo cambia la presentación.
 - **Accesibilidad (WCAG 2.1 AA):** controles interactivos como `<button>`/`<a>` reales (no `div` con `onClick`), foco visible, `prefers-reduced-motion` respetado también en las animaciones del mapa, contraste AA verificado en CI con axe (Playwright).
+- **Baja alfabetización digital** (criterio de 20 puntos de las bases): lenguaje simple y en segunda persona ("Reportar un problema", no "Crear incidencia"); cada acción con ícono **y** texto; flujos de 3 pasos como máximo con una decisión por pantalla; categorías con ícono grande; el reporte se puede enviar con foto y ubicación sin escribir texto; estados explicados con palabras ("Lo están revisando"), no con códigos; tamaño de texto base de 16 px o más; prueba con al menos 5 vecinos reales antes de la demo.
 
 ## 8. Next.js Architecture
 
@@ -412,6 +421,9 @@ erDiagram
     profiles ||--o{ traffic_reports : "reporta"
     profiles ||--o{ citizen_requests : "crea"
     citizen_requests ||--o{ request_status_history : "registra"
+    citizen_requests ||--o{ request_votes : "recibe apoyos"
+    profiles ||--o{ request_votes : "vota"
+    citizen_requests |o--o| traffic_reports : "escalado desde"
     profiles ||--o{ citizen_requests : "asignado a"
     profiles ||--o{ notifications : "recibe"
     profiles ||--|| notification_preferences : "configura"
@@ -488,7 +500,8 @@ erDiagram
         text kind "mirador|rio|cultural..."
         geometry geom "Point 4326"
         text status "CHECK: draft|published|archived"
-        tsvector search_vector
+        text status "CHECK: pending|published|rejected|archived (pending = propuesta ciudadana)"
+        uuid proposed_by FK "nullable, ON DELETE SET NULL"
     }
     eco_routes {
         uuid id PK
@@ -501,6 +514,8 @@ erDiagram
         geometry geom "MultiLineString 4326"
         geometry geom_simplified
         numeric distance_km "calculado por ST_Length geography"
+        uuid proposed_by FK "ciudadano que la propuso (nullable, ON DELETE SET NULL)"
+        text status "CHECK: pending|published|rejected|archived"
         int duration_min
         text difficulty "baja|media|alta"
         geometry start_point "Point 4326"
@@ -524,6 +539,7 @@ erDiagram
         text status "CHECK: pending|active|verified|resolved|rejected|expired|out_of_area"
         timestamptz expires_at
         text idempotency_key "UNIQUE (reporter_id, idempotency_key)"
+        uuid escalated_request_id FK "opcional: incidencia municipal creada al escalar"
     }
     citizen_requests {
         uuid id PK
@@ -538,6 +554,12 @@ erDiagram
         text status "CHECK: pending|under_review|approved|rejected|in_progress|resolved|archived"
         bool is_public
         text idempotency_key "UNIQUE (requester_id, idempotency_key)"
+        int support_count "votos de prioridad, mantenido por trigger"
+    }
+    request_votes {
+        uuid request_id PK,FK
+        uuid user_id PK,FK "ON DELETE CASCADE"
+        timestamptz created_at
     }
     request_status_history {
         bigint id PK
@@ -661,6 +683,7 @@ Tablas añadidas a la lista original y por qué son necesarias: `user_roles` (re
 |---|---|---|---|---|---|---|
 | Ver mapa, turismo, negocios aprobados | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Crear reportes de tránsito, incidencias y consultas | — | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Proponer lugares y rutas (moderados) y votar prioridades | — | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Ver estado de sus propios reportes y consultas | — | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Gestionar su negocio y sus promociones | — | — | ✓ (solo los suyos) | — | — | — |
 | Aprobar, suspender o archivar negocios | — | — | — | ✓ (su municipio) | ✓ (su municipio) | ✓ |
@@ -744,8 +767,10 @@ Dos flujos distintos que comparten adjuntos, moderación y auditoría. En la int
 
 | Flujo | Tipos | Tabla | Naturaleza |
 |---|---|---|---|
-| Tránsito | accidente, calle cerrada, semáforo, vía inundada… | `traffic_reports` | Temporal: expira solo; visible en el mapa mientras está activo |
-| Servicios municipales | bache, basura, alumbrado, infraestructura, otro (`kind = incident`) y consultas o quejas sin incidencia física (`kind = inquiry`) | `citizen_requests` | Requiere gestión municipal hasta resolverse |
+| Tránsito | accidente, calle cerrada, **bache**, semáforo dañado, **desvío**, vía inundada… (lista de las bases) | `traffic_reports` | Temporal: expira solo; visible en el mapa, en vivo, mientras está activo |
+| Servicios municipales | basura, alumbrado, infraestructura, otro (`kind = incident`) y consultas, quejas o propuestas sin incidencia física (`kind = inquiry`) | `citizen_requests` | Requiere gestión municipal hasta resolverse; los vecinos **votan prioridades** |
+
+Un reporte de tránsito que requiere obra (p. ej. un bache que no se resuelve solo) se **escala** a una incidencia municipal: el moderador ejecuta `escalate_traffic_report(id)`, que crea la `citizen_request` enlazada (`traffic_reports.escalated_request_id`) y conserva al autor, la ubicación y las fotos. El ciudadano no tiene que volver a reportarlo.
 
 ### 21.1 Incidencias y consultas municipales (`citizen_requests`)
 
@@ -770,12 +795,14 @@ pending → under_review → approved → in_progress → resolved → archived
 - Asignación: `assigned_to` debe tener rol `moderator`/`municipal_admin` en el municipio de la consulta.
 - `is_public`: la consulta solo aparece en el mapa público si un moderador la aprueba (y sin datos personales).
 - Tiempo de resolución = `resolved.created_at - pending.created_at` desde el historial.
+- **Votar prioridades** (requisito de las bases): tabla `request_votes (request_id, user_id, created_at)` con PK `(request_id, user_id)`, así cada usuario apoya una consulta una sola vez y quitar el apoyo es borrar la fila. Solo se vota en consultas `is_public` y abiertas. El contador `citizen_requests.support_count` lo mantiene un trigger, nunca el cliente. Rate limit de 30 votos/hora por usuario. El panel ordena la bandeja por apoyos y antigüedad, y el PDF incluye las consultas más apoyadas por municipio.
 
 ### 21.2 Reportes de tránsito (`traffic_reports`)
 
 | Campo | Diseño |
 |---|---|
-| Tipos | Tabla catálogo `traffic_report_types` (accidente, derrumbe, vía cerrada, vía inundada, obra, bache peligroso, semáforo/señal dañada, otro), con ícono, gravedad por defecto y duración (`default_ttl`) editables desde el panel sin deploy |
+| Tipos | Tabla catálogo `traffic_report_types` (accidente, calle cerrada, bache, semáforo o señal dañada, desvío, derrumbe, vía inundada, obra, otro), con ícono, gravedad por defecto y duración (`default_ttl`) editables desde el panel sin deploy |
+| Escalado | `escalated_request_id` (FK opcional a `citizen_requests`) cuando requiere obra municipal |
 | Gravedad | 1 baja · 2 media · 3 alta |
 | Ubicación | Punto obligatorio (ubicación actual o pin ajustado); municipio por trigger (§11.1). Fuera de la provincia → `out_of_area`, visible solo para moderadores provinciales |
 | Imágenes | Opcionales, hasta 3, bucket privado hasta moderación |
@@ -788,6 +815,7 @@ pending → under_review → approved → in_progress → resolved → archived
 
 - `tourism_places`: punto, tipo (mirador, río/balneario, sitio cultural, histórico, agroturismo), descripción, servicios (jsonb: parqueo, baños, guía, comida), accesibilidad, fotos aprobadas, horario, contacto, estado.
 - `eco_routes`: `MultiLineString` importado desde GPX/KML/GeoJSON (subido por admin, convertido con GDAL o en servidor), `distance_km` calculado con `ST_Length(geom::geography)`, desnivel (si hay datos de elevación), duración estimada, dificultad, `start_point`, puntos de interés (relación simple con `tourism_places` cercanos vía `ST_DWithin`, no tabla adicional).
+- **Aportes ciudadanos** (las bases piden que "cualquier usuario pueda agregar puntos de interés y rutas"): un usuario autenticado puede **proponer** un lugar (pin + datos + fotos) o una ruta (trazada sobre el mapa punto a punto, o subiendo un GPX grabado con el teléfono). Entra con `status = 'pending'` y `proposed_by = auth.uid()`, no aparece en el mapa público hasta que un moderador lo aprueba, y el autor recibe la notificación. Las RPC `propose_place` y `propose_route` validan la geometría (`ST_IsValid`, dentro de la provincia, máx. 2.000 vértices) y aplican rate limit (5 propuestas/día).
 - "Cómo llegar al inicio" → deep link de Google Maps a `start_point`.
 - Las rutas se muestran simplificadas en el mapa general y completas en la vista de ruta; descarga GPX opcional (Fase 2).
 - Vistas de ficha cuentan para KPIs (§24, §39).
@@ -846,7 +874,7 @@ FCM solo se justificaría si en Fase 3 existe una app nativa; aun así se usarí
 | Necesidad | Mecanismo | Motivo |
 |---|---|---|
 | Cargar mapa/listas | Request | Normal |
-| Reportes de tránsito en el mapa | Polling cada 60 s mientras la pestaña está visible | Cambian poco; polling es simple y cacheable |
+| Alertas de tránsito en el mapa | **Supabase Realtime (Broadcast)** por provincia: cuando un reporte pasa a `active`, `verified` o `expired`, un trigger emite `{id, type, severity, lat, lng, status}` (sin autor ni fotos). Sondeo de 60 s como respaldo si el canal cae | Las bases piden "mapa en tiempo real"; es lo más visible en la demo. Broadcast no expone tablas ni depende de RLS del cliente |
 | Estado de mi consulta | Notificación in-app + push | El usuario no está mirando la pantalla |
 | Bandeja del panel admin (nuevos reportes/consultas) | **Supabase Realtime** (Postgres Changes o Broadcast) con RLS | Único caso donde "en vivo" mejora el trabajo |
 | Alertas a ciudadanos | Push | Fuera de la app |
@@ -1148,6 +1176,7 @@ Resumen por tabla (el detalle de columnas está en el ERD §15; `DATABASE.md` te
 | traffic_reports | Incidencias viales | GIST, (status, expires_at), municipality_id, UNIQUE (reporter_id, idempotency_key) | Público activos sin autor; autor ve los suyos; sin INSERT/UPDATE directo (solo RPC) |
 | citizen_requests | Consultas | GIST, (status, municipality_id), requester_id, UNIQUE (requester_id, idempotency_key) | Autor, asignados, moderadores del municipio; público si `is_public`; sin INSERT/UPDATE directo |
 | request_status_history | Historial | (request_id, created_at) | Igual que la consulta |
+| request_votes | Votos de prioridad (uno por usuario y consulta) | PK (request_id, user_id) | Lectura del recuento pública en consultas `is_public`; alta y baja del voto propio solo por RPC |
 | notifications | Centro de notificaciones | (user_id, read_at, created_at) | Propio |
 | notification_preferences | Preferencias | PK | Propio |
 | push_subscriptions | Dispositivos | UNIQUE endpoint | Propio |
@@ -1295,10 +1324,10 @@ sequenceDiagram
 - **Consecuencias:** desaparecen `rewards`, `reward_redemptions`, el pepper y la clave de cifrado de cupones en Vault, y el escáner de cupones del panel del comercio.
 
 ### ADR-012 Realtime limitado
-- **Decisión:** Realtime solo para la bandeja del panel admin (y opcionalmente pantalla de cupón); polling para tránsito; push para alertas.
+- **Decisión:** Realtime para dos casos: (1) **alertas de tránsito en vivo en el mapa** (las bases piden "mapa en tiempo real" y el criterio de innovación premia el tiempo real), vía un canal **Broadcast** público por provincia que emite solo datos públicos del reporte (id, tipo, gravedad, punto), sin autor ni fotos; (2) la bandeja del panel municipal (Postgres Changes con RLS). El resto usa sondeo o push.
 - **Alternativas:** Realtime para todas las capas.
 - **Pros:** menos conexiones, menos complejidad, dentro de límites de plan.
-- **Contras:** reportes aparecen con hasta 60 s de retraso.
+- **Contras:** un canal Realtime público más que operar; si falla, el mapa vuelve al sondeo de 60 s.
 - **Riesgos:** ninguno relevante a esta escala.
 
 ### ADR-013 Notificaciones: Web Push + VAPID
@@ -1396,25 +1425,38 @@ sequenceDiagram
 
 Objetivo: cubrir las **6 funcionalidades obligatorias** del reto con calidad demostrable en 25 minutos, más lo mínimo para que sea creíble como plataforma.
 
-> ⚠ **Pendiente antes del primer sprint:** copiar aquí, textualmente desde las bases de conectasr.com, las 6 funcionalidades obligatorias y completar la columna "Obligatoria" de la tabla. La regla de recorte de §48 depende de esa columna.
+**Las seis funcionalidades obligatorias** (texto literal de las bases, conectasr.com, 24/09/2026):
+
+| F | Funcionalidad | Texto de las bases |
+|---|---|---|
+| F1 | Mapa Interactivo Ciudadano | "Mapa en tiempo real donde cualquier usuario puede ver y agregar puntos de interés, negocios, rutas y alertas georreferenciadas." |
+| F2 | Negocios Turísticos y Locales | "Registro abierto de negocios locales y establecimientos turísticos con categorías, fotos, horarios y datos de contacto." |
+| F3 | Rutas de Ecoturismo | "Trazado y consulta de rutas ecológicas, culturales y de aventura con información de dificultad, duración y servicios disponibles." |
+| F4 | Reporte de Tránsito | "Sistema colaborativo de alertas viales: accidentes, cierres, baches, semáforos dañados y desvíos en tiempo real." |
+| F5 | Consultas Ciudadanas | "Canal digital para que los ciudadanos reporten problemas comunitarios, voten prioridades y den seguimiento a sus solicitudes." |
+| F6 | Reportes Semanales Automáticos | "Generación automática de informes en PDF con métricas de uso, reportes por municipio y estado de solicitudes." |
+
+Además, la aplicación debe permitir "que cualquier ciudadano ingrese datos y reciba notificaciones sobre el mapa", y los entregables exigen un **panel de administración municipal**, un **repositorio público en GitHub** con documentación técnica y manual de despliegue, y una **demo de 25 minutos con datos reales**.
 
 **Dentro:**
 
 | # | Alcance | Obligatoria (bases) | ¿Se puede recortar? |
 |---|---|---|---|
-| 1 | Mapa con capas: municipios, turismo, rutas, negocios, reportes de tránsito y consultas públicas; clustering; filtros; búsqueda propia | ☐ | No (es el producto) |
-| 2 | Negocios: alta con verificación, ficha, panel básico | ☐ | Solo si no es obligatoria |
-| 3 | Rutas de ecoturismo: importación GeoJSON/GPX, ficha, "cómo llegar" | ☐ | Solo si no es obligatoria |
-| 4 | Reportes de tránsito: creación con foto, moderación, expiración, mapa | ☐ | Solo si no es obligatoria |
-| 5 | Consultas ciudadanas: ciclo de estados completo con historial y notificación | ☐ | Solo si no es obligatoria |
-| 6 | PDF semanal automático + regeneración manual | ☐ | No (marcado [OBLIGATORIA] en §3) |
-| 7 | Panel admin: resumen KPIs, bandejas, moderación, PDF | ☐ | No (lo necesitan 4, 5 y 6) |
-| 8a | Notificaciones **in-app** (centro de notificaciones) | ☐ | **No** (requisito explícito de §0) |
-| 8b | Web Push + email por la cola | ☐ | Push sí puede degradarse; el email de OTP no |
-| 9 | PWA instalable, offline shell y cola de reportes | ☐ | La cola offline sí; instalable no |
-| 10 | Roles: visitor, citizen, entrepreneur, moderator, municipal_admin (municipio o provincia) | — | No (seguridad) |
-| 11 | Repositorio con documentación mínima, ADRs, CI | — | No (transferencia) |
+| 1 | Mapa con capas (municipios, turismo, rutas, negocios, tránsito, consultas públicas), clustering, filtros, búsqueda propia, **alertas de tránsito en vivo** (§26) y **propuestas ciudadanas de lugares** (§22) | ✅ F1 | No |
+| 2 | Negocios: alta abierta con verificación, categorías, fotos, horarios, contacto, ficha y panel básico | ✅ F2 | No |
+| 3 | Rutas de ecoturismo: consulta con dificultad, duración y servicios; **trazado** por el administrador (GPX/GeoJSON) y propuesta ciudadana | ✅ F3 | La propuesta ciudadana de rutas puede degradarse a "solo administrador" |
+| 4 | Reportes de tránsito (accidentes, cierres, baches, semáforos, desvíos) con foto, moderación, expiración y tiempo real | ✅ F4 | No |
+| 5 | Consultas ciudadanas: ciclo de estados con historial, **votación de prioridades** y notificación | ✅ F5 | No |
+| 6 | PDF semanal automático con métricas de uso, reportes por municipio y estado de solicitudes, más regeneración manual | ✅ F6 | No |
+| 7 | Panel municipal: KPIs, bandejas, moderación y PDF | ✅ Entregable | No |
+| 8a | Notificaciones **in-app** (centro de notificaciones) | ✅ Requisito general | No |
+| 8b | Web Push + email por la cola | Parcial ("recibir notificaciones") | Push puede degradarse; el email de OTP no |
+| 9 | PWA instalable, offline shell y cola de reportes | ✅ "móvil o web progresiva" | La cola offline sí; instalable no |
+| 10 | Roles: visitor, citizen, entrepreneur, moderator, municipal_admin (municipio o provincia) | — (seguridad) | No |
+| 11 | Repositorio **público** con documentación técnica, manual de despliegue, manual administrativo, ADRs y CI | ✅ Entregable | No |
 | 12 | Cimientos de §5.1 (`province_id`, cola de jobs, estados `text`, PK particionables) | — | **No**: su costo sube cada semana que se postergan |
+
+**Calendario de las bases:** desarrollo hasta el **27/10/2026**; demo del **28 al 30/10/2026**. Con unas 5 semanas, la regla de §48 se aplica en serio: lo que no esté marcado ✅ se recorta antes que cualquier ✅.
 
 **Fuera (explícitamente):** Routes API en app, vector tiles, mapas offline, inglés, exportación de datos del usuario, 2FA obligatorio, verificación por N confirmaciones, analítica avanzada, app nativa.
 
@@ -1483,15 +1525,15 @@ Ver Anexo D (diagrama Mermaid completo).
 
 Construir SR Conecta como **Next.js 16 + Supabase (PostGIS) + Google Maps**, monolito modular, con **toda la lógica crítica en PostgreSQL, que además es la barrera de seguridad** (ADR-018), y Google reducido a mapa base y búsqueda de direcciones. Quitar Firebase, no usar Routes API en el MVP, tratar el tráfico como dato ciudadano propio, limitar Realtime al panel y llevar todo lo asíncrono por una cola en Postgres (ADR-016). Adoptar desde el primer día los cimientos de §5.1 para que las fases siguientes sean aditivas.
 
-Orden de construcción sugerido para el reto:
-- **(0) Cimientos:** cuentas de la organización, SMTP propio, esquema con `province_id`, RLS con grants correctos, cola `private.jobs` + worker, CI con Supabase local y release "migrar → desplegar".
-- **(1)** Datos abiertos importados (municipios con simplificación topológica).
-- **(2)** Mapa con capas (endpoint público y autenticado) y búsqueda.
-- **(3)** Reportes y consultas con panel.
-- **(4)** Negocios y turismo.
-- **(5)** PDF y KPIs.
-- **(6)** PWA y push.
-- **(7)** Pulido de la demo y documentación.
+Orden de construcción para el reto, ajustado al calendario de las bases (desarrollo del 24/09 al 27/10/2026, demo del 28 al 30/10):
+
+| Semana | Entrega | Cubre |
+|---|---|---|
+| 1 (24–30 sep) | **(0) Cimientos:** cuentas de la organización, SMTP propio, esquema con `province_id`, RLS con grants correctos, cola `private.jobs` + worker, CI con Supabase local y release "migrar → desplegar". **(1)** Datos abiertos importados (municipios con simplificación topológica) | Base de todo |
+| 2 (1–7 oct) | **(2)** Mapa con capas (endpoint público y autenticado), búsqueda y alertas en vivo. **(3)** Reportes de tránsito con escalado | F1, F4 |
+| 3 (8–14 oct) | **(4)** Consultas con estados y votación; panel municipal con moderación | F5, panel |
+| 4 (15–21 oct) | **(5)** Negocios, turismo, rutas y propuestas ciudadanas. **(6)** PDF semanal y KPIs | F2, F3, F6 |
+| 5 (22–27 oct) | **(7)** PWA y push, prueba con vecinos, guion y ensayo de la demo, manuales, repositorio público | Criterios UX, sostenibilidad y documentación |
 
 **Regla de recorte:** lo que se corte por tiempo sale solo de ítems **no marcados como obligatorios** en §43 y nunca de (0), de la seguridad, de las notificaciones in-app ni del PDF semanal. Push y la cola offline se pueden degradar; los cimientos no, porque postergarlos es exactamente el "cambio brusco" que este documento busca evitar.
 
@@ -1716,3 +1758,18 @@ Las filas de v1.1 y v1.2 que mencionan misiones o recompensas se conservan como 
 |---|---|---|
 | Cambios de estado con compare-and-set (`expected_status`, respuesta `stale_state`) | Dos moderadores sobre el mismo reporte: nunca gana silenciosamente el último | §14, §21.1 |
 | Ediciones de contenido con bloqueo optimista (`version`, respuesta `409`) | Dos personas editando la misma ficha | §14 |
+
+### v1.5 (24/09/2026): alineación con las bases oficiales
+
+Fuente: bases publicadas en conectasr.com (`/api/convocatoria`), leídas el 24/09/2026.
+
+| Cambio | Requisito de las bases | Dónde |
+|---|---|---|
+| Las 6 funcionalidades citadas textualmente y columna "Obligatoria" completada | "Seis funcionalidades obligatorias" | §43 |
+| Votación de prioridades en consultas (`request_votes`, `support_count`) | F5: "voten prioridades" | §15, §21.1, §39 |
+| Bache y desvío pasan a tránsito; escalado de un reporte de tránsito a incidencia municipal | F4: "accidentes, cierres, baches, semáforos dañados y desvíos" | §21 |
+| Propuestas ciudadanas de lugares y rutas (moderadas) | F1: "cualquier usuario puede ver y agregar puntos de interés… rutas"; F3: "trazado" | §15, §16, §22 |
+| Alertas de tránsito en vivo por Realtime Broadcast | F1: "mapa en tiempo real"; criterio de innovación | §26, ADR-012 |
+| UX para baja alfabetización digital | Criterio UX/UI (20 pts) | §7 |
+| Hechos del reto: criterios, entregables, calendario | Bases | §0 |
+| Plan por semanas hasta la demo | Calendario | §48 |
