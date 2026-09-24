@@ -22,7 +22,6 @@ a:hover{color:#1D4ED8;text-decoration:underline}
 @keyframes srFade{from{opacity:0}to{opacity:1}}
 @keyframes srPulse{0%{transform:scale(.55);opacity:.6}100%{transform:scale(1.5);opacity:0}}
 @keyframes srPop{0%{transform:scale(.6) translateY(8px);opacity:0}70%{transform:scale(1.06)}100%{transform:none;opacity:1}}
-@keyframes srDraw{to{stroke-dashoffset:0}}
 @keyframes srSpin{to{transform:rotate(360deg)}}
 @keyframes srRight{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
 /* Foco visible para teclado (WCAG 2.4.7); !important porque varios elementos traen outline:none inline */
@@ -271,10 +270,10 @@ button:focus-visible,[role=button]:focus-visible,input:focus-visible,textarea:fo
           <div style="display:flex;align-items:center;gap:6px;font-size:16px;margin-top:6px"><span style="color:#5B616B">{{ det.rating }}</span><span style="color:#F2B01E;letter-spacing:1px">{{ det.stars }}</span><span style="color:#5B616B">{{ det.reviews }}</span></div>
           <div style="font-size:16px;color:#5B616B;margin-top:4px">{{ det.cat }} · {{ det.eta }} en auto</div>
           <div style="font-size:16px;margin-top:4px"><span style="color:{{ det.stC }};font-weight:600">{{ det.st }}</span><span style="color:#111418"> · {{ det.until }}</span></div>
-          <sc-if value="{{ det.hasReward }}">
+          <sc-if value="{{ det.hasPromo }}">
             <div style="display:flex;align-items:center;gap:12px;margin-top:14px;background:#FEF6E0;border-radius:18px;padding:12px 14px">
               <div style="width:38px;height:38px;border-radius:12px;background:#F2B01E;display:flex;align-items:center;justify-content:center;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"></path></svg></div>
-              <div style="flex:1"><div style="font-size:16px;font-weight:700;color:#5C3D00">{{ det.reward }}</div><div style="font-size:13px;color:#8A5A00">Promoción del comercio · condiciones en el local</div></div>
+              <div style="flex:1"><div style="font-size:16px;font-weight:700;color:#5C3D00">{{ det.promo }}</div><div style="font-size:13px;color:#8A5A00">Promoción del comercio · condiciones en el local</div></div>
             </div>
           </sc-if>
           <p style="font-size:16px;line-height:1.55;color:#2B3038;margin:16px 0 0;text-wrap:pretty">{{ det.desc }}</p>
@@ -318,7 +317,7 @@ button:focus-visible,[role=button]:focus-visible,input:focus-visible,textarea:fo
         <sc-if value="{{ rt.nav }}">
           <div style="display:flex;align-items:center;gap:12px;padding:4px 4px 12px">
             <div style="width:44px;height:44px;border-radius:14px;background:#E8F0FE;display:flex;align-items:center;justify-content:center"><div style="width:18px;height:18px;border:3px solid #2F6FEB;border-top-color:transparent;border-radius:50%;animation:srSpin 1s linear infinite"></div></div>
-            <div style="flex:1"><div style="font-size:17px;font-weight:700">En camino · llegada {{ rt.eta }}</div><div style="font-size:14px;color:#5B616B">La misión se verifica por GPS al llegar</div></div>
+            <div style="flex:1"><div style="font-size:17px;font-weight:700">En camino · llegada {{ rt.eta }}</div><div style="font-size:14px;color:#5B616B">Ruta de referencia · para navegar, abre Google Maps</div></div>
           </div>
           <button onClick="{{ arrive }}" style="width:100%;height:56px;border-radius:18px;border:0;background:#111418;color:#fff;font-weight:650;font-size:17px;cursor:pointer">Simular llegada</button>
         </sc-if>
@@ -599,7 +598,7 @@ button:focus-visible,[role=button]:focus-visible,input:focus-visible,textarea:fo
             <div style="font-size:12px;font-weight:700;letter-spacing:.12em;color:#5B616B">ACTIVIDAD POR MUNICIPIO</div>
             <div style="margin-top:12px">
               <div style="display:grid;grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr));gap:8px;font-size:12px;color:#5B616B;padding:8px 0;border-bottom:1px solid #E6E8EB"><span>Municipio</span><span style="text-align:right">Usuarios</span><span style="text-align:right">Reportes</span><span style="text-align:right">Resueltos</span></div>
-              <sc-for list="{{ docMunis }}" as="dm"><div style="display:grid;grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr));gap:8px;font-size:14px;padding:10px 0;border-bottom:1px solid #F0F1F3;font-variant-numeric:tabular-nums"><span style="font-weight:600">{{ dm.name }}</span><span style="text-align:right">{{ dm.users }}</span><span style="text-align:right">{{ dm.reports }}</span><span style="text-align:right">{{ dm.missions }}</span></div></sc-for>
+              <sc-for list="{{ docMunis }}" as="dm"><div style="display:grid;grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr));gap:8px;font-size:14px;padding:10px 0;border-bottom:1px solid #F0F1F3;font-variant-numeric:tabular-nums"><span style="font-weight:600">{{ dm.name }}</span><span style="text-align:right">{{ dm.users }}</span><span style="text-align:right">{{ dm.reports }}</span><span style="text-align:right">{{ dm.res }}</span></div></sc-for>
             </div>
           </div>
         </div>
@@ -802,7 +801,7 @@ class Component extends DCLogic {
       const it = selIt; const d = S.km(S.U, it); const sv = !!s.saved[it.id];
       const full = Math.round(it.rating);
       det = { show: true, name: it.name, img: S.sat(it.lat, it.lng, 358, 196, 17), rating: String(it.rating).replace('.', ','), stars: '★'.repeat(full) + '☆'.repeat(5 - full), reviews: '(' + it.reviews.toLocaleString('es-DO') + ')', cat: it.cat, eta: S.fmin(d * 1.3 / 40 * 60), st: it.open ? 'Abierto' : 'Cerrado', stC: it.open ? '#15803D' : '#B42318', until: it.until,
-        hasReward: !!it.promo, reward: it.promo, desc: it.desc, muni: S.MUNI[it.muni].full, dist: S.fkm(d), coords: it.lat.toFixed(4) + ', ' + it.lng.toFixed(4),
+        hasPromo: !!it.promo, promo: it.promo, desc: it.desc, muni: S.MUNI[it.muni].full, dist: S.fkm(d), coords: it.lat.toFixed(4) + ', ' + it.lng.toFixed(4),
         saveBg: sv ? '#E8F0FE' : '#F1F2F4', saveFill: sv ? '#2F6FEB' : 'none', saveStroke: sv ? '#2F6FEB' : '#111418',
         onSave: () => { this.setState(x => ({ saved: { ...x.saved, [it.id]: !x.saved[it.id] } })); this.toast(sv ? 'Quitado de guardados' : 'Guardado en tu pasaporte'); },
         onShare: () => this.toast('Enlace copiado · srconecta.do/l/' + it.id), onRoute: () => this.routeTo([it.id]) };
@@ -918,7 +917,7 @@ class Component extends DCLogic {
     const KT = this.kpiScope('Todos'); const newR = KT.newR;
     out.docKpis = [{ v: String(KT.users), l: 'usuarios activos', d: '+12% vs. semana 38', dc: '#15803D' }, { v: String(KT.wRep), l: 'reportes recibidos', d: '+4', dc: '#5B616B' }, { v: String(KT.wRes), l: 'reportes resueltos', d: Math.round(KT.wRes / KT.wRep * 100) + '% de resolución', dc: '#15803D' }, { v: '2,4 d', l: 'tiempo medio de resolución', d: '−0,6 días', dc: '#15803D' }, { v: String(KT.biz), l: 'negocios registrados', d: '+3 nuevos', dc: '#15803D' }, { v: String(KT.open), l: 'reportes abiertos', d: 'acumulado', dc: '#5B616B' }, { v: String(KT.rej), l: 'reportes rechazados', d: 'con motivo visible', dc: '#5B616B' }, { v: '1.180', l: 'visitas turísticas', d: 'Presa de Monción lidera', dc: '#5B616B' }];
     out.docBars = [['L', 6, 4], ['M', 4, 5], ['X', 7, 5], ['J', 5 + newR, 4], ['V', 8, 6], ['S', 5, 3], ['D', 3, 2]].map(([d, a, r]) => ({ d, a: Math.round(a / 9 * 140), r: Math.round(r / 9 * 140) }));
-    out.docMunis = MK.map(({ x, k }) => ({ name: S.MUNI[x.k].full, users: k.users, reports: k.wRep, missions: k.wRes }));
+    out.docMunis = MK.map(({ x, k }) => ({ name: S.MUNI[x.k].full, users: k.users, reports: k.wRep, res: k.wRes }));
     const f = S.staticFit(S.MSTATS.map(x => S.MUNI[x.k]), 760, 250, 70, 12, TILE);
     out.docMap = { tiles: f.tiles, marks: f.marks.map((m, i) => { const sz = 90 + S.MSTATS[i].users; return { l: m.l - sz / 2, t: m.t - sz / 2, s: sz }; }), labels: f.marks.map((m, i) => ({ l: m.l - 40, t: m.t - 14, t2: S.MSTATS[i].k + ' · ' + S.MSTATS[i].users })) };
     out.aDown = e => this.down('am', e); out.aZoomIn = () => this.zoom('am', 1); out.aZoomOut = () => this.zoom('am', -1); out.aRef = this.aRef;

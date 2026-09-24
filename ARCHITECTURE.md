@@ -1,6 +1,6 @@
 # SR Conecta — Arquitectura Técnica Definitiva
 
-> Documento de arquitectura para el repositorio. Versión 1.3 · 24 de septiembre de 2026 (v1.0–v1.2: 23–24/09/2026)
+> Documento de arquitectura para el repositorio. Versión 1.4 · 24 de septiembre de 2026 (v1.0–v1.3: 23–24/09/2026)
 > Alcance: desde el MVP del reto TechEmprende SR Conecta 2026 hasta producción municipal y escala regional.
 > Fuentes oficiales y precios consultados el **23/09/2026** (ver §31 y Anexo E). Todo precio debe re-verificarse antes de presupuestar.
 > **v1.1** corrige contradicciones internas de seguridad, datos e infraestructura detectadas en revisión y añade decisiones de **evolución sin rupturas** (§5.1) para que las Fases 2 y 3 se construyan agregando piezas, no reescribiendo. Registro completo en el Anexo F.
@@ -382,6 +382,11 @@ Nota a verificar: fuentes secundarias reportan que en 2026 Supabase exige `GRANT
   - *De estado controlado* (`traffic_reports`, `citizen_requests`, `report_runs`): filas que cambian de estado, pero **solo mediante RPC**. Sin `UPDATE`/`DELETE` para usuarios y cada transición auditada. No son append-only.
   - *Redactables por privacidad*: la retención de §32 anula columnas sensibles (coordenadas exactas, autor) mediante una función de sistema, nunca borra la fila, para no romper los KPIs.
 - **Idempotencia en el esquema:** `idempotency_key text` con `UNIQUE (user_id, idempotency_key)` en toda tabla creada por una operación reintentable (`traffic_reports`, `citizen_requests`).
+- **Concurrencia (dos personas sobre el mismo registro):**
+  - *Cambios de estado* (consultas, reportes de tránsito, negocios): compare-and-set. La RPC recibe el estado que el moderador **vio** (`p_expected_status`) y ejecuta `UPDATE … SET status = :to WHERE id = :id AND status = :expected RETURNING …`. Si otro moderador ya lo cambió, el `UPDATE` no afecta filas y la RPC devuelve `{status: 'rejected', reason: 'stale_state', current_status}`; la UI recarga y muestra quién lo cambió (dato de `request_status_history`). Nunca gana silenciosamente el último.
+  - *Ediciones de contenido* (ficha de negocio, lugar, ruta): bloqueo optimista con columna `version int NOT NULL DEFAULT 1`, incrementada por trigger en cada `UPDATE`. La actualización exige `WHERE id = :id AND version = :version_leida`; si no coincide, responde `409` con los datos actuales para que el usuario compare.
+  - *Doble envío del mismo formulario*: lo cubre `idempotency_key`, no el bloqueo.
+  - No se usan bloqueos pesimistas largos (`SELECT … FOR UPDATE` que esperan interacción humana): solo bloqueos cortos dentro de una transacción.
 - **Unicidad con `NULL`:** toda restricción `UNIQUE` que incluye una columna donde `NULL` tiene significado (p. ej. `municipality_id NULL` = provincia) se declara `UNIQUE NULLS NOT DISTINCT` (PostgreSQL 15+). Sin eso, dos `NULL` no chocan y se duplican filas.
 - **Política de claves foráneas hacia `profiles`** (necesaria para "eliminar mi cuenta", §32):
   - `ON DELETE CASCADE` para los datos propios y privados del usuario: `notification_preferences`, `push_subscriptions`, `notifications`, `business_members`, `user_roles`.
@@ -761,7 +766,7 @@ pending → under_review → approved → in_progress → resolved → archived
 | `resolved` | `archived` | municipal_admin | — (automático a los 30 días por `pg_cron`) |
 | `pending` / `under_review` / `approved` | `rejected` | moderator / municipal_admin | Motivo obligatorio y visible |
 
-- Las transiciones válidas viven en la tabla `request_transitions (from_status, to_status, min_role)`. La RPC `change_request_status(id, to, note)` solo permite **un paso por llamada** según esa tabla, actualiza, inserta en `request_status_history`, audita y encola la notificación al ciudadano. Un trigger impide el `UPDATE` directo de `status`. **Ningún ciudadano puede mover su propio reporte**, y nadie puede saltar de `pending` a `resolved`.
+- Las transiciones válidas viven en la tabla `request_transitions (from_status, to_status, min_role)`. La RPC `change_request_status(id, expected_status, to, note)` solo permite **un paso por llamada** según esa tabla, y solo si el estado actual sigue siendo `expected_status` (compare-and-set, §14: si otro moderador se adelantó, devuelve `stale_state`), actualiza, inserta en `request_status_history`, audita y encola la notificación al ciudadano. Un trigger impide el `UPDATE` directo de `status`. **Ningún ciudadano puede mover su propio reporte**, y nadie puede saltar de `pending` a `resolved`.
 - Asignación: `assigned_to` debe tener rol `moderator`/`municipal_admin` en el municipio de la consulta.
 - `is_public`: la consulta solo aparece en el mapa público si un moderador la aprueba (y sin datos personales).
 - Tiempo de resolución = `resolved.created_at - pending.created_at` desde el historial.
@@ -1704,3 +1709,10 @@ Las filas de v1.1 y v1.2 que mencionan misiones o recompensas se conservan como 
 | Vault queda solo para el secreto del worker y credenciales de `pg_net` (sin pepper ni clave de cupones) | §3, §13, §17, §37 |
 | Los comercios conservan promociones informativas y moderadas, sin stock ni canje; su panel mide vistas y clics | §20, §23 |
 | Ajustados roles, rate limits, offline, notificaciones, PDF, auditoría, retención, pruebas, riesgos, alcance del MVP y orden de construcción | §7–§48, anexos |
+
+### v1.4 (24/09/2026): concurrencia explícita
+
+| Cambio | Motivo | Dónde |
+|---|---|---|
+| Cambios de estado con compare-and-set (`expected_status`, respuesta `stale_state`) | Dos moderadores sobre el mismo reporte: nunca gana silenciosamente el último | §14, §21.1 |
+| Ediciones de contenido con bloqueo optimista (`version`, respuesta `409`) | Dos personas editando la misma ficha | §14 |
