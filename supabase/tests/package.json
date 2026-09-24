@@ -1,0 +1,11 @@
+{
+  "name": "sr-conecta-db-tests",
+  "private": true,
+  "type": "module",
+  "description": "Pruebas de la base de datos sin Docker: PostgreSQL 18 + PostGIS en WebAssembly (PGlite)",
+  "scripts": { "test": "node run.mjs" },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@electric-sql/pglite-postgis": "0.2.8"
+  }
+}

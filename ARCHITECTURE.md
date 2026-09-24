@@ -1,6 +1,6 @@
 # SR Conecta — Arquitectura Técnica Definitiva
 
-> Documento de arquitectura para el repositorio. Versión 1.5 · 24 de septiembre de 2026 (v1.0–v1.4: 23–24/09/2026)
+> Documento de arquitectura para el repositorio. Versión 1.6 · 24 de septiembre de 2026 (v1.0–v1.5: 23–24/09/2026)
 > Alcance: desde el MVP del reto TechEmprende SR Conecta 2026 hasta producción municipal y escala regional.
 > Fuentes oficiales y precios consultados el **23/09/2026** (ver §31 y Anexo E). Todo precio debe re-verificarse antes de presupuestar.
 > **v1.1** corrige contradicciones internas de seguridad, datos e infraestructura detectadas en revisión y añade decisiones de **evolución sin rupturas** (§5.1) para que las Fases 2 y 3 se construyan agregando piezas, no reescribiendo. Registro completo en el Anexo F.
@@ -403,6 +403,8 @@ Nota a verificar: fuentes secundarias reportan que en 2026 Supabase exige `GRANT
 - **Preparado para particionar:** `audit_logs` y los históricos grandes usan PK `(created_at, id)` desde el MVP. Se particionan (mensual) en Fase 3 sin reescribir la tabla.
 
 ## 15. ERD
+
+> Diagrama conceptual. El esquema **autoritativo** está en `supabase/migrations/` y se explica en [DATABASE.md](DATABASE.md), que incluye además `business_hours`, `promotions`, `request_categories`, `engagement_daily` y las tablas de `private`.
 
 ```mermaid
 erDiagram
@@ -1188,7 +1190,7 @@ Resumen por tabla (el detalle de columnas está en el ERD §15; `DATABASE.md` te
 | jobs (`private`) | Cola asíncrona | (status, run_at) parcial WHERE status='pending'; UNIQUE parcial (dedupe_key) WHERE status IN ('pending','running') | Sin acceso por API; solo el worker (`service_role`) y funciones de sistema |
 | feature_flags | Activación por territorio | PK (key, province_id), municipality_id | Lectura pública de flags no sensibles; escritura municipal_admin provincial |
 
-Nota sobre `attachments` polimórfica: no tiene FK real a la entidad; se acepta por simplicidad y se valida con trigger (`entity_type` en lista cerrada, entidad existe). Alternativa si crece: tablas de adjuntos por entidad.
+Nota sobre `attachments` (v1.6): se reemplazó el diseño polimórfico (`entity_type` + `entity_id`, sin FK real) por un **arco exclusivo**: una FK real por entidad y `CHECK (num_nonnulls(...) = 1)`, con cascadas reales y sin adjuntos huérfanos. Ver DATABASE.md §5.6.
 
 KPIs de "visualizaciones": contador diario agregado (`daily_view_counts` en Fase 2, o Vercel Analytics en MVP) para no crear una tabla de eventos por cada vista.
 
@@ -1773,3 +1775,20 @@ Fuente: bases publicadas en conectasr.com (`/api/convocatoria`), leídas el 24/0
 | UX para baja alfabetización digital | Criterio UX/UI (20 pts) | §7 |
 | Hechos del reto: criterios, entregables, calendario | Bases | §0 |
 | Plan por semanas hasta la demo | Calendario | §48 |
+
+### v1.6 (24/09/2026): base de datos definida en SQL y verificada
+
+El diseño de datos deja de ser solo documento: 15 migraciones reales en `supabase/migrations/`, explicadas en [DATABASE.md](DATABASE.md) y verificadas con 87 pruebas (PostgreSQL 18.3 + PostGIS 3.6.2). La revisión y la ejecución corrigieron:
+
+| Cambio | Motivo | Dónde |
+|---|---|---|
+| FK compuestas `(municipality_id, province_id)` | Impedir un municipio de otra provincia | DATABASE.md §3, §5 |
+| `f_unaccent()` inmutable | `unaccent()` no se puede usar en columnas generadas ni índices | DATABASE.md §8 |
+| `ALTER DEFAULT PRIVILEGES` global (sin `IN SCHEMA`) | La forma por esquema no puede revocar el `EXECUTE` que Postgres concede a `PUBLIC` | DATABASE.md §8 |
+| Helpers `SECURITY DEFINER` en políticas que tocan columnas ocultas | Las subconsultas de una política respetan los grants por columna | DATABASE.md §8 |
+| `USAGE` explícito sobre `extensions` | Las funciones `SECURITY INVOKER` con tipos PostGIS fallaban para `anon` | DATABASE.md §8 |
+| Adjuntos con arco exclusivo (FK reales) | El diseño polimórfico no admitía FK ni cascadas | §39, DATABASE.md §5.6 |
+| Horarios normalizados (`business_hours`) | Consultar "abierto ahora" y validar rangos | DATABASE.md §5.4 |
+| Grants por columna (autor, asignado, claves) | RLS protege filas, no columnas | DATABASE.md §7 |
+| Índices en toda FK hacia `profiles` | Baja de cuentas sin recorridos completos | DATABASE.md §5.9 |
+| Contrato de RPC → HTTP y capas del backend | Una sola autoridad (PostgreSQL), sin capa "repositorio" extra | DATABASE.md §2 |

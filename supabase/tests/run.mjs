@@ -1,0 +1,390 @@
+// Suite de pruebas de la base de datos de SR Conecta.
+// Ejecuta las migraciones reales y prueba seguridad (RLS, grants, ataques directos), integridad,
+// concurrencia (compare-and-set, idempotencia), PostGIS, KPIs/PDF y mantenimiento.
+// Uso:  cd supabase/tests && npm install && npm test
+import { createDb, as } from './db.mjs';
+
+const results = [];
+const ok = (name, cond, detail = '') => results.push({ name, pass: !!cond, detail: String(detail ?? '') });
+const expectError = async (name, fn, re) => {
+  try { await fn(); ok(name, false, 'no lanzó error'); }
+  catch (e) { ok(name, re.test(e.message), e.message); }
+};
+
+const { db, files } = await createDb();
+let lastStep = 'inicio';
+try {
+const q = async (sql, params = []) => (await db.query(sql, params)).rows;
+const one = async (sql, params = []) => (await q(sql, params))[0];
+const rpc = async (who, sql, params = []) => (await as(db, who, `select ${sql} as r`, params)).rows[0].r;
+
+// Puntos de prueba (seed: rectángulos demo por municipio)
+const P = {
+  SAB: [19.4752, -71.3412], SAB2: [19.4700, -71.3450], MON: [19.4167, -71.1680], VLA: [19.4110, -71.4415],
+  SAB_EDGE: [19.5290, -71.3412],   // ~1 km fuera del borde norte de Sabaneta → se asigna a Sabaneta
+  SANTO_DOMINGO: [18.4700, -69.9000],
+};
+const muni = Object.fromEntries((await q(`select code, id from public.municipalities`)).map(r => [r.code, r.id]));
+const provinceId = (await one(`select id from public.provinces where code = 'SR'`)).id;
+
+// ---------------------------------------------------------------------------------------------
+// A. Estructura y permisos globales
+// ---------------------------------------------------------------------------------------------
+const noRls = await q(`select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+                       where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity`);
+ok('A1 RLS activado en todas las tablas de public', noRls.length === 0, noRls.map(r => r.relname).join(', '));
+
+const anonExec = await q(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                          where n.nspname = 'public' and has_function_privilege('anon', p.oid, 'execute') order by 1`);
+ok('A2 anon solo ejecuta map_features y search_all', anonExec.map(r => r.proname).join(',') === 'map_features,search_all',
+   anonExec.map(r => r.proname).join(','));
+
+const anonWrite = await q(`select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+                           where n.nspname = 'public' and c.relkind = 'r'
+                             and (has_table_privilege('anon', c.oid, 'insert') or has_table_privilege('anon', c.oid, 'update')
+                                  or has_table_privilege('anon', c.oid, 'delete'))`);
+ok('A3 anon no puede escribir en ninguna tabla', anonWrite.length === 0, anonWrite.map(r => r.relname).join(', '));
+
+const authWrite = await q(`select c.relname, p.priv from pg_class c join pg_namespace n on n.oid = c.relnamespace,
+                           unnest(array['INSERT','UPDATE','DELETE']) p(priv)
+                           where n.nspname = 'public' and c.relkind = 'r' and has_table_privilege('authenticated', c.oid, p.priv)
+                             and c.relname in ('traffic_reports','citizen_requests','businesses','user_roles','request_votes',
+                                               'tourism_places','eco_routes','audit_logs','moderation_actions','report_runs')`);
+ok('A4 authenticated sin escritura directa en tablas críticas', authWrite.length === 0,
+   authWrite.map(r => r.relname + ':' + r.priv).join(', '));
+
+const privExec = await q(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                          where n.nspname = 'private' and has_function_privilege('authenticated', p.oid, 'execute') order by 1`);
+ok('A5 authenticated solo ejecuta los helpers de RLS en private',
+   privExec.map(r => r.proname).join(',') === 'can_read_request,f_unaccent,is_admin,is_any_staff,is_business_member,is_provincial_admin,is_service,is_staff,reject',
+   privExec.map(r => r.proname).join(','));
+
+const definerNoPath = await q(`select n.nspname || '.' || p.proname f from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                               where n.nspname in ('public','private') and p.prosecdef
+                                 and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c where c like 'search_path=%')`);
+ok('A6 toda función SECURITY DEFINER fija search_path', definerNoPath.length === 0, definerNoPath.map(r => r.f).join(', '));
+
+const fkNoIndex = await q(`
+  select c.conrelid::regclass::text || '(' || string_agg(a.attname, ',') || ')' as fk
+  from pg_constraint c
+  join pg_attribute a on a.attrelid = c.conrelid and a.attnum = any (c.conkey)
+  join pg_namespace n on n.oid = (select relnamespace from pg_class where oid = c.conrelid)
+  where c.contype = 'f' and n.nspname = 'public' and c.confrelid = 'public.profiles'::regclass
+    and not exists (select 1 from pg_index i where i.indrelid = c.conrelid
+                    and (i.indkey::int2[])[0:cardinality(c.conkey) - 1] @> c.conkey)
+  group by c.conrelid, c.conname`);
+ok('A7 toda FK hacia profiles tiene índice (borrado de cuentas sin recorridos completos)', fkNoIndex.length === 0, fkNoIndex.map(r => r.fk).join(' · '));
+
+// ---------------------------------------------------------------------------------------------
+// B. Identidad: alta automática, perfiles y escalada de privilegios
+// ---------------------------------------------------------------------------------------------
+const newUser = async (email, name) => (await one(
+  `insert into auth.users (email, raw_user_meta_data) values ($1, jsonb_build_object('display_name', $2::text)) returning id`, [email, name])).id;
+const U = {
+  ana: await newUser('ana@ejemplo.do', 'Ana'),
+  beto: await newUser('beto@ejemplo.do', 'Beto'),
+  cris: await newUser('cris@ejemplo.do', 'Cris'),
+  modSab: await newUser('mod.sab@ejemplo.do', 'Moderador Sabaneta'),
+  modMon: await newUser('mod.mon@ejemplo.do', 'Moderador Monción'),
+  admMon: await newUser('adm.mon@ejemplo.do', 'Admin Monción'),
+  admProv: await newUser('adm.prov@ejemplo.do', 'Admin Provincial'),
+};
+// Script de operación (ADR-020): el personal inicial se crea con permisos de servicio
+await db.query(`insert into public.user_roles (user_id, role, province_id, municipality_id) values
+  ($1, 'moderator', $5, $6), ($2, 'moderator', $5, $7), ($3, 'municipal_admin', $5, $7), ($4, 'municipal_admin', $5, null)`,
+  [U.modSab, U.modMon, U.admMon, U.admProv, provinceId, muni.SAB, muni.MON]);
+
+const anaProfile = await one(`select p.display_name, array_agg(r.role) roles from public.profiles p
+                              join public.user_roles r on r.user_id = p.id where p.id = $1 group by p.display_name`, [U.ana]);
+ok('B1 el registro crea perfil y rol citizen', anaProfile.display_name === 'Ana' && anaProfile.roles.join() === 'citizen');
+
+await expectError('B2 ciudadano no puede autoasignarse un rol',
+  () => as(db, U.ana, `insert into public.user_roles (user_id, role, province_id) values ($1, 'municipal_admin', $2)`, [U.ana, provinceId]),
+  /permission denied/);
+await expectError('B3 ciudadano no puede subir su reputación',
+  () => as(db, U.ana, `update public.profiles set reputation = 100 where id = $1`, [U.ana]), /permission denied/);
+await as(db, U.ana, `update public.profiles set display_name = 'Ana María' where id = $1`, [U.ana]);
+const hijack = await as(db, U.ana, `update public.profiles set display_name = 'hackeado' where id = $1`, [U.beto]);
+ok('B4 edita su nombre pero no el de otro (RLS: 0 filas)',
+   (await one(`select display_name from public.profiles where id = $1`, [U.ana])).display_name === 'Ana María'
+   && hijack.affectedRows === 0 && (await one(`select display_name from public.profiles where id = $1`, [U.beto])).display_name === 'Beto');
+
+// ---------------------------------------------------------------------------------------------
+// C. Territorio y PostGIS
+// ---------------------------------------------------------------------------------------------
+const loc = async ([lat, lng]) => (await one(`select m.code from private.locate(private.make_point($1, $2)) l
+                                              join public.municipalities m on m.id = l.municipality_id`, [lat, lng]))?.code ?? null;
+ok('C1 punto dentro de Sabaneta → SAB', await loc(P.SAB) === 'SAB');
+ok('C2 punto a ~1 km del borde → municipio más cercano (tolerancia GPS)', await loc(P.SAB_EDGE) === 'SAB');
+ok('C3 punto fuera de la provincia → sin municipio', await loc(P.SANTO_DOMINGO) === null);
+ok('C4 coordenadas inválidas → NULL', (await one(`select private.make_point(95, -71) is null v`)).v === true);
+
+await db.query(`insert into public.provinces (code, name) values ('XX', 'Otra provincia')`);
+const otherProv = (await one(`select id from public.provinces where code = 'XX'`)).id;
+await expectError('C5 FK compuesta: un rol no puede mezclar municipio y provincia distintos',
+  () => db.query(`insert into public.user_roles (user_id, role, province_id, municipality_id) values ($1, 'moderator', $2, $3)`,
+                 [U.cris, otherProv, muni.SAB]), /foreign key/);
+await expectError('C6 NULLS NOT DISTINCT: no se duplica un rol provincial',
+  () => db.query(`insert into public.user_roles (user_id, role, province_id, municipality_id) values ($1, 'municipal_admin', $2, null)`,
+                 [U.admProv, provinceId]), /duplicate key/);
+
+// ---------------------------------------------------------------------------------------------
+// D. Reportes de tránsito (F4)
+// ---------------------------------------------------------------------------------------------
+const createTraffic = (who, [lat, lng], key, type = 'bache') =>
+  rpc(who, `public.create_traffic_report($1, $2, $3, $4)`, [type, lat, lng, key]);
+
+await expectError('D1 anon no puede crear reportes', () => createTraffic(null, P.SAB, 'anon-key-0001'), /permission denied/);
+const t1 = await createTraffic(U.ana, P.SAB, 'ana-traffic-0001');
+const t1row = await one(`select status, municipality_id, reporter_id from public.traffic_reports where id = $1`, [t1.id]);
+ok('D2 reporte creado pendiente y ubicado en Sabaneta', t1.status === 'ok' && t1row.status === 'pending' && t1row.municipality_id === muni.SAB);
+const t1dup = await createTraffic(U.ana, P.SAB, 'ana-traffic-0001');
+ok('D3 idempotencia: misma clave devuelve el mismo reporte', t1dup.id === t1.id && t1dup.duplicate === true);
+const tBad = await rpc(U.ana, `public.create_traffic_report('bache', 200, -71, 'ana-traffic-0002')`);
+ok('D4 coordenadas inválidas → rechazo (no excepción)', tBad.reason === 'invalid_coordinates');
+const tOut = await createTraffic(U.ana, P.SANTO_DOMINGO, 'ana-traffic-0003');
+ok('D5 fuera de la provincia → out_of_area', (await one(`select status from public.traffic_reports where id = $1`, [tOut.id])).status === 'out_of_area');
+const tType = await rpc(U.ana, `public.create_traffic_report('ovni', 19.47, -71.34, 'ana-traffic-0004')`);
+ok('D6 tipo inexistente → invalid_type', tType.reason === 'invalid_type');
+
+for (let i = 0; i < 5; i++) await rpc(U.beto, `public.create_traffic_report('bache', 999, 999, $1)`, [`beto-bad-${i}-xxxx`]);
+const limited = await createTraffic(U.beto, P.SAB, 'beto-ok-00001');
+ok('D7 rate limit: los intentos rechazados también cuentan (6º bloqueado)', limited.reason === 'rate_limited', JSON.stringify(limited));
+
+const bbox = `public.map_features(-71.5, 19.3, -71.0, 19.6, array['traffic'])`;
+const before = (await rpc(null, bbox)).features.length;
+const modWrong = await rpc(U.modMon, `public.moderate_traffic_report($1, 'pending', 'active')`, [t1.id]);
+ok('D8 moderador de Monción no modera Sabaneta (forbidden)', modWrong.reason === 'forbidden');
+ok('D9 el intento denegado queda auditado',
+   (await one(`select count(*)::int n from public.audit_logs where entity_id = $1 and result = 'denied'`, [t1.id])).n === 1);
+const skip = await rpc(U.modSab, `public.moderate_traffic_report($1, 'pending', 'resolved')`, [t1.id]);
+ok('D10 transición inválida pending→resolved rechazada', skip.reason === 'invalid_transition');
+const act = await rpc(U.modSab, `public.moderate_traffic_report($1, 'pending', 'active')`, [t1.id]);
+const stale = await rpc(U.modSab, `public.moderate_traffic_report($1, 'pending', 'rejected', 'duplicado')`, [t1.id]);
+ok('D11 compare-and-set: el segundo moderador recibe stale_state', act.status === 'ok' && stale.reason === 'stale_state'
+   && stale.current_status === 'active', JSON.stringify(stale));
+const after = (await rpc(null, bbox)).features;
+ok('D12 el mapa público muestra el reporte solo al activarse', before === 0 && after.some(f => f.properties.id === t1.id));
+await expectError('D13 anon no puede leer el autor del reporte (grant por columna)',
+  () => as(db, null, `select reporter_id from public.traffic_reports`), /permission denied/);
+const sent = await one(`select payload from realtime.sent where payload->>'id' = $1 order by at desc limit 1`, [t1.id]);
+ok('D14 alerta en vivo emitida por Realtime sin datos personales',
+   sent && sent.payload.status === 'active' && !('reporter_id' in sent.payload));
+await expectError('D15 ciudadano no puede cambiar el estado directamente',
+  () => as(db, U.ana, `update public.traffic_reports set status = 'resolved' where id = $1`, [t1.id]), /permission denied/);
+ok('D16 reputación del autor sube al verificarse',
+   (await one(`select reputation from public.profiles where id = $1`, [U.ana])).reputation === 1);
+const esc = await rpc(U.modSab, `public.escalate_traffic_report($1)`, [t1.id]);
+const esc2 = await rpc(U.modSab, `public.escalate_traffic_report($1)`, [t1.id]);
+const escReq = await one(`select status, requester_id, kind from public.citizen_requests where id = $1`, [esc.request_id]);
+ok('D17 escalado a incidencia municipal (una sola vez, conserva al autor)',
+   esc.status === 'ok' && esc2.duplicate === true && escReq.status === 'approved' && escReq.requester_id === U.ana && escReq.kind === 'incident');
+
+// ---------------------------------------------------------------------------------------------
+// E. Incidencias y consultas (F5)
+// ---------------------------------------------------------------------------------------------
+const inq = await rpc(U.ana, `public.create_citizen_request('inquiry', 'consulta', 'Horario de la oficina', 'Quisiera saber el horario del ayuntamiento.', 'ana-req-00001', null, null, $1)`, [muni.SAB]);
+ok('E1 consulta sin ubicación con municipio elegido', inq.status === 'ok', JSON.stringify(inq));
+const noLoc = await rpc(U.ana, `public.create_citizen_request('incident', 'basura', 'Basura acumulada', 'Hay basura acumulada en la esquina.', 'ana-req-00002')`);
+ok('E2 incidencia sin ubicación → location_required', noLoc.reason === 'location_required');
+const badCat = await rpc(U.ana, `public.create_citizen_request('inquiry', 'basura', 'Mezcla', 'Categoría de incidencia en una consulta.', 'ana-req-00003', null, null, $1)`, [muni.SAB]);
+ok('E3 categoría de otro tipo → invalid_category', badCat.reason === 'invalid_category');
+const inc = await rpc(U.ana, `public.create_citizen_request('incident', 'alumbrado', 'Poste sin luz', 'El poste de la esquina lleva una semana apagado.', 'ana-req-00004', $1, $2)`, P.SAB2);
+ok('E4 incidencia con ubicación creada', inc.status === 'ok');
+const bSees = await as(db, U.beto, `select id from public.citizen_requests where id = $1`, [inc.id]);
+const aSees = await as(db, U.ana, `select id from public.citizen_requests where id = $1`, [inc.id]);
+ok('E5 RLS: otro ciudadano no ve una solicitud privada; la autora sí', bSees.rows.length === 0 && aSees.rows.length === 1);
+const citizenMove = await rpc(U.ana, `public.change_request_status($1, 'pending', 'under_review')`, [inc.id]);
+ok('E6 la autora no puede mover su propia solicitud', citizenMove.reason === 'forbidden');
+const s1 = await rpc(U.modSab, `public.change_request_status($1, 'pending', 'under_review')`, [inc.id]);
+const s2 = await rpc(U.modSab, `public.change_request_status($1, 'under_review', 'approved')`, [inc.id]);
+const s3 = await rpc(U.modSab, `public.change_request_status($1, 'approved', 'in_progress')`, [inc.id]);
+ok('E7 in_progress exige asignación', s1.status === 'ok' && s2.status === 'ok' && s3.reason === 'assignee_required');
+const badAssign = await rpc(U.modSab, `public.assign_request($1, $2)`, [inc.id, U.beto]);
+ok('E8 no se puede asignar a alguien que no es personal', badAssign.reason === 'assignee_not_staff');
+await rpc(U.modSab, `public.assign_request($1, $2)`, [inc.id, U.modSab]);
+const s4 = await rpc(U.modSab, `public.change_request_status($1, 'approved', 'in_progress')`, [inc.id]);
+const s4b = await rpc(U.modSab, `public.change_request_status($1, 'approved', 'in_progress')`, [inc.id]);
+ok('E9 compare-and-set en consultas: repetir la misma transición → stale_state', s4.status === 'ok' && s4b.reason === 'stale_state');
+const s5 = await rpc(U.modSab, `public.change_request_status($1, 'in_progress', 'resolved')`, [inc.id]);
+const s6 = await rpc(U.modSab, `public.change_request_status($1, 'in_progress', 'resolved', 'Se cambió la bombilla.')`, [inc.id]);
+ok('E10 resolver exige nota', s5.reason === 'note_required' && s6.status === 'ok');
+const hist = await as(db, U.ana, `select to_status from public.request_status_history where request_id = $1 order by created_at, id`, [inc.id]);
+ok('E11 historial completo visible para la autora', hist.rows.map(r => r.to_status).join('>') === 'pending>under_review>approved>in_progress>resolved',
+   hist.rows.map(r => r.to_status).join('>'));
+ok('E12 la autora recibió notificaciones de cada cambio',
+   (await one(`select count(*)::int n from public.notifications where user_id = $1 and kind = 'request_status'`, [U.ana])).n >= 4);
+
+// ---------------------------------------------------------------------------------------------
+// F. Votación de prioridades (F5 "voten prioridades")
+// ---------------------------------------------------------------------------------------------
+const pub = await rpc(U.ana, `public.create_citizen_request('incident', 'infraestructura', 'Acera rota', 'La acera frente a la escuela está rota.', 'ana-req-00005', $1, $2)`, P.SAB);
+const v0 = await rpc(U.beto, `public.toggle_request_vote($1)`, [pub.id]);
+ok('F1 no se vota una solicitud no pública', v0.reason === 'not_votable');
+await rpc(U.modSab, `public.change_request_status($1, 'pending', 'under_review')`, [pub.id]);
+await rpc(U.modSab, `public.change_request_status($1, 'under_review', 'approved')`, [pub.id]);
+const pubOk = await rpc(U.modSab, `public.set_request_public($1, true)`, [pub.id]);
+const v1 = await rpc(U.beto, `public.toggle_request_vote($1)`, [pub.id]);
+const v2 = await rpc(U.beto, `public.toggle_request_vote($1)`, [pub.id]);
+const v3 = await rpc(U.beto, `public.toggle_request_vote($1)`, [pub.id]);
+const v4 = await rpc(U.cris, `public.toggle_request_vote($1)`, [pub.id]);
+ok('F2 un voto por usuario; alternar quita y pone; el contador lo lleva la base',
+   pubOk.status === 'ok' && v1.voted && v1.support_count === 1 && !v2.voted && v2.support_count === 0
+   && v3.support_count === 1 && v4.support_count === 2, JSON.stringify([v1, v2, v3, v4]));
+const own = await rpc(U.ana, `public.toggle_request_vote($1)`, [pub.id]);
+ok('F3 la autora no vota su propia solicitud', own.reason === 'own_request');
+await expectError('F4 no se insertan votos directamente', () => as(db, U.cris,
+  `insert into public.request_votes (request_id, user_id) values ($1, $2)`, [pub.id, U.cris]), /permission denied/);
+const anonPub = await as(db, null, `select title, support_count from public.citizen_requests where id = $1`, [pub.id]);
+ok('F5 anon ve la solicitud pública con sus apoyos', anonPub.rows[0]?.support_count === 2);
+await expectError('F6 anon no ve quién la creó', () => as(db, null, `select requester_id from public.citizen_requests`), /permission denied/);
+
+// ---------------------------------------------------------------------------------------------
+// G. Negocios, horarios, lugares y rutas (F1, F2, F3)
+// ---------------------------------------------------------------------------------------------
+const biz = await rpc(U.cris, `public.submit_business('Café Monción', 'cafeteria', $1, $2, 'cris-biz-000001', 'Café de altura')`, P.MON);
+ok('G1 alta de negocio pendiente con dueño', biz.status === 'ok' && biz.business_status === 'pending'
+   && (await one(`select member_role from public.business_members where business_id = $1 and user_id = $2`, [biz.id, U.cris])).member_role === 'owner');
+ok('G2 anon no ve negocios pendientes; el dueño sí',
+   (await as(db, null, `select id from public.businesses where id = $1`, [biz.id])).rows.length === 0
+   && (await as(db, U.cris, `select id from public.businesses where id = $1`, [biz.id])).rows.length === 1);
+const rWrong = await rpc(U.modSab, `public.review_content('business', $1, 'pending', 'under_review')`, [biz.id]);
+ok('G3 moderador de otro municipio no revisa (forbidden)', rWrong.reason === 'forbidden');
+await rpc(U.modMon, `public.review_content('business', $1, 'pending', 'under_review')`, [biz.id]);
+const appr = await rpc(U.modMon, `public.review_content('business', $1, 'under_review', 'approved')`, [biz.id]);
+ok('G4 aprobado: el dueño pasa a entrepreneur y el negocio es público', appr.status === 'ok'
+   && (await one(`select count(*)::int n from public.user_roles where user_id = $1 and role = 'entrepreneur'`, [U.cris])).n === 1
+   && (await as(db, null, `select id from public.businesses where id = $1`, [biz.id])).rows.length === 1);
+const mass = await rpc(U.cris, `public.update_business($1, 1, '{"status":"approved","name":"X"}'::jsonb)`, [biz.id]);
+ok('G5 asignación masiva bloqueada (campo no permitido)', mass.reason === 'unknown_field', JSON.stringify(mass));
+const curVersion = (await one(`select version from public.businesses where id = $1`, [biz.id])).version;
+const upd = await rpc(U.cris, `public.update_business($1, $2, '{"phone":"+1 809 555 0101"}'::jsonb)`, [biz.id, curVersion]);
+const conflict = await rpc(U.cris, `public.update_business($1, $2, '{"phone":"+1 809 555 0199"}'::jsonb)`, [biz.id, curVersion]);
+ok('G6 bloqueo optimista: versión vieja → version_conflict', upd.status === 'ok' && conflict.reason === 'version_conflict', JSON.stringify(conflict));
+const other = await rpc(U.beto, `public.update_business($1, $2, '{"phone":"+1 809 000 0000"}'::jsonb)`, [biz.id, curVersion + 1]);
+ok('G7 otro usuario no edita el negocio', other.reason === 'forbidden');
+const badPhone = await rpc(U.cris, `public.update_business($1, $2, '{"phone":"<script>"}'::jsonb)`, [biz.id, curVersion + 1]);
+ok('G8 datos inválidos rechazados por CHECK (no se guardan)', badPhone.reason === 'invalid_field');
+const hoursBad = await rpc(U.cris, `public.set_business_hours($1, '[{"weekday":9,"opens":"08:00","closes":"17:00"}]'::jsonb)`, [biz.id]);
+const hoursOk = await rpc(U.cris, `public.set_business_hours($1, '[{"weekday":1,"opens":"08:00","closes":"17:00"},{"weekday":6,"opens":"20:00","closes":"02:00"}]'::jsonb)`, [biz.id]);
+ok('G9 horarios validados; anon los ve en negocios aprobados', hoursBad.reason === 'invalid_hours' && hoursOk.status === 'ok'
+   && (await as(db, null, `select count(*)::int n from public.business_hours where business_id = $1`, [biz.id])).rows[0].n === 2);
+
+const place = await rpc(U.beto, `public.propose_place('Mirador de Monción', 'mirador', $1, $2, 'Vista al embalse')`, P.MON);
+ok('G10 propuesta ciudadana de lugar queda pendiente e invisible al público', place.place_status === 'pending'
+   && (await as(db, null, `select id from public.tourism_places where id = $1`, [place.id])).rows.length === 0);
+await rpc(U.modMon, `public.review_content('place', $1, 'pending', 'published')`, [place.id]);
+const found = await as(db, null, `select entity, name from public.search_all('mirador moncion')`);
+ok('G11 publicada y encontrable sin acentos ("moncion" → "Monción")', found.rows.some(r => r.name === 'Mirador de Monción'),
+   JSON.stringify(found.rows));
+const typo = await as(db, null, `select name from public.search_all('Cafe Monsion')`);
+ok('G12 búsqueda tolera errores de tipeo (trigramas)', typo.rows.some(r => r.name === 'Café Monción'), JSON.stringify(typo.rows));
+
+const line = { type: 'LineString', coordinates: [[-71.3412, 19.4752], [-71.3450, 19.4700], [-71.3500, 19.4668]] };
+const route = await rpc(U.beto, `public.propose_route('Sendero del Inaje', 'ecologica', 'media', 90, $1::jsonb)`, [JSON.stringify(line)]);
+const rrow = await one(`select distance_km, st_astext(start_point) sp, municipality_ids from public.eco_routes where id = $1`, [route.id]);
+ok('G13 ruta: distancia y punto de inicio calculados por la base', route.status === 'ok' && Number(rrow.distance_km) > 0.5
+   && Number(rrow.distance_km) < 2 && rrow.sp.startsWith('POINT(-71.3412') && rrow.municipality_ids.includes(muni.SAB),
+   JSON.stringify(rrow));
+const badRoute = await rpc(U.beto, `public.propose_route('Mala', 'ecologica', 'baja', 30, '{"type":"Point","coordinates":[0,0]}'::jsonb)`);
+ok('G14 geometría inválida rechazada', badRoute.reason === 'invalid_geometry');
+
+// ---------------------------------------------------------------------------------------------
+// H. Roles (ADR-020: sin super_admin)
+// ---------------------------------------------------------------------------------------------
+const g1 = await rpc(U.admMon, `public.assign_role($1, 'moderator', $2)`, [U.beto, muni.MON]);
+const g2 = await rpc(U.admMon, `public.assign_role($1, 'moderator', $2)`, [U.beto, muni.SAB]);
+const g3 = await rpc(U.admMon, `public.assign_role($1, 'municipal_admin', $2)`, [U.beto, muni.MON]);
+const g4 = await rpc(U.admProv, `public.assign_role($1, 'municipal_admin', $2)`, [U.beto, muni.VLA]);
+const g5 = await rpc(U.admProv, `public.assign_role($1, 'municipal_admin', null)`, [U.beto]);
+const g6 = await rpc(U.ana, `public.assign_role($1, 'moderator', $2)`, [U.ana, muni.SAB]);
+ok('H1 admin municipal asigna moderadores solo en su municipio', g1.status === 'ok' && g2.reason === 'forbidden');
+ok('H2 solo el admin provincial crea admins municipales', g3.reason === 'forbidden' && g4.status === 'ok');
+ok('H3 el alcance provincial no se asigna desde la app', g5.reason === 'provincial_scope_requires_operation_script');
+ok('H4 un ciudadano no se autoasigna roles', g6.reason === 'forbidden');
+
+// ---------------------------------------------------------------------------------------------
+// I. KPIs y PDF (misma fuente)
+// ---------------------------------------------------------------------------------------------
+const today = (await one(`select (now() at time zone 'America/Santo_Domingo')::date d`)).d;
+const iso = d => (d instanceof Date ? d.toISOString() : String(d)).slice(0, 10);
+const kCit = await rpc(U.ana, `public.kpi_summary($1::date, $1::date)`, [iso(today)]);
+const kMonOnSab = await rpc(U.admMon, `public.kpi_summary($1::date, $1::date, $2)`, [iso(today), muni.SAB]);
+const kProv = await rpc(U.admProv, `public.kpi_summary($1::date, $1::date)`, [iso(today)]);
+ok('I1 KPIs: ciudadano y admin de otro municipio → forbidden', kCit.reason === 'forbidden' && kMonOnSab.reason === 'forbidden');
+ok('I2 KPIs provinciales cuentan lo ocurrido hoy (2 tránsito válidos, 4 solicitudes, 1 resuelta, 1 negocio)', kProv.traffic.received === 2 && kProv.traffic.out_of_area === 1 && kProv.requests.received === 4
+   && kProv.requests.resolved === 1 && kProv.businesses.approved_total === 1, JSON.stringify({t: kProv.traffic, r: kProv.requests, b: kProv.businesses}));
+const periodStart = iso((await one(`select date_trunc('week', (now() at time zone 'America/Santo_Domingo')::date)::date d`)).d);
+const wr1 = await rpc('service', `public.weekly_report_begin($1::date)`, [periodStart]);
+const wr2 = await rpc('service', `public.weekly_report_begin($1::date)`, [periodStart]);
+ok('I3 informe semanal: 4 snapshots (provincia + 3 municipios); el cron repetido no duplica',
+   wr1.status === 'ok' && wr1.snapshots.length === 4 && wr2.status === 'skipped', JSON.stringify(wr2));
+const kWeek = await rpc('service', `public.kpi_summary($1::date, ($1::date + 6))`, [periodStart]);
+const snapProv = await one(`select metrics from public.weekly_kpi_snapshots where report_run_id = $1 and municipality_id is null`, [wr1.run_id]);
+ok('I4 PDF y panel coinciden: snapshot == kpi_summary del mismo periodo',
+   JSON.stringify(snapProv.metrics) === JSON.stringify(kWeek));
+const wrMan = await rpc(U.admProv, `public.weekly_report_begin($1::date, true)`, [periodStart]);
+const wrMun = await rpc(U.admMon, `public.weekly_report_begin($1::date, true)`, [periodStart]);
+ok('I5 regeneración manual crea versión 2 (solo admin provincial)', wrMan.version === 2 && wrMun.reason === 'forbidden');
+const fin = await rpc('service', `public.weekly_report_finish($1, true, 'sr/2026/semana-39/v1.pdf')`, [wr1.run_id]);
+ok('I6 cierre del informe y aviso a administradores', fin.status === 'ok'
+   && (await one(`select count(*)::int n from public.notifications where kind = 'system'`)).n >= 2);
+
+// ---------------------------------------------------------------------------------------------
+// J. Cola de trabajos
+// ---------------------------------------------------------------------------------------------
+await expectError('J1 un usuario no puede tomar trabajos del worker',
+  () => rpc(U.admProv, `public.worker_claim_jobs(5)`), /permission denied|forbidden/);
+const claimed = await rpc('service', `public.worker_claim_jobs(50)`);
+const again = await rpc('service', `public.worker_claim_jobs(50)`);
+ok('J2 el worker toma trabajos y no los repite mientras están tomados', claimed.length > 0 && again.length === 0,
+   `${claimed.length} / ${again.length}`);
+await rpc('service', `public.worker_finish_job($1, false, 'SMTP caído')`, [claimed[0].id]);
+const retry = await one(`select status, run_at > now() + interval '20 seconds' later from private.jobs where id = $1`, [claimed[0].id]);
+ok('J3 fallo → reintento con backoff', retry.status === 'pending' && retry.later === true);
+await db.exec(`select private.enqueue('push', '{"x":1}', 'dedupe-test'); select private.enqueue('push', '{"x":2}', 'dedupe-test');`);
+ok('J4 deduplicación de trabajos pendientes',
+   (await one(`select count(*)::int n from private.jobs where dedupe_key = 'dedupe-test'`)).n === 1);
+
+// ---------------------------------------------------------------------------------------------
+// K. Storage
+// ---------------------------------------------------------------------------------------------
+await as(db, U.ana, `insert into storage.objects (bucket_id, name) values ('report-evidence', $1)`, [`incoming/${U.ana}/foto.jpg`]);
+ok('K1 ciudadana sube a su carpeta incoming/{uid}', true);
+await expectError('K2 no puede subir a la carpeta de otro usuario',
+  () => as(db, U.ana, `insert into storage.objects (bucket_id, name) values ('report-evidence', $1)`, [`incoming/${U.beto}/x.jpg`]),
+  /row-level security/);
+await expectError('K3 no puede escribir en el bucket público',
+  () => as(db, U.ana, `insert into storage.objects (bucket_id, name) values ('public-media', 'x/y.webp')`), /row-level security/);
+
+// ---------------------------------------------------------------------------------------------
+// L. Mantenimiento y privacidad
+// ---------------------------------------------------------------------------------------------
+await db.query(`update public.traffic_reports set expires_at = created_at + interval '1 second' where id = $1`, [t1.id]);
+await db.query(`select pg_sleep(1.1)`);
+const expired = await one(`select private.expire_traffic_reports() n`);
+ok('L1 expiración automática de reportes de tránsito', expired.n >= 1
+   && (await one(`select status from public.traffic_reports where id = $1`, [t1.id])).status === 'expired');
+ok('L2 un reporte expirado desaparece del mapa público',
+   !(await rpc(null, bbox)).features.some(f => f.properties.id === t1.id));
+await db.query(`delete from auth.users where id = $1`, [U.ana]);
+const afterDel = await one(`select
+   (select count(*) from public.profiles where id = $1)::int as profiles,
+   (select count(*) from public.traffic_reports where reporter_id is null and id = $2)::int as anon_traffic,
+   (select count(*) from public.citizen_requests where requester_id is null and id = $3)::int as anon_request,
+   (select count(*) from public.request_status_history where request_id = $3)::int as history`, [U.ana, t1.id, inc.id]);
+ok('L3 borrar la cuenta: perfil eliminado, reportes anonimizados, historial intacto',
+   afterDel.profiles === 0 && afterDel.anon_traffic === 1 && afterDel.anon_request === 1 && afterDel.history === 5,
+   JSON.stringify(afterDel));
+const ret = await one(`select private.apply_retention() r`);
+ok('L4 la retención se ejecuta sin errores', typeof ret.r === 'object', JSON.stringify(ret.r));
+
+} catch (e) {
+  results.push({ name: `ERROR NO CONTROLADO después de "${results.at(-1)?.name ?? lastStep}"`, pass: false,
+                 detail: `${e.message}${e.where ? ' | ' + e.where : ''}` });
+}
+// ---------------------------------------------------------------------------------------------
+const failed = results.filter(r => !r.pass);
+for (const r of results) console.log(`${r.pass ? 'PASS' : 'FAIL'}  ${r.name}${r.detail && (!r.pass || r.name.includes('informativo')) ? '  → ' + r.detail : ''}`);
+console.log(`\n${results.length - failed.length}/${results.length} pruebas OK · ${files.length} migraciones`);
+process.exit(failed.length ? 1 : 0);

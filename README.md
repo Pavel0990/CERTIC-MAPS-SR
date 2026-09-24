@@ -2,13 +2,15 @@
 
 Plataforma geográfica para la provincia Santiago Rodríguez (República Dominicana). Conecta a ciudadanos, turistas, emprendedores, comercios y autoridades alrededor de un mapa: negocios y turismo, rutas ecoturísticas, reportes de tránsito, incidencias y consultas municipales, panel administrativo con KPIs y un informe semanal en PDF.
 
-> **Estado actual del repositorio:** prototipo interactivo de diseño + documento de arquitectura. **Todavía no existe el código del producto** (Next.js, Supabase, base de datos, API). Todo lo que se describe como "producto" está en [ARCHITECTURE.md](ARCHITECTURE.md) y aún no está implementado.
+> **Estado actual del repositorio:** prototipo interactivo de diseño, documento de arquitectura y **base de datos definida y probada** (migraciones SQL). Todavía no existe la aplicación Next.js: su diseño está en [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Contenido
 
 | Ruta | Qué es |
 |---|---|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Arquitectura técnica (v1.4): stack, modelo de datos, seguridad, API, despliegue, ADRs y registro de cambios |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Arquitectura técnica (v1.6): stack, modelo de datos, seguridad, API, despliegue, ADRs y registro de cambios |
+| [DATABASE.md](DATABASE.md) | Backend y base de datos: capas, convenciones, modelo, RPC, matriz RLS, operación |
+| [supabase/](supabase) | Migraciones SQL, seed de desarrollo, script de operación y pruebas de la base |
 | [project/Main.dc.html](project/Main.dc.html) | Prototipo interactivo: app ciudadana y panel municipal, con datos de demostración |
 | [project/sr-core.js](project/sr-core.js) | Datos de demostración y utilidades del prototipo (proyección de mapa, distancias, KPIs) |
 | [project/support.js](project/support.js) | Runtime del lienzo de diseño. Archivo **generado**: no editar |
@@ -39,6 +41,16 @@ Lo que el prototipo sí respeta del diseño final: un solo origen de datos para 
 Incluido: mapa interactivo y geolocalización; negocios y comercio local (con promociones informativas); turismo y rutas ecoturísticas; reportes de tránsito; incidencias y consultas municipales; usuarios, perfiles y roles; panel municipal con moderación; KPIs y PDF semanal; PWA responsive; imágenes; auditoría.
 
 **Fuera de alcance:** misiones y recompensas (retiradas en la arquitectura v1.3; ver ADR-010 y ADR-011).
+
+## Base de datos
+
+El esquema de PostgreSQL + PostGIS ya está definido y probado en [`supabase/migrations/`](supabase/migrations) (15 migraciones), explicado en [DATABASE.md](DATABASE.md). Para ejecutar las 87 pruebas (no requiere Docker ni Supabase):
+
+```bash
+cd supabase/tests
+npm install
+npm test
+```
 
 ## Stack objetivo (resumen)
 
