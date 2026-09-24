@@ -1,1433 +1,104 @@
-# SR Conecta — Arquitectura Técnica Definitiva
+# SR Conecta — Arquitectura
 
-> Documento de arquitectura para el repositorio. Versión 1.6 · 24 de septiembre de 2026 (v1.0–v1.5: 23–24/09/2026)
-> Alcance: desde el MVP del reto TechEmprende SR Conecta 2026 hasta producción municipal y escala regional.
-> Fuentes oficiales y precios consultados el **23/09/2026** (ver §31 y Anexo E). Todo precio debe re-verificarse antes de presupuestar.
-> **v1.1** corrige contradicciones internas de seguridad, datos e infraestructura detectadas en revisión y añade decisiones de **evolución sin rupturas** (§5.1) para que las Fases 2 y 3 se construyan agregando piezas, no reescribiendo. Registro completo en el Anexo F.
-
----
-
-## 0. Contexto que cambia decisiones (leído de conectasr.com)
-
-Antes de decidir, estos hechos del reto condicionan la arquitectura más que cualquier preferencia técnica:
-
-| Hecho del reto | Consecuencia arquitectónica |
-|---|---|
-| Provincia Santiago Rodríguez, 3 municipios: San Ignacio de Sabaneta (cabecera), Monción y Villa Los Almácigos | Territorio pequeño. El volumen de puntos en MVP es de cientos a pocos miles, no millones. No sobre-optimizar. |
-| La organización entrega **datos geográficos abiertos** de la provincia | Deben importarse a PostGIS (límites municipales, POIs, caminos). PostGIS es la fuente de verdad territorial, no Google. |
-| Demo en vivo de **25 minutos con datos reales** | Semilla de datos reproducible, guion de demo y plan B si una API externa falla. |
-| El proyecto ganador se libera bajo **MIT o Apache 2.0** y pasa a los patrocinadores (FUNDESER) | Todas las dependencias deben ser compatibles en licencia. La cuenta de Google Cloud, Supabase y Vercel deben poder **transferirse**. Nada de claves ni cuentas personales incrustadas. |
-| Stack libre; se evalúa el resultado | Priorizar lo que el equipo domina y lo que se demuestra bien, no lo más sofisticado. |
-| "Cualquier ciudadano ingresa datos y **recibe notificaciones** sobre el mapa" | Notificaciones in-app son obligatorias; push es un canal adicional. |
-| "Mapa **en tiempo real** donde cualquier usuario puede ver **y agregar** puntos de interés, negocios, rutas y alertas" | Los ciudadanos **proponen** lugares y rutas (moderados antes de publicarse, §22) y las alertas de tránsito aparecen en vivo en el mapa (Realtime, §26) |
-| Reporte de tránsito incluye "accidentes, cierres, **baches**, semáforos dañados y **desvíos**" | Esos tipos pertenecen a `traffic_report_types`, no a servicios municipales (§21.2) |
-| Consultas ciudadanas: "reportar problemas comunitarios, **votar prioridades** y dar seguimiento" | Votos de apoyo por consulta, uno por usuario (§21.1) |
-| Criterios (100 pts): MVP 25 · UX/UI para **baja alfabetización digital** 20 · innovación (geolocalización, tiempo real, IA o automatización) 20 · pertinencia territorial 15 · **sostenibilidad**: el municipio opera sin el equipo 10 · código y documentación 10 | UX de lenguaje simple (§7); tiempo real y automatización visibles en la demo; manual administrativo y de operación como entregable |
-| Entregables: MVP, mapa integrado, panel municipal, PDF semanal, **repositorio público en GitHub** con documentación técnica y manual de despliegue, demo de 25 min | El repositorio debe ser público antes de la entrega |
-| Calendario: inscripción hasta el **24/09/2026**; desarrollo del 14/09 al **27/10/2026**; demo del **28 al 30/10/2026** | Alcance del MVP ajustado a ~5 semanas (§43, §48) |
-
-Fuente: bases oficiales publicadas en conectasr.com (endpoint público `/api/convocatoria`), consultadas el 24/09/2026. Las seis funcionalidades obligatorias se citan textualmente en §43.
+> **Versión 2.0 · 24 de septiembre de 2026**
+> Plataforma geográfica para la provincia Santiago Rodríguez (República Dominicana), para el reto TechEmprende SR Conecta 2026.
+> Este documento es la referencia única de diseño antes de programar. Reemplaza a las versiones 1.x: el historial de esas versiones está en Git.
 
 ---
 
-## 1. Executive Summary
+## Índice
 
-SR Conecta se construye como un **monolito modular** en **Next.js 16 (App Router) + TypeScript**, desplegado en **Vercel**, con **Supabase** como plataforma de datos (PostgreSQL + PostGIS + Auth + Storage). El mapa base es **Google Maps JavaScript API** con marcadores avanzados y clustering, pero **todos los datos de negocio viven en PostgreSQL/PostGIS**. Google aporta mapa base, autocompletado de direcciones puntual y navegación vía enlace profundo; nunca es la base de datos de negocios.
+0. [Cómo leer este documento](#0-cómo-leer-este-documento)
+1. [Contexto y requisitos](#1-contexto-y-requisitos)
+2. [La solución en una página](#2-la-solución-en-una-página)
+3. [Principios](#3-principios)
+4. [Stack](#4-stack)
+5. [Arquitectura del sistema](#5-arquitectura-del-sistema)
+6. [Frontend y experiencia de uso](#6-frontend-y-experiencia-de-uso)
+7. [Mapa y geografía](#7-mapa-y-geografía)
+8. [Backend y datos](#8-backend-y-datos)
+9. [Módulos funcionales](#9-módulos-funcionales)
+10. [Seguridad y privacidad](#10-seguridad-y-privacidad)
+11. [Tiempo real, trabajos asíncronos y tareas programadas](#11-tiempo-real-trabajos-asíncronos-y-tareas-programadas)
+12. [API](#12-api)
+13. [Operación](#13-operación)
+14. [Calidad: pruebas y rendimiento](#14-calidad-pruebas-y-rendimiento)
+15. [Estructura del repositorio](#15-estructura-del-repositorio)
+16. [Alcance, plan y fases](#16-alcance-plan-y-fases)
+17. [Riesgos](#17-riesgos)
+18. [Decisiones de arquitectura (ADR)](#18-decisiones-de-arquitectura-adr)
+19. [No hacer](#19-no-hacer)
+20. [Pendiente de verificar](#20-pendiente-de-verificar)
 
-Las operaciones críticas (cambiar el estado de una consulta o reporte, moderar, aprobar negocios, asignar roles) se ejecutan como **funciones transaccionales en PostgreSQL** que validan por sí mismas todo lo que importa. El flujo normal pasa por Next.js, pero **cada RPC se diseña asumiendo que un usuario autenticado puede invocarla directamente** con la anon key y su JWT (PostgREST es público por diseño). El frontend nunca decide un estado ni un permiso, y Next.js tampoco es la barrera de seguridad: lo es Postgres.
+---
 
-Del stack propuesto se mantiene cerca del 80%. Los cambios importantes: se elimina Firebase Cloud Messaging (Web Push + VAPID es suficiente), se reemplaza el uso de Routes API por enlaces de navegación de Google Maps y rutas propias en PostGIS, Realtime se limita a uno o dos casos, y se agregan `pg_trgm`/`unaccent` para búsqueda, Serwist para el service worker y Sentry para errores. Desde v1.1 se incorporan además una **cola de trabajos en Postgres** (`pg_cron` + `pg_net`) para todo lo asíncrono (push, email, imágenes, PDF), un **proveedor SMTP transaccional** y un modelo de datos preparado para multi-provincia desde el MVP.
+## 0. Cómo leer este documento
 
-## 2. Architectural Verdict
-
-**Veredicto: el stack es correcto en su columna vertebral y excesivo en sus bordes.**
-
-| Acción | Qué |
+| Si necesitas… | Ve a |
 |---|---|
-| **Mantener** | Next.js, React, TypeScript, Tailwind, shadcn/ui, Google Maps JS API, Supabase (Postgres, PostGIS, Auth, Storage), React Hook Form, Zod, Recharts, Vercel, GitHub + Actions, Vitest, Playwright |
-| **Cambiar** | FCM → Web Push/VAPID · Routes API → deep links + rutas PostGIS · Geocoding para municipio → `ST_Covers` en PostGIS (§11.1) · "librería PDF" → `@react-pdf/renderer` · Realtime "para todo" → 1–2 canales |
-| **Eliminar** | Firebase (cualquier producto) · Places como catálogo de negocios · llamadas a Google por cada movimiento del mapa · Edge Functions en MVP |
-| **Introducir** | `pg_trgm` + `unaccent` + full-text en español · Serwist (service worker) · `@vis.gl/react-google-maps` · Sentry · rate limiting en Postgres · migraciones con Supabase CLI · Map ID de Google (requerido por AdvancedMarkerElement) · `pg_cron` + `pg_net` + cola `private.jobs` · Supabase Vault (secretos en base) · SMTP transaccional (Resend/SES/Brevo) · `province_id` desde el MVP |
-| **Postergar** | Vector tiles propios (`ST_AsMVT`), mapas offline, Traffic Layer como feature principal, Routes API en app, analítica avanzada, multi-provincia |
+| Entender qué se construye y por qué | §1, §2, §3 |
+| Saber qué tecnología usar | §4 |
+| Implementar una funcionalidad | §9 (módulo) + §12 (API) + [DATABASE.md](DATABASE.md) (RPC y tablas) |
+| Revisar permisos o seguridad | §10 |
+| Desplegar u operar | §13 |
+| Saber qué entra en el MVP | §16 |
 
-Tres cuestionamientos directos a decisiones del documento original:
+**Jerarquía de fuentes.** Si dos fuentes discrepan, manda la primera:
 
-1. **"Tráfico con Google Traffic Layer" no es un pilar confiable.** La cobertura de tráfico en vivo en zonas rurales de Santiago Rodríguez no está verificada y probablemente es escasa. El valor real de tránsito viene de **reportes ciudadanos propios** (accidentes, derrumbes, vías cerradas). Traffic Layer queda como capa opcional encendible.
-2. **"Rutas: Google Routes API" es innecesario para ecoturismo.** Un sendero no existe en Google. Las rutas de ecoturismo son `LineString` propios en PostGIS. Para "cómo llegar al inicio del sendero" basta un enlace a Google Maps (sin costo de API).
-3. **"No cargar toda la provincia" es correcto para capas que crecen, no para todas.** Límites municipales, rutas y lugares turísticos son pocos y estables: cargarlos una vez por sesión, simplificados y cacheados, es más rápido y barato que consultar por viewport. El filtrado por viewport se aplica a capas que crecen (negocios, reportes).
+1. El SQL de [`supabase/migrations/`](supabase/migrations). Es ejecutable y está probado (§14.1).
+2. [DATABASE.md](DATABASE.md): explica el SQL (tablas, RPC, RLS, índices).
+3. Este documento: arquitectura, módulos, operación y decisiones.
 
-## 3. Recommended Final Stack
+Este documento no repite columnas ni firmas de funciones: las nombra y remite a DATABASE.md.
 
-| Área | Tecnología | Clasificación |
-|---|---|---|
-| Framework | Next.js 16 (App Router) | [OBLIGATORIA] |
-| Lenguaje | TypeScript (strict) | [OBLIGATORIA] |
-| UI | Tailwind CSS + shadcn/ui | [RECOMENDADA] |
-| Mapa | Google Maps JavaScript API vía `@vis.gl/react-google-maps` | [OBLIGATORIA] |
-| Marcadores | AdvancedMarkerElement (requiere Map ID) | [RECOMENDADA] |
-| Clustering | `@googlemaps/markerclusterer` | [RECOMENDADA] |
-| Búsqueda externa | Places API (New) — solo Autocomplete con session tokens | [OPCIONAL] |
-| Navegación | Google Maps URLs (deep link) | [RECOMENDADA] |
-| Rutas en app | Routes API | [FUTURA] |
-| Tráfico | TrafficLayer (toggle) | [OPCIONAL] |
-| Geocoding | Solo reverse geocoding bajo demanda para dirección legible | [OPCIONAL] |
-| Base de datos | PostgreSQL (Supabase) | [OBLIGATORIA] |
-| Geodatos | PostGIS | [OBLIGATORIA] |
-| Búsqueda propia | Full-text `spanish` + `pg_trgm` + `unaccent` | [RECOMENDADA] |
-| Auth | Supabase Auth (email + OTP/magic link; Google OAuth opcional) | [OBLIGATORIA] |
-| Email transaccional | SMTP propio configurado en Supabase Auth y usado por la cola (Resend, Amazon SES o Brevo). El SMTP por defecto de Supabase es solo para pruebas y tiene límites muy bajos | [OBLIGATORIA] |
-| Archivos | Supabase Storage (buckets privados + URLs firmadas) | [OBLIGATORIA] |
-| Lógica crítica | Funciones PL/pgSQL (RPC) + RLS | [OBLIGATORIA] |
-| Trabajos asíncronos | Tabla `private.jobs` (outbox) + `pg_cron` (planificador) + `pg_net` (dispara el worker HTTP en Next.js) | [OBLIGATORIA] |
-| Secretos en base | Supabase Vault (secreto del worker, credenciales de `pg_net`) | [RECOMENDADA] |
-| Realtime | Supabase Realtime (solo panel admin y estado propio) | [OPCIONAL] |
-| Edge Functions | — | [FUTURA] |
-| PWA | Web App Manifest + Serwist | [OBLIGATORIA] |
-| Push | Web Push + VAPID (`web-push`) | [RECOMENDADA] |
-| Firebase Cloud Messaging | — | [NO RECOMENDADA] |
-| Formularios | React Hook Form + Zod | [RECOMENDADA] |
-| Gráficos | Recharts | [RECOMENDADA] |
-| PDF | `@react-pdf/renderer` en Route Handler (runtime Node) | [OBLIGATORIA] |
-| Cron | `pg_cron` para jobs de datos (expiraciones, retención, cola); Vercel Cron diario para el PDF; GitHub Actions `schedule` como respaldo | [OBLIGATORIA] |
-| Errores | Sentry (plan gratuito: verificar límite de usuarios; el plan Developer es de 1 persona) | [RECOMENDADA] |
-| Tests | Vitest + Playwright | [RECOMENDADA] |
-| CI/CD | GitHub Actions + Vercel (deploy de producción disparado por la Action después de migrar; §36) | [OBLIGATORIA] |
-| Base de datos por PR | Supabase local en CI (MVP) → Supabase Branching (con plan Pro) | [RECOMENDADA] |
-| Hosting | Vercel + Supabase | [OBLIGATORIA] |
-| Estado global | Zustand solo para estado del mapa; sin Redux | [OPCIONAL] |
-| Data fetching cliente | TanStack Query (solo en el módulo mapa) | [RECOMENDADA] |
+**Etiquetas de fase:**
+- **[MVP]**: se entrega para la demo del reto (28–30/10/2026).
+- **[Fase 2]**: producción municipal.
+- **[Fase 3]**: escala regional.
 
-## 4. Why This Stack
+Si una capacidad no tiene etiqueta, es [MVP].
 
-- **Un solo lenguaje de punta a punta (TypeScript) y un solo motor de datos (Postgres).** Menos piezas que mantener para un equipo de 1–5 personas y para una fundación que heredará el código.
-- **PostGIS resuelve el 90% de la lógica geográfica** (cercanía, geocercas, pertenencia a municipio, rutas) sin pagar por llamada. Google solo resuelve lo que no podemos producir nosotros: el mapa base y la búsqueda de direcciones arbitrarias.
-- **Supabase da Auth, Storage y RLS sobre el mismo Postgres**, evitando un backend Express separado. La seguridad vive junto a los datos.
-- **Next.js permite SSR para páginas públicas indexables** (turismo, negocios) y una app cliente rica para el mapa, en un solo proyecto.
-- **Todo es open source o reemplazable**, compatible con la liberación MIT/Apache del reto. El único proveedor propietario crítico es Google Maps, y está aislado detrás de un adaptador.
+**Estado del repositorio (24/09/2026):**
 
-## 5. Architecture Principles
-
-1. **Postgres es la fuente de verdad.** Si un dato importa al negocio o al municipio, vive en nuestra base.
-2. **El cliente propone, la base de datos dispone.** Ubicación, evidencias y clics son "reclamos"; la base de datos decide. Toda RPC y toda tabla expuesta asume que puede ser invocada directamente, sin pasar por Next.js: la validación en Next (Zod) es UX y defensa temprana, nunca la única barrera.
-3. **Operaciones críticas = una transacción en la base de datos.** Nunca "leer en JS, decidir en JS, escribir en JS".
-4. **Google se invoca por intención del usuario, nunca por evento del mapa.**
-5. **Mínimo de piezas.** Cada servicio nuevo debe justificar su costo operativo.
-6. **RLS siempre activo**, incluso cuando el acceso pasa por el servidor. Defensa en profundidad.
-7. **Privacidad por defecto.** Ubicación puntual, con propósito, nunca rastreo continuo.
-8. **Todo cambio de estado relevante deja rastro** (historial + auditoría).
-9. **Idempotencia en todo lo que se puede reintentar** (cron, creación de reportes, cola offline).
-10. **Diseñar para transferencia.** Otro equipo debe poder operar esto con la documentación del repo.
-11. **Evolución aditiva.** Esquema, API y eventos cambian agregando (columnas, endpoints, tipos de job), nunca renombrando ni borrando en el mismo release. Lo que se sabe que vendrá (multi-provincia, idiomas, particiones, colas) se prepara desde el MVP cuando cuesta poco hoy y mucho después (§5.1).
-12. **Asíncrono por cola, no inline.** Todo efecto secundario lento o externo (push, email, procesamiento de imágenes, PDF) se encola en la misma transacción que lo origina y lo ejecuta un worker con reintentos. Así ningún efecto se pierde si falla un proveedor, y la cola se puede cambiar de motor sin tocar a quien produce los trabajos.
-
-### 5.1 Diseño para evolucionar sin rupturas
-
-Decisiones que cuestan horas en el MVP y evitan migraciones grandes o reescrituras en Fase 2/3:
-
-| Decisión desde el MVP | Evita en el futuro | Costo hoy |
-|---|---|---|
-| Tabla `provinces` y `province_id` en todas las tablas territoriales y en `user_roles` (una sola fila: Santiago Rodríguez) | Migración multi-tenant de Fase 3 (backfill de millones de filas y reescritura de todas las políticas RLS) | Una columna con valor por defecto y un filtro más en RLS |
-| Estados como `text` + `CHECK` o tablas catálogo, **no** `enum` de Postgres | Los `enum` no permiten eliminar ni renombrar valores sin recrear el tipo | Ninguno |
-| Catálogos configurables en tablas (`traffic_report_types` con expiración, ícono y gravedad por defecto; `business_categories`; límites de rate limit por acción) | Deploys para cambiar reglas operativas | Una tabla pequeña por catálogo |
-| Cola `private.jobs` con contrato estable (`kind`, `payload`, `run_at`, `attempts`, `status`, `dedupe_key`) | Cambiar a `pgmq`/Inngest en Fase 3 sin modificar productores: solo cambia el consumidor | Una tabla + un Route Handler |
-| `audit_logs` y tablas históricas con PK `(created_at, id)` | El particionado mensual exige que la PK incluya la clave de partición; cambiarla después obliga a reescribir la tabla | Ninguno |
-| Snapshots de KPIs inmutables por ejecución (`report_run_id`) | Pérdida de trazabilidad entre un PDF y los datos que lo generaron | Unas filas más por semana |
-| Contenido traducible con columna `translations jsonb` (`{"en": {"name": …, "description": …}}`) en turismo, rutas, negocios y categorías | Tablas de traducción añadidas a posteriori y cambios en todas las consultas | Una columna vacía |
-| Rutas de Storage con convención `{bucket}/{province}/{entity}/{id}/{uuid}.{ext}`; en base solo se guardan `bucket` + `path`, nunca URLs | Migración de URLs al cambiar de dominio, CDN o proveedor de storage | Ninguno |
-| API versionada `/api/v1` con reglas de compatibilidad: solo cambios aditivos; lo incompatible va a `/v2` en paralelo | Romper PWAs instaladas con código viejo en caché | Disciplina en revisión de PR |
-| Adaptadores en las fronteras: mapa (`modules/map/provider`), búsqueda de direcciones, canales de notificación (`push`, `email`, futuro `native`) | Cambiar Google, SMTP o agregar app nativa sin tocar dominio | Una interfaz por frontera |
-| Feature flags en tabla `feature_flags` (por provincia/municipio) | Deploys o ramas largas para activar capas o pilotos por municipio | Una tabla y un helper |
-| Identificadores públicos estables (`slug` en negocios, lugares y rutas) separados del `uuid` | Romper enlaces compartidos e indexados al cambiar nombres o migrar datos | Una columna única |
-
-## 6. System Architecture
-
-```text
-┌──────────────────────── Dispositivo (PWA) ────────────────────────┐
-│ Next.js client · Mapa (Google Maps JS) · Service Worker (Serwist)  │
-│ Cola offline (IndexedDB) · Web Push                               │
-└──────────────┬─────────────────────────────────────┬──────────────┘
-               │ HTTPS (cookies de sesión)            │ Maps JS / Autocomplete
-               ▼                                      ▼
-┌──────────── Vercel ────────────┐         ┌──── Google Maps Platform ────┐
-│ Next.js 16                     │         │ Maps JS · Places Autocomplete │
-│ · Server Components (páginas)  │         │ · (Routes/Geocoding opcional) │
-│ · Route Handlers /api/v1       │         └──────────────────────────────┘
-│ · Server Actions (admin)       │
-│ · proxy.ts (sesión)            │
-│ · Cron → PDF semanal           │
-│ · Worker /api/v1/internal/jobs │◄──── pg_net (disparo por pg_cron)
-└──────────────┬─────────────────┘
-               │ supabase-js (JWT del usuario) / service_role solo en worker y cron
-               ▼
-┌──────────────────── Supabase ─────────────────────┐
-│ PostgreSQL 15+ · PostGIS · pg_trgm · unaccent       │
-│ RLS · Funciones RPC transaccionales · Triggers      │
-│ pg_cron · pg_net · cola private.jobs · Vault        │
-│ Auth (SMTP propio) · Storage (privado) · Realtime   │
-└────────────────────────────────────────────────────┘
-```
-
-Estilo: **monolito modular** (§12, ADR-008). Un despliegue, un repositorio, una base de datos, módulos por dominio con fronteras explícitas.
-
-## 7. Frontend Architecture
-
-- **Dos "caras" en una app:** (a) sitio público y listados SSR (turismo, negocios, perfil de lugar), (b) aplicación de mapa cliente pesada.
-- **El mapa se carga con `dynamic(() => import(...), { ssr: false })`** detrás de un esqueleto. La primera pintura nunca espera a Google.
-- **Estado:** servidor = TanStack Query en el módulo mapa (cache por bbox/capa); UI del mapa (capas activas, filtros, feature seleccionado) = Zustand o `useReducer`. Filtros persistidos en la URL (`?capas=turismo,reportes&cat=…`) para compartir enlaces.
-- **Formularios:** React Hook Form + un **único esquema Zod por operación**, compartido cliente/servidor (`modules/*/schemas.ts`). El servidor revalida siempre.
-- **Diseño:** mobile-first, bottom sheet para detalles en móvil, panel lateral en escritorio. shadcn/ui copia componentes al repo (sin dependencia en runtime), Tailwind para tokens.
-- **Accesibilidad:** todo lo que está en el mapa debe tener equivalente en lista (requisito práctico y de accesibilidad).
-- **i18n:** español como único idioma en MVP; textos centralizados para añadir inglés (turistas) en Fase 2.
-- **Estados obligatorios por pantalla:** toda vista que carga datos implementa `LOADING` (esqueleto, no spinner a pantalla completa), `EMPTY` (explica por qué y qué hacer), `ERROR` (mensaje claro + reintentar, sin detalles internos), `SUCCESS`, `DISABLED` (con motivo, p. ej. sin conexión), `UNAUTHORIZED` (invita a iniciar sesión o explica que falta el rol) y `NOT FOUND` (`not-found.tsx` por route group). Se revisa en PR con una checklist.
-- **Formularios:** botón de envío desactivado durante el envío (sin doble submit, reforzado por `idempotency_key`), errores por campo asociados con `aria-describedby`, foco al primer error.
-- **Responsive:** mobile-first con cortes en 640 / 768 / 1024 / 1280 px. Móvil: mapa a pantalla completa, barra inferior y bottom sheets. Tablet: panel lateral colapsable. Escritorio: panel lateral fijo y, en el panel admin, tablas con paginación por cursor. Objetivos táctiles de al menos 44×44 px. La lógica de negocio es la misma en todos los tamaños; solo cambia la presentación.
-- **Accesibilidad (WCAG 2.1 AA):** controles interactivos como `<button>`/`<a>` reales (no `div` con `onClick`), foco visible, `prefers-reduced-motion` respetado también en las animaciones del mapa, contraste AA verificado en CI con axe (Playwright).
-- **Baja alfabetización digital** (criterio de 20 puntos de las bases): lenguaje simple y en segunda persona ("Reportar un problema", no "Crear incidencia"); cada acción con ícono **y** texto; flujos de 3 pasos como máximo con una decisión por pantalla; categorías con ícono grande; el reporte se puede enviar con foto y ubicación sin escribir texto; estados explicados con palabras ("Lo están revisando"), no con códigos; tamaño de texto base de 16 px o más; prueba con al menos 5 vecinos reales antes de la demo.
-
-## 8. Next.js Architecture
-
-| Pieza | Uso en SR Conecta |
+| Pieza | Estado |
 |---|---|
-| App Router + layouts | `(public)`, `(app)` (mapa, requiere o no login), `(admin)`, `(business)` como route groups con layouts propios |
-| Server Components | Páginas públicas, listados, ficha de lugar, todas las vistas del panel admin (lectura) |
-| Client Components | Mapa, geolocalización, cámara/QR, formularios interactivos, gráficos Recharts |
-| Route Handlers `/api/v1/*` | Todo lo que llama el mapa y la PWA (features por viewport, crear reporte o consulta), webhooks, cron y el worker de la cola (`/api/v1/internal/jobs/run`, protegido por secreto). Motivo: la cola offline del service worker reintenta **requests HTTP**, no Server Actions |
-| Server Actions | Mutaciones de formularios del panel admin y del panel de negocio (moderar, cambiar estados, editar negocio). Siempre validan sesión y rol dentro de la acción |
-| `proxy.ts` | (Next 16 renombró `middleware.ts` a `proxy.ts`, runtime Node). Solo refresca la sesión Supabase y hace redirecciones gruesas (`/admin` sin sesión → login). **No es la capa de autorización** |
-| Caching | Tres clases de respuesta, **nunca mezcladas en un mismo endpoint**: (1) catálogos públicos estables (turismo, rutas, categorías, límites) con `use cache`/`revalidateTag` y CDN larga; (2) capas públicas volátiles (reportes de tránsito activos, negocios por viewport) con `s-maxage` ≤ 30 s y sin cookies; (3) datos por usuario o por rol con `Cache-Control: private, no-store`. Ver §9.3 |
-| loading.tsx / error.tsx | Por route group; `error.tsx` reporta a Sentry |
-| Runtime | Node para PDF, push y cualquier cosa con `web-push` o `@react-pdf/renderer` |
+| Base de datos (16 migraciones, 107 pruebas) | ✅ Definida y verificada |
+| Prototipo de diseño (`project/`) | ✅ Navegable, con datos de demostración |
+| Aplicación Next.js | ⏳ No iniciada; su diseño es este documento |
 
-**Dónde corre cada lógica:**
+---
 
-| Capa | Responsabilidad |
+## 1. Contexto y requisitos
+
+### 1.1 El reto
+
+Fuente: bases oficiales de conectasr.com (endpoint público `/api/convocatoria`), leídas el 24/09/2026.
+
+| Hecho | Consecuencia para la arquitectura |
 |---|---|
-| Cliente | Render, UX, obtener ubicación, comprimir imágenes, cola offline, validación temprana (Zod) |
-| Servidor Next | Autenticación de la request, validación Zod (defensa temprana y mensajes de error claros), orquestación, llamadas server-to-server, firma de URLs, worker de la cola (push, email, imágenes), PDF |
-| PostgreSQL | **Barrera autoritativa**: reglas de negocio críticas, validación de entradas que importan (rangos, longitudes, pertenencia), pertenencia territorial, transiciones de estado, historial, auditoría, RLS, rate limits, encolado de efectos secundarios |
-| Google APIs | Mapa base, autocompletado de direcciones, (opcional) dirección legible |
-| Supabase | Auth, Storage, Realtime (limitado) |
+| Provincia Santiago Rodríguez, con 3 municipios: San Ignacio de Sabaneta (cabecera), Monción y Villa Los Almácigos | Territorio pequeño: cientos a pocos miles de puntos. No se optimiza para millones. |
+| La organización entrega **datos geográficos abiertos** de la provincia | Se importan a PostGIS. PostGIS es la fuente de verdad territorial, no Google. |
+| Demo en vivo de **25 minutos con datos reales** | Semilla reproducible, guion de demo y plan B si falla un servicio externo. |
+| El ganador libera el código con **MIT o Apache 2.0** y lo transfiere a FUNDESER | Todas las dependencias deben tener licencia compatible. Cuentas de la organización desde el día uno, nunca personales. |
+| Stack libre; se evalúa el resultado | Se prioriza lo que se demuestra bien y se puede mantener. |
+| "Cualquier ciudadano ingresa datos y **recibe notificaciones** sobre el mapa" | Notificaciones in-app obligatorias, alertas de tránsito por municipio y push como canal adicional. |
+| Entregables: MVP, mapa integrado, panel municipal, PDF semanal, **repositorio público en GitHub** con documentación técnica y manual de despliegue, demo de 25 min | El repositorio se hace público antes de la entrega (hoy es privado). |
+| Calendario: desarrollo hasta el **27/10/2026**; demo del **28 al 30/10/2026** | Unas 5 semanas de construcción (§16.3). |
 
-## 9. Map Architecture
+**Criterios de evaluación (100 puntos):**
 
-### 9.1 Capas y estrategia de carga
-
-| Capa | Geometría | Volumen esperado | Estrategia |
-|---|---|---|---|
-| Municipios (3) | MultiPolygon | 3 | Carga única, cache CDN largo. Simplificación **topológica en la importación** (mapshaper, o `ST_CoverageSimplify` si la versión de PostGIS lo soporta) para que las fronteras compartidas no queden con huecos ni solapes; `ST_SimplifyPreserveTopology` por polígono no preserva fronteras entre vecinos |
-| Rutas de ecoturismo | LineString/MultiLineString | decenas | Carga única de trazos simplificados; geometría completa al abrir la ruta |
-| Lugares turísticos | Point | decenas–cientos | Carga única por sesión (payload pequeño) |
-| Negocios | Point | cientos → miles | **Por viewport** + filtros |
-| Reportes de tránsito activos | Point | decenas | Por viewport en el endpoint **público** (sin autor), solo `status in (active, verified)` y `expires_at > now()`, `s-maxage=30`, refresco cada 60 s |
-| Consultas ciudadanas | Point | cientos | Endpoint **autenticado** (`/api/v1/me/map/features`, `no-store`): el panel admin ve las de su alcance; el ciudadano, las suyas. Las públicas aprobadas (`is_public`) sí van al endpoint público |
-
-### 9.2 Zoom
-
-| Zoom Google | Qué se muestra | Cómo |
+| Criterio | Puntos | Cómo lo atiende la arquitectura |
 |---|---|---|
-| ≤ 10 (provincia) | Polígonos de municipios con conteos por capa | Endpoint de agregados: `count(*) group by municipality_id` (barato: pertenencia precalculada) |
-| 11–14 (municipio) | Clusters | Puntos del viewport (límite 500) + `MarkerClusterer` en cliente |
-| ≥ 15 (calle) | Todos los puntos, íconos por categoría | Mismo endpoint; al tocar un punto se pide el detalle |
-
-Detalle (fotos, horario, descripción) **nunca** viaja en la consulta de viewport; solo `id, tipo, categoría, lat, lng, título corto, ícono`.
-
-### 9.3 Flujo de consulta
-
-1. Evento `idle` del mapa (no `bounds_changed`) + debounce de 300 ms.
-2. El bbox se **redondea hacia afuera a una rejilla** (p. ej. 0.01°) para que requests similares compartan cache (TanStack Query en cliente y `s-maxage` corto en CDN, solo en el endpoint público).
-3. Si el nuevo bbox está contenido en uno ya cargado con los mismos filtros, no se consulta.
-4. Dos endpoints con la misma forma de respuesta y distinta política de cache:
-   - `GET /api/v1/map/features?bbox=…&layers=…&zoom=…&cat=…` → **público y anónimo**: se ejecuta con el rol `anon` aunque haya sesión, ignora cookies y responde `public, s-maxage=30`. Solo capas visibles para cualquier visitante.
-   - `GET /api/v1/me/map/features?…` → **autenticado**, `private, no-store`: capas del usuario (mis consultas) y administrativas según rol. RLS filtra.
-   Ambos van a Postgres con `&&`/`ST_Intersects` sobre índice GIST y devuelven GeoJSON compacto. El cliente combina las dos respuestas en el adaptador de mapa.
-5. Límite duro de 500 features por respuesta; si se excede, se devuelve `truncated: true` y el cliente sugiere acercar.
-
-**Fase 2:** si los negocios superan ~20k puntos, pasar a vector tiles propios con `ST_AsMVT` servidos por Route Handler y cache CDN.
-
-## 10. Google Maps Architecture
-
-### 10.1 Google Maps vs Leaflet (para este proyecto)
-
-| Criterio | Google Maps Platform | Leaflet/MapLibre + tiles (OSM vía MapTiler/Stadia) |
-|---|---|---|
-| Calidad del mapa en SR | Buena cartografía vial y satelital; familiar para el usuario dominicano | OSM en zonas rurales de SR depende de la comunidad; calidad variable, hay que verificar |
-| UX | Estándar de facto, gestos y estilo conocidos | Excelente con MapLibre (vectorial); Leaflet más básico |
-| Places / búsqueda | Líder, con negocios locales | Requiere geocodificador aparte (Nominatim/Photon/Pelias); calidad menor en RD |
-| Rutas | Routes API (costo) | OSRM/GraphHopper/ORS externos |
-| Tráfico | Traffic Layer (cobertura rural incierta) | No disponible |
-| Markers/clustering | AdvancedMarkerElement + MarkerClusterer | Plugins maduros |
-| GeoJSON/polígonos/rutas propias | Data Layer y polylines; suficiente | Nativo y muy flexible |
-| Costos | Por SKU, cuotas gratuitas mensuales por SKU | Tiles gratuitos limitados o de pago; sin facturación por carga si self-host |
-| Dependencia | Alta; **el contenido de Google no puede mostrarse sobre mapas no-Google** | Baja |
-| Equipo | Muy documentado | Documentado, más piezas |
-| Datos propios | Sí, vía nuestra API | Sí, vía nuestra API |
-
-**Decisión: Google Maps JavaScript API como mapa base en MVP y Fase 2**, por calidad percibida en la demo, familiaridad del usuario y búsqueda de direcciones locales. **Con dos salvaguardas:**
-
-1. **Adaptador de mapa** (`modules/map/provider/`): el resto de la app habla con una interfaz propia (`MapView`, `addLayer(geojson)`, `onFeatureClick`), no con `google.maps.*`. Nuestra API devuelve GeoJSON neutral.
-2. **Plan B documentado: MapLibre GL + tiles OSM.** Como los términos de Google prohíben usar su contenido sobre un mapa no-Google, **solo nuestros datos propios migran**. Esto refuerza la regla de no depender de Places para datos de negocio.
-
-### 10.2 Uso selectivo de APIs
-
-| API | ¿Usar? | Cuándo se invoca | Nunca |
-|---|---|---|---|
-| Maps JavaScript API (Dynamic Maps) | Sí | Una carga por apertura de la vista mapa | Recargar el mapa al cambiar de pestaña interna |
-| AdvancedMarkerElement | Sí | Render de marcadores (requiere Map ID) | Miles de marcadores sin clustering |
-| MarkerClusterer | Sí | Zoom 11–14 | — |
-| Places Autocomplete (New) | Opcional | Solo cuando el usuario escribe en "buscar dirección" y **nuestra búsqueda propia no encontró resultado**; y en el alta de negocio para vincular `google_place_id` | Por cada tecla sin session token; para listar negocios en el mapa |
-| Place Details (New) | Mínimo | Al seleccionar una sugerencia: solo campos `location` y `formattedAddress` con **field mask** | Pedir fotos, reseñas o rating |
-| Nearby/Text Search | No | — | Poblar la capa de negocios |
-| Routes API | Futuro | Solo si se exige ruta dibujada dentro de la app | Por cada interacción |
-| Navegación | Sí (gratis) | Botón "Cómo llegar": URL `https://www.google.com/maps/dir/?api=1&destination=lat,lng` | — |
-| TrafficLayer | Opcional | Toggle manual del usuario | Encendido por defecto |
-| Geocoding (reverse) | Opcional | Una vez al crear un reporte, si se quiere texto de dirección | Para saber el municipio (eso lo hace PostGIS) |
-
-### 10.3 Datos propios vs datos de Google
-
-| Dato | Dónde vive | Política |
-|---|---|---|
-| `place_id` de Google | `businesses.google_place_id` | Puede almacenarse indefinidamente (exento de restricciones de caché según las políticas de Places) |
-| Lat/lng obtenidos de Google | No se usan como coordenada oficial | La caché de coordenadas de Google está limitada a 30 días; por eso **la coordenada oficial del negocio la confirma el dueño/moderador arrastrando el pin** y se guarda como dato propio |
-| Nombre, dirección, horario, fotos, reseñas de Google | No se almacenan | Se piden en vivo si se muestran, con atribución de Google |
-| Todo lo demás (negocios, rutas, reportes, consultas) | PostgreSQL | Fuente de verdad propia |
-
-### 10.4 Claves y costos
-
-- **Clave de navegador** (`NEXT_PUBLIC_GOOGLE_MAPS_KEY`): restringida por referrer HTTP (dominios de producción y previews) y **por API** (solo Maps JS y Places).
-- **Clave de servidor** (`GOOGLE_MAPS_SERVER_KEY`): solo si se usa Geocoding/Routes desde el servidor; restringida por API; nunca en el cliente.
-- Proyectos de Google Cloud separados para dev y prod.
-- **Cuotas diarias por API** en la consola (tope duro práctico), **alertas de presupuesto** al 50/80/100%, y revisión semanal del reporte por SKU.
-- Map ID y estilos vía Cloud-based styling.
-- La cuenta de facturación debe estar a nombre de la organización que operará la plataforma (FUNDESER/municipio), no de un integrante.
-
-## 11. Geospatial Architecture
-
-### 11.1 Decisiones
-
-| Tema | Decisión | Motivo |
-|---|---|---|
-| SRID | **4326 (WGS84)** en todas las columnas | Compatibilidad directa con GPS, Google y GeoJSON |
-| Tipo de columna | `geometry(<Tipo>, 4326)` | Compatible con todas las funciones (`ST_Contains`, `ST_AsMVT`, simplificación) |
-| Distancias en metros | Cast a `geography` en la consulta, con **índice GIST de expresión** `((geom::geography))` | `ST_DWithin(geom::geography, punto::geography, 1000)` = metros reales usando índice |
-| Viewport | `geom && ST_MakeEnvelope(minLng, minLat, maxLng, maxLat, 4326)` | Operador de bbox, usa índice GIST de geometría |
-| Pertenencia a municipio | `municipality_id` calculado por trigger al insertar/mover. Puntos: `ST_Covers` (incluye el borde; `ST_Contains` lo excluye). Si no cae en ningún municipio: el más cercano a ≤ 2 km (`ORDER BY geom <-> p`), y si no hay ninguno, `NULL` + estado `out_of_area` visible para moderadores de alcance provincial. Líneas (rutas): el municipio que contiene el `start_point`, más `municipality_ids uuid[]` con todos los que la ruta cruza (`ST_Intersects`), para filtros y KPIs. Registros sin geometría (consultas sin ubicación): el usuario elige el municipio y es obligatorio | Evita joins espaciales en cada lectura, alimenta KPIs y garantiza que ningún registro quede invisible para el RLS municipal |
-| Provincia | `province_id` en toda tabla territorial, derivado del municipio por el mismo trigger | Multi-provincia (Fase 3) sin migración de datos (§5.1) |
-| Índices | GIST en `geom` de cada tabla espacial + GIST de expresión geography donde haya búsquedas por radio | — |
-
-Alternativa aceptable: almacenar en UTM zona 19N (EPSG:32619) para cálculos métricos rápidos. **Descartada**: añade conversiones en cada lectura para ganar poco a esta escala.
-
-### 11.2 Tipos por entidad
-
-| Entidad | Tipo |
-|---|---|
-| municipalities | MultiPolygon |
-| businesses, tourism_places, traffic_reports | Point (obligatorio) |
-| citizen_requests | Point opcional (municipio obligatorio si no hay punto) |
-| eco_routes | MultiLineString (un sendero puede tener tramos) |
-
-### 11.3 Consultas tipo (patrones)
-
-| Pregunta | Patrón |
-|---|---|
-| Negocios a 1 km | `ST_DWithin(b.geom::geography, :p::geography, 1000)` + `ORDER BY b.geom <-> :p` + `LIMIT` |
-| Lugares turísticos a 2 km | Igual con 2000 |
-| Reportes dentro de esta zona | `ST_Intersects(r.geom, :zona)` |
-| Rutas cercanas | `ST_DWithin(route.geom::geography, :p::geography, 3000)` |
-| Objetos visibles | `geom && ST_MakeEnvelope(...)` + filtros + `LIMIT 500` |
-| Clustering servidor (si hace falta) | `ST_SnapToGrid(geom, tamaño_por_zoom)` + `count(*)` agrupado |
-
-Importación de datos abiertos de la provincia: `ogr2ogr` (GDAL) → tablas de staging → validación `ST_IsValid`/`ST_MakeValid` → tablas finales, versionado como migración/seed.
-
-## 12. Backend Architecture
-
-No hay backend separado. El "backend" son tres capas dentro del monolito:
-
-1. **Route Handlers / Server Actions** (Next.js): autenticación, validación Zod, orquestación, integraciones (push, PDF, Google server-side).
-2. **Servicios de dominio en TypeScript** (`modules/<dominio>/server/*.ts`): funciones puras de aplicación que llaman a Supabase con el JWT del usuario.
-3. **PostgreSQL**: RLS + funciones RPC transaccionales + triggers de historial/auditoría.
-
-Regla: **si una operación modifica inventario, estado o permisos, termina en una función SQL**. TypeScript orquesta; SQL garantiza.
-
-**Contrato de las RPC** (aplica a todas las funciones invocables por usuarios):
-- **Autosuficientes:** validan `auth.uid()`, rol, alcance y *todas* las entradas que importan (rangos de lat/lng, `accuracy`, longitudes de texto, tipos permitidos). Asumen que pueden ser llamadas directamente sin Next.js.
-- **Rechazo de negocio ≠ excepción:** un rechazo esperado (límite alcanzado, transición no permitida, ubicación fuera de la provincia) **devuelve** `{status: 'rejected', reason}` y hace commit, para que el contador de rate limit, el intento rechazado y la auditoría persistan. `RAISE EXCEPTION` solo para errores de programación, datos corruptos o acceso no autorizado.
-- **Idempotentes:** toda RPC de creación acepta `p_idempotency_key` y devuelve el mismo resultado si se repite.
-- **Efectos secundarios encolados:** notificaciones, push, email y procesamiento de archivos se insertan en `private.jobs` dentro de la misma transacción; nunca se llaman servicios externos desde SQL de forma síncrona.
-
-No se agrega Express, NestJS ni un broker de mensajes. Lo asíncrono va por una **cola en Postgres** (`private.jobs`): los productores (RPC, triggers, `pg_cron`) insertan filas; `pg_cron` dispara cada minuto, vía `pg_net`, el worker `POST /api/v1/internal/jobs/run` en Next.js, que toma lotes con `FOR UPDATE SKIP LOCKED`, ejecuta y marca `done`/`failed` con reintentos exponenciales y `dead` tras N intentos. En Fase 3 el consumidor puede pasar a `pgmq` o Inngest sin cambiar productores (§5.1).
-
-## 13. Supabase Architecture
-
-| Componente | Uso | Nota |
-|---|---|---|
-| PostgreSQL | Sí | Fuente de verdad |
-| PostGIS, pg_trgm, unaccent | Sí | Extensiones habilitadas por migración |
-| Auth | Sí | Email+OTP/magic link; Google OAuth opcional. Teléfono/SMS postergado (costo). **SMTP propio obligatorio** antes de abrir registro a ciudadanos. Captcha (Turnstile) con la integración nativa de Supabase Auth, que se valida en el servidor de Auth y no se puede saltar llamando la API directo |
-| RLS | Sí, en **todas** las tablas | Tablas sin política = inaccesibles |
-| Database Functions (RPC) | Sí | Crear reporte o consulta, transición de estado, moderación, asignar rol, rate limit. Las RPC invocables viven en `public` (el único esquema expuesto); los helpers internos, en `private` (§14) |
-| Triggers | Sí | `updated_at`, municipio y provincia por `ST_Covers` (§11.1), historial de estados, auditoría, encolado de jobs |
-| Storage | Sí | Buckets privados: `report-evidence`, `reports-pdf`; bucket público solo `public-media` (fotos aprobadas de lugares/negocios) |
-| Realtime | Limitado | Ver §26 |
-| Edge Functions | No en MVP | Todo lo resuelve Next.js; evitar dos runtimes de servidor |
-| pg_cron | **Sí (obligatorio)** | Único planificador sub-diario disponible sin Vercel Pro: cada minuto dispara el worker de la cola; cada hora expira reportes de tránsito y archiva consultas resueltas; cada noche aplica la retención de §32 y limpia uploads huérfanos |
-| pg_net | Sí | Llamadas HTTP asíncronas desde Postgres, usadas solo para despertar al worker (`/api/v1/internal/jobs/run`) con un secreto guardado en Vault |
-| Vault | Sí | Secretos que la base necesita en claro: secreto del worker y credenciales de `pg_net` |
-| Branching | Fase 2 (plan Pro) | Una base efímera por PR con sus migraciones aplicadas (§36) |
-| Migraciones | Sí | Supabase CLI, SQL versionado en `supabase/migrations`, nunca cambios manuales en producción |
-
-Nota a verificar: fuentes secundarias reportan que en 2026 Supabase exige `GRANT` explícitos para exponer tablas nuevas vía Data API. Las migraciones deben incluir los `GRANT` necesarios y probarse en un proyecto recién creado.
-
-## 14. Database Architecture
-
-- **Esquemas:**
-  - `public`: único esquema expuesto por la Data API. Tablas con RLS y las RPC invocables por usuarios.
-  - `private`: **no expuesto** por la API (no figura en "Exposed schemas"). Helpers de RLS (`has_role`, `is_business_member`), tablas internas (`rate_limits`, `jobs`) y funciones de sistema. Que no esté expuesto no significa que no tenga permisos: los helpers usados por políticas RLS **necesitan** `GRANT USAGE ON SCHEMA private` y `GRANT EXECUTE` a `authenticated` (y a `anon` si la política aplica a visitantes), porque las políticas se evalúan con el rol del usuario. Las funciones de sistema (retención, worker) sí llevan `REVOKE EXECUTE ... FROM anon, authenticated`.
-- Claves primarias `uuid` (`gen_random_uuid()`); `created_at` en todas y `updated_at` en las mutables.
-- **Estados como `text` + `CHECK`** (o tabla catálogo cuando el valor lleva atributos, p. ej. `traffic_report_types`). No se usan `enum` de Postgres: no permiten eliminar ni renombrar valores sin recrear el tipo (§5.1). Las transiciones se validan por función, no por UI.
-- **`province_id`** en toda tabla territorial (§5.1).
-- Borrado lógico (`deleted_at`) en entidades de contenido; borrado físico para datos personales cuando el usuario lo pide (§32).
-- **Tres clases de tablas de rastro**, con reglas distintas:
-  - *Inmutables* (`request_status_history`, `moderation_actions`, `audit_logs`): solo `INSERT`. La única excepción es la retención de §32, ejecutada por una función de sistema en `private`.
-  - *De estado controlado* (`traffic_reports`, `citizen_requests`, `report_runs`): filas que cambian de estado, pero **solo mediante RPC**. Sin `UPDATE`/`DELETE` para usuarios y cada transición auditada. No son append-only.
-  - *Redactables por privacidad*: la retención de §32 anula columnas sensibles (coordenadas exactas, autor) mediante una función de sistema, nunca borra la fila, para no romper los KPIs.
-- **Idempotencia en el esquema:** `idempotency_key text` con `UNIQUE (user_id, idempotency_key)` en toda tabla creada por una operación reintentable (`traffic_reports`, `citizen_requests`).
-- **Concurrencia (dos personas sobre el mismo registro):**
-  - *Cambios de estado* (consultas, reportes de tránsito, negocios): compare-and-set. La RPC recibe el estado que el moderador **vio** (`p_expected_status`) y ejecuta `UPDATE … SET status = :to WHERE id = :id AND status = :expected RETURNING …`. Si otro moderador ya lo cambió, el `UPDATE` no afecta filas y la RPC devuelve `{status: 'rejected', reason: 'stale_state', current_status}`; la UI recarga y muestra quién lo cambió (dato de `request_status_history`). Nunca gana silenciosamente el último.
-  - *Ediciones de contenido* (ficha de negocio, lugar, ruta): bloqueo optimista con columna `version int NOT NULL DEFAULT 1`, incrementada por trigger en cada `UPDATE`. La actualización exige `WHERE id = :id AND version = :version_leida`; si no coincide, responde `409` con los datos actuales para que el usuario compare.
-  - *Doble envío del mismo formulario*: lo cubre `idempotency_key`, no el bloqueo.
-  - No se usan bloqueos pesimistas largos (`SELECT … FOR UPDATE` que esperan interacción humana): solo bloqueos cortos dentro de una transacción.
-- **Unicidad con `NULL`:** toda restricción `UNIQUE` que incluye una columna donde `NULL` tiene significado (p. ej. `municipality_id NULL` = provincia) se declara `UNIQUE NULLS NOT DISTINCT` (PostgreSQL 15+). Sin eso, dos `NULL` no chocan y se duplican filas.
-- **Política de claves foráneas hacia `profiles`** (necesaria para "eliminar mi cuenta", §32):
-  - `ON DELETE CASCADE` para los datos propios y privados del usuario: `notification_preferences`, `push_subscriptions`, `notifications`, `business_members`, `user_roles`.
-  - `ON DELETE SET NULL` (columna nullable) para las referencias históricas que deben sobrevivir: `traffic_reports.reporter_id`, `citizen_requests.requester_id`, `assigned_to`, `request_status_history.changed_by`, `moderation_actions.moderator_id`, `audit_logs.actor_id`, `user_roles.granted_by`.
-- **Preparado para particionar:** `audit_logs` y los históricos grandes usan PK `(created_at, id)` desde el MVP. Se particionan (mensual) en Fase 3 sin reescribir la tabla.
-
-## 15. ERD
-
-> Diagrama conceptual. El esquema **autoritativo** está en `supabase/migrations/` y se explica en [DATABASE.md](DATABASE.md), que incluye además `business_hours`, `promotions`, `request_categories`, `engagement_daily` y las tablas de `private`.
-
-```mermaid
-erDiagram
-    provinces ||--|{ municipalities : "agrupa"
-    profiles ||--o{ user_roles : "tiene"
-    municipalities ||--o{ user_roles : "alcance opcional"
-    profiles ||--o{ business_members : "administra"
-    businesses ||--o{ business_members : "tiene"
-    business_categories ||--o{ businesses : "clasifica"
-    municipalities ||--o{ businesses : "contiene"
-    municipalities ||--o{ tourism_places : "contiene"
-    municipalities ||--o{ eco_routes : "contiene"
-    municipalities ||--o{ traffic_reports : "contiene"
-    municipalities ||--o{ citizen_requests : "contiene"
-    traffic_report_types ||--o{ traffic_reports : "tipifica"
-    profiles ||--o{ traffic_reports : "reporta"
-    profiles ||--o{ citizen_requests : "crea"
-    citizen_requests ||--o{ request_status_history : "registra"
-    citizen_requests ||--o{ request_votes : "recibe apoyos"
-    profiles ||--o{ request_votes : "vota"
-    citizen_requests |o--o| traffic_reports : "escalado desde"
-    profiles ||--o{ citizen_requests : "asignado a"
-    profiles ||--o{ notifications : "recibe"
-    profiles ||--|| notification_preferences : "configura"
-    profiles ||--o{ push_subscriptions : "registra"
-    profiles ||--o{ attachments : "sube"
-    profiles ||--o{ moderation_actions : "modera"
-    profiles ||--o{ audit_logs : "actor"
-    report_runs ||--|{ weekly_kpi_snapshots : "congela"
-
-    provinces {
-        uuid id PK
-        text name
-        text code "UNIQUE"
-    }
-    profiles {
-        uuid id PK "= auth.users.id"
-        text display_name
-        uuid home_municipality_id FK
-        bool location_consent
-        timestamptz created_at
-    }
-    user_roles {
-        bigint id PK
-        uuid user_id FK "ON DELETE CASCADE"
-        text role "CHECK: citizen|entrepreneur|moderator|municipal_admin (sin super_admin)"
-        uuid province_id FK
-        uuid municipality_id FK "alcance, null = toda la provincia"
-        uuid granted_by FK "ON DELETE SET NULL"
-    }
-    municipalities {
-        uuid id PK
-        uuid province_id FK
-        text name
-        text code
-        geometry geom "MultiPolygon 4326"
-        geometry geom_simplified "MultiPolygon 4326, simplificación topológica"
-    }
-    business_categories {
-        uuid id PK
-        text slug "UNIQUE"
-        text name
-        text icon
-        jsonb translations
-    }
-    businesses {
-        uuid id PK
-        uuid province_id FK
-        uuid category_id FK
-        uuid municipality_id FK
-        text slug "UNIQUE, identificador público estable"
-        text name
-        text description
-        jsonb translations "i18n futuro"
-        geometry geom "Point 4326"
-        text google_place_id "opcional"
-        jsonb opening_hours
-        text phone
-        text whatsapp
-        text status "CHECK: draft|pending|under_review|approved|rejected|suspended|archived"
-        tsvector search_vector
-    }
-    business_members {
-        uuid business_id PK,FK
-        uuid user_id PK,FK
-        text member_role "owner|staff"
-    }
-    tourism_places {
-        uuid id PK
-        uuid province_id FK
-        uuid municipality_id FK
-        text slug "UNIQUE"
-        text name
-        jsonb translations
-        text kind "mirador|rio|cultural..."
-        geometry geom "Point 4326"
-        text status "CHECK: draft|published|archived"
-        text status "CHECK: pending|published|rejected|archived (pending = propuesta ciudadana)"
-        uuid proposed_by FK "nullable, ON DELETE SET NULL"
-    }
-    eco_routes {
-        uuid id PK
-        uuid province_id FK
-        uuid municipality_id FK "municipio del start_point"
-        uuid_array municipality_ids "todos los que cruza"
-        text slug "UNIQUE"
-        text name
-        jsonb translations
-        geometry geom "MultiLineString 4326"
-        geometry geom_simplified
-        numeric distance_km "calculado por ST_Length geography"
-        uuid proposed_by FK "ciudadano que la propuso (nullable, ON DELETE SET NULL)"
-        text status "CHECK: pending|published|rejected|archived"
-        int duration_min
-        text difficulty "baja|media|alta"
-        geometry start_point "Point 4326"
-    }
-    traffic_report_types {
-        text code PK "accidente|derrumbe|via_cerrada|..."
-        text name
-        text icon
-        smallint default_severity
-        interval default_ttl "accidente 3 h, obra 7 días"
-        bool active
-    }
-    traffic_reports {
-        uuid id PK
-        uuid province_id FK
-        uuid reporter_id FK "nullable, ON DELETE SET NULL"
-        uuid municipality_id FK "nullable solo si status = out_of_area"
-        text type FK "-> traffic_report_types.code"
-        smallint severity "1-3"
-        geometry geom "Point 4326"
-        text status "CHECK: pending|active|verified|resolved|rejected|expired|out_of_area"
-        timestamptz expires_at
-        text idempotency_key "UNIQUE (reporter_id, idempotency_key)"
-        uuid escalated_request_id FK "opcional: incidencia municipal creada al escalar"
-    }
-    citizen_requests {
-        uuid id PK
-        uuid province_id FK
-        uuid requester_id FK "nullable, ON DELETE SET NULL"
-        uuid municipality_id FK "NOT NULL: por trigger o elegido por el usuario"
-        uuid assigned_to FK "ON DELETE SET NULL"
-        text category
-        text description
-        geometry geom "Point 4326, opcional"
-        text kind "CHECK: incident|inquiry (incidencia municipal o consulta)"
-        text status "CHECK: pending|under_review|approved|rejected|in_progress|resolved|archived"
-        bool is_public
-        text idempotency_key "UNIQUE (requester_id, idempotency_key)"
-        int support_count "votos de prioridad, mantenido por trigger"
-    }
-    request_votes {
-        uuid request_id PK,FK
-        uuid user_id PK,FK "ON DELETE CASCADE"
-        timestamptz created_at
-    }
-    request_status_history {
-        bigint id PK
-        uuid request_id FK
-        text from_status
-        text to_status
-        uuid changed_by FK "ON DELETE SET NULL"
-        text note
-        timestamptz created_at
-    }
-    notifications {
-        uuid id PK
-        uuid user_id FK "ON DELETE CASCADE"
-        text kind
-        jsonb payload
-        timestamptz read_at
-        text push_status "CHECK: none|pending|sent|failed"
-    }
-    notification_preferences {
-        uuid user_id PK,FK
-        bool push_enabled
-        jsonb topics
-        uuid_array municipalities
-    }
-    push_subscriptions {
-        uuid id PK
-        uuid user_id FK
-        text endpoint "UNIQUE"
-        text p256dh
-        text auth
-        timestamptz last_success_at
-    }
-    attachments {
-        uuid id PK
-        uuid owner_id FK
-        text entity_type
-        uuid entity_id
-        text bucket
-        text path
-        text mime
-        int bytes
-        text status "pending|approved|rejected"
-    }
-    moderation_actions {
-        bigint id PK
-        uuid moderator_id FK
-        text entity_type
-        uuid entity_id
-        text action
-        text reason
-    }
-    audit_logs {
-        timestamptz created_at PK "PK (created_at, id): lista para particionar"
-        bigint id PK
-        uuid province_id FK
-        uuid actor_id FK "ON DELETE SET NULL"
-        text actor_role
-        text action
-        text entity_type
-        uuid entity_id
-        jsonb before
-        jsonb after
-        inet ip_observed "vista por Supabase"
-        inet ip_declared "declarada por Next.js, no probatoria"
-        text user_agent
-    }
-    report_runs {
-        uuid id PK
-        uuid province_id FK
-        date period_start
-        date period_end
-        int version
-        text status "CHECK: running|succeeded|failed"
-        text storage_path
-        text trigger "CHECK: cron|manual"
-        int attempts
-        timestamptz started_at
-        text error
-    }
-    weekly_kpi_snapshots {
-        uuid id PK
-        uuid report_run_id FK "inmutable: un juego de snapshots por ejecución"
-        date period_start
-        uuid municipality_id FK "null = provincia"
-        jsonb metrics
-    }
-    jobs {
-        bigint id PK "esquema private"
-        text kind "push|email|image_process|pdf|fanout_alert|..."
-        jsonb payload
-        text dedupe_key "UNIQUE parcial mientras está pendiente"
-        timestamptz run_at
-        int attempts
-        text status "CHECK: pending|running|done|failed|dead"
-        text last_error
-    }
-    feature_flags {
-        text key PK
-        uuid province_id PK,FK
-        uuid municipality_id "null = toda la provincia"
-        bool enabled
-        jsonb config
-    }
-```
-
-Tablas añadidas a la lista original y por qué son necesarias: `user_roles` (reemplaza `roles`: los roles se asignan, no se definen; PK sustituta porque `municipality_id` puede ser `NULL` y una PK no admite `NULL`. Unicidad con `UNIQUE NULLS NOT DISTINCT (user_id, role, province_id, municipality_id)`, que permite a un moderador tener alcance en varios municipios), `business_members` (quién administra cada negocio), `push_subscriptions` (un usuario tiene varios dispositivos). Añadidas en v1.1: `provinces` (multi-provincia sin migración), `traffic_report_types` (reglas operativas configurables), `jobs` (cola asíncrona, esquema `private`) y `feature_flags` (activación por territorio).
-
-## 16. Authentication & Authorization
-
-**Registro/login:** email + contraseña o magic link/OTP por email (Supabase Auth). Google OAuth opcional. `visitor` = sin sesión. Al registrarse, trigger crea `profiles` y `user_roles(citizen)`.
-
-**Recuperación:** flujo nativo de Supabase (email con enlace), página `/auth/reset`.
-
-**Sesiones:** `@supabase/ssr` con cookies de sesión `Secure` + `SameSite=Lax`. **No son `httpOnly`**: el cliente de navegador de Supabase necesita leer el token para Realtime (§26) y para las consultas desde el cliente. Esto se asume y se compensa con CSP estricta (§17), sin scripts de terceros innecesarios, y con tokens de acceso de vida corta. `proxy.ts` refresca tokens. En servidor, autorizar siempre con una sesión validada por Auth (`supabase.auth.getUser()`, o `getClaims()` con verificación de firma JWT si la versión del SDK lo ofrece), nunca con `getSession()` a secas.
-
-**Captcha:** Turnstile con la integración nativa de Supabase Auth en registro y login sospechoso. Se valida en el servidor de Auth, así que no se puede saltar llamando la API directamente.
-
-**Roles y permisos (mínimo privilegio, sin `super_admin`):** cinco roles: `visitor` (sin sesión), `citizen`, `entrepreneur`, `moderator` y `municipal_admin`. No existe un rol "dios" en la aplicación. La gobernanza provincial la ejerce un `municipal_admin` con **alcance provincial** (`municipality_id NULL`). Las operaciones de plataforma que no pertenecen a ningún municipio (crear el primer administrador provincial, rotar secretos, cambios de esquema) no se hacen desde la interfaz: son **scripts de operación versionados en el repo**, ejecutados por la organización con `service_role` y registrados en `audit_logs` (ADR-020).
-
-| Capacidad | visitor | citizen | entrepreneur | moderator | municipal_admin (municipio) | municipal_admin (provincia) |
-|---|---|---|---|---|---|---|
-| Ver mapa, turismo, negocios aprobados | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Crear reportes de tránsito, incidencias y consultas | — | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Proponer lugares y rutas (moderados) y votar prioridades | — | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Ver estado de sus propios reportes y consultas | — | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Gestionar su negocio y sus promociones | — | — | ✓ (solo los suyos) | — | — | — |
-| Aprobar, suspender o archivar negocios | — | — | — | ✓ (su municipio) | ✓ (su municipio) | ✓ |
-| Moderar reportes, fotos, rutas y promociones | — | — | — | ✓ (su municipio) | ✓ (su municipio) | ✓ |
-| Gestionar consultas (asignar, cambiar estado) | — | — | — | ✓ (su municipio) | ✓ (su municipio) | ✓ |
-| Ver KPIs, generar PDF | — | — | — | — | ✓ (su municipio) | ✓ |
-| Asignar rol `moderator` | — | — | — | — | ✓ (su municipio) | ✓ |
-| Asignar `municipal_admin` de municipio | — | — | — | — | — | ✓ |
-| Asignar `municipal_admin` provincial | — | — | — | — | — | — (script de operación auditado) |
-| Catálogos, feature flags, cola de jobs | — | — | — | — | — | ✓ |
-| Ver auditoría | — | — | — | — | ✓ (su municipio) | ✓ (provincia) |
-
-"Su municipio" = los municipios de sus filas en `user_roles`. Un administrador provincial no puede auto-asignarse más poder: la única vía para crear otro administrador provincial es el script de operación, que exige una revisión en PR.
-
-
-**Implementación:** tabla `user_roles` sin políticas de escritura para usuarios; asignación solo por RPC `assign_role()`, que aplica la tabla anterior y escribe auditoría. Función `private.has_role(role, municipality_id)` usada por RLS (con `GRANT EXECUTE` a `authenticated`, §14). Opcional: Custom Access Token Hook de Supabase para incluir roles en el JWT (evita consultas repetidas); si se usa, asumir que un cambio de rol tarda hasta la expiración del token.
-
-`entrepreneur` no es un rol que el usuario se da: se obtiene cuando un moderador aprueba la solicitud de alta de negocio.
-
-## 17. Security Architecture
-
-| Tema | Diseño |
-|---|---|
-| RLS | Activo en todas las tablas `public`. Políticas por rol y propiedad (`auth.uid()`), con alcance municipal vía `has_role()`. Tests automáticos de RLS en CI (§35) |
-| Superficie de API directa | La anon key es pública y PostgREST expone `public`: **cualquier usuario autenticado puede llamar RPC y tablas sin pasar por Next.js**. Por eso: (1) las tablas críticas (`user_roles`, `status` de consultas, reportes y negocios) no tienen políticas de `INSERT`/`UPDATE` para usuarios, solo se modifican por RPC; (2) cada RPC valida todo por sí misma (§12); (3) nada de lo que haga Next.js (Zod, captcha, IP) se considera garantía. Tests de CI que llaman las RPC directamente con un JWT de prueba (§35) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Solo en variables de entorno de servidor (sin prefijo `NEXT_PUBLIC_`). Usada **únicamente** por el worker de la cola (procesamiento de imágenes, envío de push y email, PDF) y por el cron. Nunca en un request iniciado por un usuario. Módulo `lib/supabase/admin.ts` con `import 'server-only'` para que el build falle si se importa en cliente |
-| Requests de usuario | Siempre con el cliente Supabase autenticado con el JWT del usuario, para que RLS aplique incluso desde el servidor |
-| Funciones `SECURITY DEFINER` | `search_path = ''` y nombres calificados; validan `auth.uid()` y rol dentro de la función. RPC invocables: en `public`, con `GRANT EXECUTE` solo al rol que corresponde (`authenticated`, o `anon` si son públicas). Helpers de RLS: en `private` (no expuesto) **con** `GRANT USAGE`/`EXECUTE` a `authenticated`/`anon`, porque las políticas se evalúan con el rol del usuario. Funciones de sistema (retención, worker): en `private` con `REVOKE EXECUTE FROM anon, authenticated` (§14) |
-| Uploads | URL de subida firmada generada por el servidor tras validar sesión y cuota. El archivo llega a una ruta `incoming/` del bucket privado y se registra en `attachments` como `pending`. Un job `image_process` (worker con `service_role`) verifica los magic bytes, rechaza lo que no sea `image/jpeg`/`png`/`webp` o supere 5 MB, **quita EXIF** (contiene GPS y datos del dispositivo), limita dimensiones (máx. 4096 px por lado y 40 MP, para evitar bombas de descompresión), **re-codifica** la imagen (descarta metadatos y cualquier contenido extra incrustado, como archivos políglotas), genera WebP en tamaños estándar y mueve el resultado a su ruta final. El nombre final lo genera el servidor (`{uuid}.webp`): el nombre que envía el cliente nunca se usa en rutas (sin path traversal ni nombres maliciosos). No se confía en el MIME ni en la extensión que declara el navegador. Solo tras aprobación de moderación se copia a `public-media`. Uploads `pending` con más de 24 h se borran por `pg_cron` |
-| Descargas | Buckets privados + `createSignedUrl` de corta duración (p. ej. 5 min) tras verificar permiso; PDFs solo para roles admin |
-| Rate limiting | Tabla `private.rate_limits` (ventana deslizante por `user_id` + acción; límites configurables en tabla) consultada dentro de cada RPC sensible (p. ej. máx. 5 reportes/hora, 5 consultas/hora, 3 solicitudes de alta de negocio/día). **Los intentos rechazados también cuentan**: como las RPC devuelven los rechazos en lugar de lanzar excepción (§12), el incremento del contador hace commit. Sin proveedor adicional en MVP. Vercel Firewall como capa extra en Fase 2 |
-| Anti-abuso | Captcha (Turnstile) vía integración nativa de Supabase Auth en registro. Los reportes de cuentas nuevas o con baja reputación entran como `pending` (moderación) en vez de depender de un captcha que se podría saltar. Reputación simple por usuario: los reportes rechazados reducen los límites |
-| Escalamiento de privilegios | Usuario no puede escribir `user_roles` ni columnas sensibles de `profiles`; `UPDATE` de perfil limitado por `GRANT` de columnas |
-| Panel admin | Verificación de rol en layout de servidor **y** en cada acción; RLS como red final; 2FA (TOTP de Supabase Auth) obligatorio para `municipal_admin` en Fase 2 (desde el MVP para el alcance provincial) |
-| Auditoría | Toda acción administrativa → `audit_logs` (§33) |
-| Cabeceras | CSP estricta con nonce (dominios de Google Maps, Supabase y Sentry permitidos; sin `unsafe-inline` en scripts; `frame-ancestors 'none'`), `X-Frame-Options: DENY`, HSTS (Vercel), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: geolocation=(self), camera=(self), microphone=(), payment=()`. CORS: las Route Handlers no envían `Access-Control-Allow-Origin` (solo mismo origen), salvo `/api/v1/map/features` pública (`GET`, sin credenciales). Es la mitigación principal de XSS, ya que las cookies de sesión son legibles por JS |
-| Auth: abuso y enumeración | Límites de Supabase Auth configurados (registro, OTP, magic link, recuperación de contraseña, verificación) + captcha en registro y recuperación. Respuestas genéricas en recuperación y login ("si el correo existe, te enviamos un enlace") para no permitir enumerar usuarios. Redirecciones post-login solo a rutas internas (lista blanca; sin open redirect) |
-| Secretos | Vercel Environment Variables por entorno; `.env.example` sin valores; GitHub secret scanning activado. Secretos que la base necesita en claro (secreto del worker, credenciales de `pg_net`): **Supabase Vault**, nunca en columnas normales |
-| Claves Google | Restringidas por referrer y por API (§10.4) |
-
-## 18. PWA Architecture
-
-- **Manifest:** nombre, íconos (incluye maskable), `display: standalone`, `start_url: /mapa`, colores de marca.
-- **Service Worker:** **Serwist** (sucesor mantenido de `next-pwa`).
-- **Instalación:** prompt propio en Android/escritorio; en iPhone, instrucciones "Compartir → Añadir a pantalla de inicio" (iOS no ofrece prompt automático). **En iOS, Web Push solo funciona con la PWA instalada** (iOS 16.4+).
-
-| Funciona offline | No funciona offline | Por qué |
-|---|---|---|
-| Shell de la app, navegación, pantallas visitadas | Mapa base de Google | Los términos de Google no permiten cachear tiles para uso offline; además pesaría demasiado |
-| Última lista de lugares turísticos y rutas vistas (sin mapa, en lista) | Búsqueda, Autocomplete | Requieren servidor/Google |
-| **Borradores** de reporte y consulta (IndexedDB, con foto comprimida) | Moderación y cambios de estado | Transacciones con historial y auditoría en el servidor |
-| **Cola de reintento**: el reporte se envía al volver la conexión (Background Sync donde exista; reintento al abrir la app en iOS) | Alta de negocio | Requiere verificación del moderador y subida de fotos |
-| Ver mis reportes y consultas ya enviados (último estado sincronizado) | Panel admin | No aporta valor offline y amplía superficie de riesgo |
-
-**Tres modos explícitos, siempre visibles para el usuario** (indicador en la barra superior; nunca se simula una experiencia offline que no existe):
-
-| Modo | Cuándo | Qué funciona | Qué se bloquea |
-|---|---|---|---|
-| **ONLINE** | Red y API responden | Todo | — |
-| **DEGRADED** | Hay red pero falla un servicio (Google Maps, API propia lenta o con error 5xx, Storage) | Lista de lugares en lugar de mapa si Google falla; lectura desde caché con aviso "datos de hace X min"; borradores y cola | Acciones que dependen del servicio caído, con mensaje concreto |
-| **OFFLINE** | Sin red | Lo de la tabla anterior: shell, contenido visto, borradores, cola de reportes, mis reportes | Búsqueda, alta de negocios, panel admin (botones desactivados con explicación) |
-
-- Cada item de la cola lleva `idempotency_key` generado en cliente para evitar duplicados al reintentar. El servidor lo persiste en la fila creada (`UNIQUE (user_id, idempotency_key)`, §14).
-- Si al reintentar la sesión expiró, el item queda en la cola con estado "requiere iniciar sesión" y se reenvía tras el login; nunca se descarta en silencio.
-- **Actualizaciones:** estrategia "nueva versión disponible → recargar", sin `skipWaiting` silencioso durante un formulario.
-- **Caching:** estáticos con `CacheFirst` versionado; APIs públicas de catálogo con `StaleWhileRevalidate`; APIs de usuario con `NetworkOnly`.
-
-## 19. Missions Architecture — retirada
-
-**Fuera de alcance desde v1.3 (24/09/2026).** Por decisión del proyecto, SR Conecta no incluye misiones ni recompensas (ADR-010 y ADR-011 retirados). Se eliminaron del modelo de datos, la API, la seguridad, las pruebas y el alcance del MVP. La numeración de secciones se conserva para no romper referencias.
-
-Si se retoman en el futuro, entran como **módulo aditivo** según §5.1: tablas y endpoints nuevos en `/api/v1`, sin modificar las tablas existentes. El diseño retirado (check-ins con GPS/QR, stock atómico, cupones cifrados) queda en el historial de Git (v1.2 de este documento) como punto de partida.
-
-## 20. Rewards Architecture — retirada
-
-Ver §19. Los comercios conservan **promociones informativas** (texto con vigencia, moderadas antes de publicarse, §23), sin stock, códigos ni canje.
-
-## 21. Citizen Reports Architecture
-
-Dos flujos distintos que comparten adjuntos, moderación y auditoría. En la interfaz, el ciudadano elige el tipo en un solo formulario ("Reportar"), agrupado en **Tránsito** y **Servicios municipales**; el servidor enruta cada tipo a su flujo:
-
-| Flujo | Tipos | Tabla | Naturaleza |
-|---|---|---|---|
-| Tránsito | accidente, calle cerrada, **bache**, semáforo dañado, **desvío**, vía inundada… (lista de las bases) | `traffic_reports` | Temporal: expira solo; visible en el mapa, en vivo, mientras está activo |
-| Servicios municipales | basura, alumbrado, infraestructura, otro (`kind = incident`) y consultas, quejas o propuestas sin incidencia física (`kind = inquiry`) | `citizen_requests` | Requiere gestión municipal hasta resolverse; los vecinos **votan prioridades** |
-
-Un reporte de tránsito que requiere obra (p. ej. un bache que no se resuelve solo) se **escala** a una incidencia municipal: el moderador ejecuta `escalate_traffic_report(id)`, que crea la `citizen_request` enlazada (`traffic_reports.escalated_request_id`) y conserva al autor, la ubicación y las fotos. El ciudadano no tiene que volver a reportarlo.
-
-### 21.1 Incidencias y consultas municipales (`citizen_requests`)
-
-Ubicación opcional (obligatoria para `incident`); **municipio obligatorio**: si hay punto, lo calcula el trigger (§11.1), y si no hay, el ciudadano lo elige en el formulario. Así ninguna consulta queda fuera del alcance de un moderador.
-
-```text
-pending → under_review → approved → in_progress → resolved → archived
-   │            │            │
-   └────────────┴────────────┴──→ rejected   (con motivo visible para el ciudadano)
-```
-
-| Desde | Hacia | Quién | Requisito |
-|---|---|---|---|
-| `pending` | `under_review` | moderator / municipal_admin del municipio | — |
-| `under_review` | `approved` | ídem | Validada como legítima; se puede asignar (`assigned_to`) |
-| `approved` | `in_progress` | ídem o el asignado | `assigned_to` definido |
-| `in_progress` | `resolved` | ídem o el asignado | Nota de resolución obligatoria |
-| `resolved` | `archived` | municipal_admin | — (automático a los 30 días por `pg_cron`) |
-| `pending` / `under_review` / `approved` | `rejected` | moderator / municipal_admin | Motivo obligatorio y visible |
-
-- Las transiciones válidas viven en la tabla `request_transitions (from_status, to_status, min_role)`. La RPC `change_request_status(id, expected_status, to, note)` solo permite **un paso por llamada** según esa tabla, y solo si el estado actual sigue siendo `expected_status` (compare-and-set, §14: si otro moderador se adelantó, devuelve `stale_state`), actualiza, inserta en `request_status_history`, audita y encola la notificación al ciudadano. Un trigger impide el `UPDATE` directo de `status`. **Ningún ciudadano puede mover su propio reporte**, y nadie puede saltar de `pending` a `resolved`.
-- Asignación: `assigned_to` debe tener rol `moderator`/`municipal_admin` en el municipio de la consulta.
-- `is_public`: la consulta solo aparece en el mapa público si un moderador la aprueba (y sin datos personales).
-- Tiempo de resolución = `resolved.created_at - pending.created_at` desde el historial.
-- **Votar prioridades** (requisito de las bases): tabla `request_votes (request_id, user_id, created_at)` con PK `(request_id, user_id)`, así cada usuario apoya una consulta una sola vez y quitar el apoyo es borrar la fila. Solo se vota en consultas `is_public` y abiertas. El contador `citizen_requests.support_count` lo mantiene un trigger, nunca el cliente. Rate limit de 30 votos/hora por usuario. El panel ordena la bandeja por apoyos y antigüedad, y el PDF incluye las consultas más apoyadas por municipio.
-
-### 21.2 Reportes de tránsito (`traffic_reports`)
-
-| Campo | Diseño |
-|---|---|
-| Tipos | Tabla catálogo `traffic_report_types` (accidente, calle cerrada, bache, semáforo o señal dañada, desvío, derrumbe, vía inundada, obra, otro), con ícono, gravedad por defecto y duración (`default_ttl`) editables desde el panel sin deploy |
-| Escalado | `escalated_request_id` (FK opcional a `citizen_requests`) cuando requiere obra municipal |
-| Gravedad | 1 baja · 2 media · 3 alta |
-| Ubicación | Punto obligatorio (ubicación actual o pin ajustado); municipio por trigger (§11.1). Fuera de la provincia → `out_of_area`, visible solo para moderadores provinciales |
-| Imágenes | Opcionales, hasta 3, bucket privado hasta moderación |
-| Estados | `pending` → `active` (automático si el usuario tiene buena reputación, si no requiere moderador) → `verified` (moderador o N confirmaciones en Fase 2) → `resolved` / `rejected` / `expired` |
-| Expiración | `expires_at = now() + traffic_report_types.default_ttl` (p. ej. accidente 3 h, obra 7 días). Las lecturas filtran siempre `expires_at > now()` (la visibilidad no depende del job); el job horario de `pg_cron` solo actualiza el estado a `expired` para KPIs. El ciudadano puede marcar "ya no está" |
-| Mapa | Solo `active`/`verified` no expirados; color por gravedad |
-| Estadísticas | Todos los estados cuentan en KPIs (por tipo, municipio, tiempo hasta resolución) |
-
-## 22. Tourism Architecture
-
-- `tourism_places`: punto, tipo (mirador, río/balneario, sitio cultural, histórico, agroturismo), descripción, servicios (jsonb: parqueo, baños, guía, comida), accesibilidad, fotos aprobadas, horario, contacto, estado.
-- `eco_routes`: `MultiLineString` importado desde GPX/KML/GeoJSON (subido por admin, convertido con GDAL o en servidor), `distance_km` calculado con `ST_Length(geom::geography)`, desnivel (si hay datos de elevación), duración estimada, dificultad, `start_point`, puntos de interés (relación simple con `tourism_places` cercanos vía `ST_DWithin`, no tabla adicional).
-- **Aportes ciudadanos** (las bases piden que "cualquier usuario pueda agregar puntos de interés y rutas"): un usuario autenticado puede **proponer** un lugar (pin + datos + fotos) o una ruta (trazada sobre el mapa punto a punto, o subiendo un GPX grabado con el teléfono). Entra con `status = 'pending'` y `proposed_by = auth.uid()`, no aparece en el mapa público hasta que un moderador lo aprueba, y el autor recibe la notificación. Las RPC `propose_place` y `propose_route` validan la geometría (`ST_IsValid`, dentro de la provincia, máx. 2.000 vértices) y aplican rate limit (5 propuestas/día).
-- "Cómo llegar al inicio" → deep link de Google Maps a `start_point`.
-- Las rutas se muestran simplificadas en el mapa general y completas en la vista de ruta; descarga GPX opcional (Fase 2).
-- Vistas de ficha cuentan para KPIs (§24, §39).
-- Nombre, descripción y servicios admiten `translations` (§5.1) desde el MVP, aunque el inglés llegue en Fase 2.
-
-## 23. Business Architecture
-
-- **Alta:** usuario solicita → formulario (nombre, categoría, contacto, WhatsApp, horario, fotos, ubicación por pin) → opcional "vincular con Google" (Autocomplete, se guarda solo `google_place_id`) → `status = pending` → `under_review` (el moderador verifica por llamada o visita) → `approved` (el solicitante recibe el rol `entrepreneur` y una fila en `business_members`) o `rejected` con motivo. Después: `suspended` (reversible) o `archived` (cierre). Solo `approved` aparece en el mapa y en la búsqueda.
-- **Negocio registrado vs Google Place:** solo los negocios **registrados y aprobados** aparecen en la capa "Negocios" y pueden publicar promociones. Un Google Place sin registro puede aparecer solo como resultado de búsqueda de dirección, nunca como negocio de SR Conecta.
-- **Panel del negocio:** editar perfil, fotos, horario, promociones (texto con vigencia, moderadas antes de publicarse), estadísticas propias (vistas de la ficha, clics en «Cómo llegar» y en WhatsApp).
-- **Suspensión:** moderador puede suspender (el negocio sale del mapa y sus promociones se pausan), con motivo registrado en `moderation_actions`.
-
-## 24. Admin Dashboard Architecture
-
-Ruta `/admin`, Server Components, filtros en URL (`?desde&hasta&municipio&categoria&estado&gravedad`).
-
-| Sección | Contenido |
-|---|---|
-| Resumen | KPIs principales del periodo, comparación con periodo anterior, alertas (reportes de gravedad 3 abiertos, consultas vencidas) |
-| Mapa | Mismo motor de mapa con capas administrativas (consultas no públicas, reportes pendientes) |
-| Reportes / Consultas | Bandeja con filtros, detalle, cambio de estado, asignación, historial |
-| Negocios | Solicitudes pendientes, verificados, suspendidos |
-| Turismo / Rutas | CRUD, carga de GPX/GeoJSON, previsualización |
-| Validaciones | Cola unificada de moderación (fotos, reportes, consultas, negocios y promociones) |
-| Usuarios | Búsqueda, roles según la tabla de §16, suspensión |
-| Auditoría | Consulta de `audit_logs` con filtros |
-| PDF | Historial de `report_runs`, descarga (signed URL), regenerar |
-| Sistema (municipal_admin provincial) | Estado de la cola `private.jobs` (pendientes, fallidos, `dead` con botón de reintento), feature flags por municipio, catálogos (`traffic_report_types`, categorías, límites de rate limit) |
-
-Los KPIs se calculan con **funciones SQL de agregación** con filtros como parámetros; vistas materializadas solo si una consulta supera ~500 ms (Fase 2).
-
-## 25. Notifications Architecture
-
-**Decisión: Web Push + VAPID. Sin Firebase.**
-
-| Criterio | Web Push + VAPID | FCM |
-|---|---|---|
-| Android/escritorio | ✓ | ✓ |
-| iOS | ✓ (PWA instalada, 16.4+) | Usa el mismo Web Push por debajo en web |
-| Dependencias | librería `web-push` en servidor | SDK de Firebase en cliente + proyecto Firebase |
-| Datos | Suscripciones en nuestra tabla | Tokens en Firebase + nuestra tabla |
-| Complejidad | Baja | Media, y agrega un segundo proveedor |
-
-FCM solo se justificaría si en Fase 3 existe una app nativa; aun así se usaría **exclusivamente** como transporte push, nunca como base de datos.
-
-**Diseño:**
-- `notifications` es la fuente de verdad (centro de notificaciones in-app, estado leído `read_at`). Push es un canal de entrega (`push_status`).
-- `notification_preferences`: por tema (estado de mis consultas, reportes cerca de mi municipio, novedades de turismo y rutas) y municipios de interés.
-- `push_subscriptions`: una por dispositivo; si el envío responde 404/410, se elimina.
-- **Envío por cola (desde el MVP):** quien origina el evento (una RPC, un trigger o un job de `pg_cron`) inserta en la misma transacción la fila de `notifications` (`push_status = 'pending'` si el usuario tiene push activo) y un job `push` en `private.jobs`. El worker (§12) envía con `web-push`, marca `sent`/`failed` y reintenta con backoff. Esto cubre **todos** los orígenes (reportes verificados por trigger, avisos programados desde `pg_cron`, cambios de estado desde Server Actions), cosa que un envío inline "después del commit" no garantiza. La latencia es de ≤ 1 minuto con el disparo por minuto de `pg_cron`; si hace falta inmediatez, la RPC puede además llamar a `pg_net` para despertar al worker en el acto.
-- **Canales detrás de una interfaz** (`modules/notifications/channels/`): `in_app` (siempre), `push` (Web Push), `email` (SMTP propio, para eventos importantes y para usuarios iOS sin PWA instalada) y, en el futuro, `native`. Agregar un canal no toca a los productores.
-- **"Notificaciones sobre el mapa"** (requisito del reto): alertas por municipio de interés (no por ubicación en vivo), p. ej. "Derrumbe reportado en la carretera Sabaneta–Monción". Se implementan como un job `fanout_alert` que divide a los destinatarios en lotes de ~500 y encola un job `push` por lote, para no superar el tiempo máximo de una función serverless.
-
-## 26. Realtime Architecture
-
-| Necesidad | Mecanismo | Motivo |
-|---|---|---|
-| Cargar mapa/listas | Request | Normal |
-| Alertas de tránsito en el mapa | **Supabase Realtime (Broadcast)** por provincia: cuando un reporte pasa a `active`, `verified` o `expired`, un trigger emite `{id, type, severity, lat, lng, status}` (sin autor ni fotos). Sondeo de 60 s como respaldo si el canal cae | Las bases piden "mapa en tiempo real"; es lo más visible en la demo. Broadcast no expone tablas ni depende de RLS del cliente |
-| Estado de mi consulta | Notificación in-app + push | El usuario no está mirando la pantalla |
-| Bandeja del panel admin (nuevos reportes/consultas) | **Supabase Realtime** (Postgres Changes o Broadcast) con RLS | Único caso donde "en vivo" mejora el trabajo |
-| Alertas a ciudadanos | Push | Fuera de la app |
-
-Todo lo demás: sin realtime.
-
-## 27. PDF Reporting Architecture
-
-```text
-Vercel Cron DIARIO 10:00 UTC (= 06:00 America/Santo_Domingo)  — compatible con Hobby
-  → GET /api/v1/cron/weekly-report  (header Authorization: Bearer CRON_SECRET)
-  → calcular periodo: lunes 00:00 a domingo 23:59:59 de la semana anterior en America/Santo_Domingo (UTC-4, sin horario de verano)
-  → INSERT report_runs (province_id, period_start, version=1, status='running', started_at=now())
-      ON CONFLICT (province_id, period_start, version) DO NOTHING
-      → si la fila ya existe con 'succeeded' → salir (idempotente; así se comportan 6 de cada 7 días)
-      → si existe 'running' con started_at < now() - 15 min, o 'failed' con attempts < 5
-          → UPDATE ... SET status='running', attempts=attempts+1, started_at=now()
-            WHERE id=:id AND (condición anterior)   -- toma atómica; si no afecta filas, otro proceso la tomó
-      → si 'failed' con attempts >= 5 → salir y alertar (Sentry + panel)
-  → SQL de agregación por municipio y provincia → INSERT weekly_kpi_snapshots (report_run_id, …)   -- inmutable, sin upsert
-  → @react-pdf/renderer (runtime Node) → Buffer
-  → Storage: reports-pdf/{province}/2026/semana-39/v1.pdf (privado)
-  → report_runs.status='succeeded', storage_path; job de notificación a municipal_admin
-  → error: status='failed', error, Sentry; se reintenta en la ejecución del día siguiente
-```
-
-- **Idempotencia:** clave única `(province_id, period_start, version)`; el cron puede dispararse dos veces (Vercel + respaldo de GitHub Actions) sin duplicar.
-- **Trazabilidad:** cada PDF queda ligado a sus propios snapshots (`weekly_kpi_snapshots.report_run_id`). Regenerar una v2 crea snapshots nuevos, no sobrescribe los de la v1, así que cualquier versión se puede auditar contra los datos que la generaron.
-- **Zona horaria:** todo cálculo de periodo en SQL con `AT TIME ZONE 'America/Santo_Domingo'`; las fechas se guardan en `timestamptz`.
-- **Regeneración:** botón admin crea `version = max + 1` (no sobrescribe; historial completo). Auditoría registra quién regeneró.
-- **Plan Hobby de Vercel:** los cron solo pueden correr una vez al día y con precisión de una hora; alcanza porque el diseño es un chequeo diario que genera si falta. Todo lo que necesita más frecuencia vive en `pg_cron` (§13). Hobby es solo para uso no comercial → producción municipal en Vercel Pro. Respaldo: GitHub Actions `schedule` llamando al mismo endpoint.
-- **Límite de ejecución:** si el PDF crece (mapas estáticos, muchas páginas), mover la generación a un job con más tiempo; en MVP un PDF de 4–8 páginas con tablas y gráficos SVG es rápido.
-- Contenido: portada, resumen ejecutivo, KPIs por municipio, reportes de tránsito por tipo/gravedad, consultas y tiempos de resolución, turismo, economía local (negocios y promociones), anexos.
-
-## 28. API Architecture
-
-Convenciones: `/api/v1`, JSON, errores `{ error: { code, message, details } }`, validación Zod, paginación por cursor, `Idempotency-Key` en POST críticos, respuestas GeoJSON para capas de mapa. Los rechazos de negocio (límite alcanzado, transición no permitida, fuera de la provincia) responden `200` con `{status: 'rejected', reason}`; los códigos 4xx/5xx quedan para errores de protocolo, autenticación o servidor.
-
-**Compatibilidad (§5.1):** en `/v1` solo se hacen cambios aditivos (campos nuevos opcionales, endpoints nuevos). Un cambio incompatible crea `/v2` en paralelo y `/v1` se mantiene hasta que la versión mínima de la PWA en uso lo permita (el service worker informa su versión en un header `X-App-Version`).
-
-**Endpoints HTTP** (consumidos por la PWA, la cola offline y sistemas externos):
-
-| Endpoint | Tipo | Detalle |
-|---|---|---|
-| `GET /api/v1/map/features` | Route Handler → SQL (RPC `map_features`) como `anon` | Capas públicas; `public, s-maxage=30`; ignora cookies |
-| `GET /api/v1/me/map/features` | Route Handler → SQL con JWT del usuario | Capas del usuario y administrativas; `private, no-store` |
-| `GET /api/v1/map/aggregates` | Route Handler → SQL | Conteos por municipio |
-| `GET /api/v1/map/static-layers` | Route Handler, cache CDN | Municipios + rutas simplificadas + turismo |
-| `GET /api/v1/search?q=` | Route Handler → SQL (§29) | Búsqueda propia |
-| `GET /api/v1/businesses`, `/:id` | Route Handler / Server Component | Listado y detalle |
-| `GET /api/v1/tourism`, `/api/v1/routes`, `/:id` | Route Handler / Server Component | — |
-| `POST /api/v1/reports` | Route Handler → RPC `create_traffic_report` | Idempotente; usado por cola offline |
-| `POST /api/v1/requests` | Route Handler → RPC `create_citizen_request` | Idempotente |
-| `GET /api/v1/me/requests` | Route Handler → SQL con RLS | — |
-| `POST /api/v1/uploads/sign` | Route Handler → Storage | URL firmada de subida |
-| `POST /api/v1/push/subscribe` / `DELETE` | Route Handler | — |
-| `GET /api/v1/cron/weekly-report` | Route Handler protegido por `CRON_SECRET` | Idempotente (§27) |
-| `POST /api/v1/internal/jobs/run` | Route Handler protegido por `JOBS_SECRET` (en Vault del lado de Postgres) | Worker de la cola; lo despierta `pg_net` |
-| `GET /api/v1/health` | Route Handler | Uptime; verifica base y antigüedad de la cola |
-| Autocomplete de direcciones | **Directo cliente → Google** con clave restringida | No proxiar por nuestro servidor |
-
-**Operaciones internas del panel** (no son endpoints HTTP públicos; si algún día se necesitan desde fuera, se agregan como Route Handler sobre la misma RPC):
-
-| Operación | Implementación |
-|---|---|
-| Moderar reporte | Server Action → RPC `moderate_traffic_report` |
-| Cambiar estado de consulta | Server Action → RPC `change_request_status` |
-| KPIs del panel | Server Component → funciones SQL de agregación |
-| Regenerar PDF semanal | Server Action → misma función que el cron, `version = max + 1` |
-
-## 29. Search Architecture
-
-**A. Datos de SR Conecta (primero siempre):**
-- Columna `search_vector` (`tsvector` con configuración `spanish`, pesos: nombre A, categoría B, descripción C) mantenida por trigger, índice GIN.
-- `pg_trgm` + `unaccent` con índice GIN trigram sobre `unaccent(name)` para tolerar errores ("monsion" → Monción, "salto" → Salto de…).
-- RPC `search_all(q, lat?, lng?, limit)` que une negocios, lugares turísticos y rutas, ordena por relevancia combinada (`ts_rank` + similitud trigram) y, si hay ubicación, por cercanía.
-
-**B. Google Places (segundo, explícito):**
-- Solo si A no devuelve resultados o el usuario elige "Buscar una dirección". Autocomplete (New) con session token; al elegir, Place Details con field mask mínimo. Centrar el mapa; no guardar el resultado.
-
-## 30. Performance Architecture
-
-| Objetivo | Móvil gama media, 4G | Escritorio |
-|---|---|---|
-| LCP (páginas públicas) | < 2.5 s | < 1.5 s |
-| INP | < 200 ms | < 100 ms |
-| CLS | < 0.1 | < 0.1 |
-| Shell interactivo del mapa (sin tiles) | < 2.5 s | < 1.5 s |
-| Mapa con primeras features | < 4 s | < 2.5 s |
-| JS inicial propio (gzip, sin Google) | < 200 KB | < 200 KB |
-| `GET /map/features` p95 en servidor | < 300 ms | — |
-
-Técnicas: import dinámico del mapa y de Recharts/PDF; Server Components para todo lo que no es interactivo; `next/image` con tamaños responsivos y fotos convertidas a WebP al subir; payload de features mínimo; geometrías simplificadas por zoom; índices GIST/GIN; región de Vercel Functions y de Supabase **cercanas entre sí** (p. ej. ambas en us-east); CDN para catálogos públicos; medir con Vercel Speed Insights o Lighthouse CI.
-
-## 31. Cost Architecture
-
-Precios consultados el 23/09/2026 en documentación oficial y fuentes secundarias recientes. **Verificar en las páginas oficiales antes de presupuestar.**
-
-| Servicio | Modelo (a la fecha de consulta) | Impacto en SR Conecta |
-|---|---|---|
-| Google Maps Platform | Desde marzo 2025 el crédito de US$200 fue reemplazado por **cuotas gratuitas mensuales por SKU**: en general 10,000 eventos para SKUs Essentials, 5,000 Pro y 1,000 Enterprise. Dynamic Maps (mapa JS) tiene 10,000 cargas gratis; luego del umbral, la primera banda cuesta US$7 por 1,000 cargas | MVP y primeros meses de producción probablemente dentro de la cuota si se evita recargar el mapa. Place Details Pro es más caro que Essentials: pedir solo campos Essentials con field mask |
-| Supabase | Free: 500 MB de base de datos, 1 GB de storage, 50,000 MAU, 2 proyectos activos, **pausa tras 7 días de inactividad**, sin backups. Pro: desde US$25/mes **por organización**, con US$10 de crédito de cómputo que cubre aproximadamente una instancia pequeña; **cada proyecto adicional de la organización paga su propio cómputo**. El plan es por organización: no se pueden mezclar proyectos Free y Pro en la misma | Free sirve para desarrollo y demo (mantener actividad antes del jurado). Producción municipal → organización Pro con `production` + `staging` (≈ US$25 + cómputo del segundo proyecto). Branching por PR también se cobra por cómputo usado |
-| Vercel | Hobby gratis pero **solo uso personal/no comercial**, cuenta individual (sin equipo) y cron limitado a una vez al día. Pro: US$20 por miembro/mes con US$20 de crédito incluido | Demo del reto en Hobby, en una cuenta creada con un email de la organización (no de un integrante) para poder entregarla. Operación para FUNDESER/municipio → Team Pro (§37) |
-| Email transaccional | Resend/Brevo/SES: niveles gratuitos de miles de emails/mes (verificar) | Suficiente para OTP y avisos en MVP y Fase 2 |
-| Web Push | Sin costo de proveedor | — |
-| Sentry | Plan gratuito (Developer) limitado a **1 usuario** (verificar); Team de pago para más | 1 cuenta de la organización en MVP; Team en Fase 2 si varias personas atienden errores |
-| Dominio | Costo anual del registrador | `.do` vía NIC.DO o `.com` |
-
-**Estimación orden de magnitud Fase 2 (producción municipal):** Supabase Pro (~US$25 + ~US$10 de cómputo del proyecto `staging`) + Vercel Pro (~US$20 por miembro con acceso de despliegue) + email (US$0 en nivel gratuito) + Google (US$0 mientras se mantenga bajo cuota; presupuestar colchón). Fuera de tabla: tiempo de mantenimiento humano, que es el costo real.
-
-**Controles:** cuotas diarias por API en Google Cloud; alertas de presupuesto; restricciones de clave; field masks; session tokens; nada de llamadas a Google por eventos de mapa; spend cap de Supabase activado; alertas de uso de Vercel; imágenes comprimidas en cliente (storage y egress).
-
-## 32. Privacy Architecture
-
-Marco: Ley 172-13 de protección de datos personales de República Dominicana (validar con asesoría legal del municipio/FUNDESER).
-
-| Principio | Aplicación |
-|---|---|
-| Consentimiento | Permiso de ubicación solicitado **en contexto** (al tocar "Estoy aquí" o "Reportar aquí"), con explicación. `profiles.location_consent` para funciones que lo requieran. Términos y política de privacidad aceptados al registrarse |
-| Minimización | Solo se guarda ubicación puntual ligada a una acción (reporte o consulta). Nunca trayectorias. Sin teléfono obligatorio |
-| Retención | Ejecutada cada noche por `pg_cron` mediante una función de sistema en `private` (la única autorizada a modificar tablas de rastro, §14). Reportes de tránsito: coordenadas se mantienen (dato público), `reporter_id` se pone en `NULL` a los 12 meses. Logs de auditoría: 2 años (definir con el municipio); con la PK `(created_at, id)` la retención será un `DROP PARTITION` cuando se particione (Fase 3) |
-| Eliminación | "Eliminar mi cuenta" = borrar el usuario de `auth.users`. Por la política de claves foráneas de §14: se borran en cascada perfil, suscripciones, preferencias, notificaciones, membresías y roles; quedan anonimizados (`SET NULL`) reportes, consultas, historial y auditoría, así las estadísticas no se rompen. Antes, un job borra los adjuntos privados del usuario en Storage. Si el usuario es el único `owner` de un negocio, la baja se bloquea hasta transferirlo |
-| Acceso | "Descargar mis datos" (JSON) en Fase 2 |
-| Anonimización | Mapa público nunca muestra autor de reportes/consultas; KPIs agregados; EXIF eliminado de fotos |
-| Menores | Registro solo mayores de edad o con consentimiento; no se piden datos de edad más allá de una casilla |
-
-## 33. Audit Architecture
-
-`audit_logs(created_at, id, province_id, actor_id, actor_role, action, entity_type, entity_id, before jsonb, after jsonb, ip_observed inet, ip_declared inet, user_agent)`, con PK `(created_at, id)` lista para particionar (§14).
-
-- Se escribe **desde las RPC y triggers**, no desde el cliente. Tabla inmutable: sin políticas de `UPDATE`/`DELETE` para nadie; la retención automática la hace una función de sistema (§32).
-- Acciones auditadas: cambios de rol, moderación, cambios de estado de consultas/reportes, verificación/suspensión de negocios, regeneración de PDF, descargas de PDF, eliminación de cuentas.
-- `before/after` solo con campos relevantes (no volcar filas completas con datos personales).
-- IP, en dos columnas y **ninguna probatoria**:
-  - `ip_observed`: la IP con la que Supabase vio la llamada (leída de `request.headers` en PostgREST). Si la llamada vino de Next.js será una IP de Vercel; si fue directa, la del cliente.
-  - `ip_declared`: la IP del usuario que Next.js pasa como parámetro. Un cliente que llama la RPC directamente puede inventarla, por eso se guarda aparte y se trata como dato informativo.
-- Lectura: `municipal_admin` provincial, toda la provincia; `municipal_admin` de municipio, su municipio.
-
-## 34. Observability Architecture
-
-| Necesidad | Herramienta MVP |
-|---|---|
-| Logs de aplicación | Vercel Logs (logs estructurados JSON con `request_id`) |
-| Errores | **Sentry** (cliente, servidor, cron) — aporta valor real: errores del mapa en dispositivos variados son difíciles de reproducir |
-| Base de datos | Supabase Dashboard: Query Performance, logs, advisors de seguridad y rendimiento (revisar semanalmente) |
-| Google APIs | Google Cloud Console: métricas por API/SKU, cuotas, alertas de presupuesto |
-| Cron | Tabla `report_runs` + alerta Sentry en fallo + check en el panel admin |
-| Cola de trabajos | Panel "Sistema" (§24): jobs pendientes con más de 5 min, fallidos y `dead`; alerta Sentry cuando un job pasa a `dead`. `/api/v1/health` falla si el job pendiente más antiguo tiene más de 10 min (la cola está detenida) |
-| Email | Panel del proveedor SMTP (rebotes, quejas) |
-| Rendimiento | Vercel Speed Insights (Web Vitals reales) |
-| Uptime | Monitor externo gratuito sobre `/api/v1/health` desde el MVP (detecta también la pausa de Supabase Free antes de la demo) |
-
-No se introduce stack propio de métricas (Grafana/Prometheus) antes de Fase 3.
-
-## 35. Testing Architecture
-
-| Nivel | Herramienta | Qué cubre |
-|---|---|---|
-| Unit | Vitest | Esquemas Zod, cálculo de periodos/zona horaria, generación de datos del PDF, utilidades de bbox/rejilla, transiciones de estado |
-| Base de datos | Vitest contra Supabase local (CLI + Docker), o pgTAP | **RLS por rol** (visitor no ve consultas privadas, entrepreneur no edita negocio ajeno, citizen no escribe `user_roles`); **ataque directo a la API**: con un JWT de ciudadano, llamar por PostgREST cada RPC y tabla crítica saltando Next.js con entradas inválidas (coordenadas fuera de rango, textos enormes, estados inventados, `municipality_id` ajeno) → todo rechazado; **transiciones de estado** (nadie salta de `pending` a `resolved`; un ciudadano no mueve su propio reporte; dos moderadores que cambian el mismo estado a la vez → solo una transición válida); idempotencia (el mismo `idempotency_key` devuelve el mismo reporte); **rate limit con rechazos** (N intentos rechazados agotan el límite); unicidad con `NULL` (`weekly_kpi_snapshots`, `user_roles`); eliminación de cuenta sin romper claves foráneas; expiración y retención; helpers de RLS con `GRANT` correctos (las políticas no fallan por permisos) |
-| E2E | Playwright | Login/registro, crear reporte con foto, flujo de consulta hasta resuelta, reporte con **geolocalización simulada** (`context.setGeolocation`) dentro y fuera de la provincia, alta y aprobación de negocio, filtros del dashboard, descarga de PDF, modo offline (cola de reportes) |
-| PDF | Vitest | Snapshot de datos de entrada + verificación de que el PDF se genera y tiene N páginas |
-| Visual/manual | Checklist en dispositivos reales | Android gama media, iPhone con PWA instalada, tablet |
-
-Google Maps en E2E: usar una clave de desarrollo con cuota baja o un modo `MAP_PROVIDER=mock` del adaptador para no gastar cuota en CI. Push y email en E2E: canales en modo `mock` que escriben en una tabla consultable por el test.
-
-## 36. CI/CD
-
-```text
-feature/* → Pull Request
-  ├─ lint (ESLint) + format check + reglas de fronteras de módulos
-  ├─ typecheck (tsc --noEmit) + tipos de la base regenerados sin diferencias
-  ├─ unit tests (Vitest)
-  ├─ db tests (Supabase CLI local: migraciones desde cero + RLS + RPC + ataques directos)
-  ├─ build (next build)
-  ├─ E2E (Playwright) contra `next start` + Supabase LOCAL en el mismo job de CI
-  │     → cada PR prueba SU esquema; ningún PR comparte base con otro
-  └─ Vercel Preview Deployment (revisión visual/manual)
-        MVP: apunta a `staging` → solo para PRs sin migraciones o ya mergeadas
-        Fase 2 (Pro): Supabase Branching → cada preview con su propia base y sus migraciones
-
-merge a main (squash) → GitHub Action "release" (environment `production` con aprobación manual):
-  1. supabase db push   (migraciones compatibles hacia atrás, §37)
-  2. vercel deploy --prod   (o deploy hook)   ← el código sale SOLO después de migrar
-  3. smoke test contra /api/v1/health
-El auto-deploy de producción de Vercel desde `main` está DESACTIVADO (git.deploymentEnabled.main = false);
-los previews siguen automáticos.
-```
-
-**Branching para equipo pequeño:** trunk-based. `main` protegida (PR obligatorio, checks verdes, 1 aprobación cuando haya más de una persona). Ramas cortas `feat/`, `fix/`, `chore/`. Conventional Commits para changelog. Releases etiquetadas `v0.x` hasta producción municipal.
-
-## 37. Deployment
-
-| Entorno | Frontend | Supabase | Google | Datos |
-|---|---|---|---|---|
-| Development | `next dev` local | Supabase CLI local (Docker) | Proyecto GCP dev, clave restringida a localhost | Seed sintético + datos abiertos de la provincia |
-| CI | `next start` en el runner | Supabase CLI local (Docker) con las migraciones del PR | Mock del adaptador | Seed de pruebas |
-| Preview | Vercel Preview por PR | MVP: proyecto `staging` (compartido). Fase 2: Supabase Branching (una base por PR) | Clave dev con referrer `*.vercel.app` del proyecto | Seed de demo |
-| Production | Vercel Production (dominio propio) | Proyecto Supabase `production` | Proyecto GCP prod | Reales |
-
-**Cuentas y planes por fase** (el plan de Supabase es por organización y Hobby de Vercel es personal):
-
-| Fase | Supabase | Vercel |
-|---|---|---|
-| Reto / demo | Organización Free de la organización con `staging` + `production` (2 proyectos Free) | Hobby en una cuenta creada con un email de la organización (no de un integrante); los despliegues los hace esa cuenta desde la Action |
-| Producción municipal | La organización pasa a Pro (los dos proyectos pasan a pagar cómputo) | Team Pro de la organización; el proyecto se transfiere de la cuenta Hobby al Team |
-
-En Hobby, los despliegues provocados por commits de otros colaboradores en repos privados pueden quedar bloqueados (verificar la política vigente). Por eso el despliegue de producción lo hace siempre la Action con el token de la cuenta de la organización.
-
-- **Variables:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (o publishable key), `SUPABASE_SERVICE_ROLE_KEY` (solo server), `NEXT_PUBLIC_GOOGLE_MAPS_KEY`, `NEXT_PUBLIC_GOOGLE_MAP_ID`, `GOOGLE_MAPS_SERVER_KEY` (opcional), `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `CRON_SECRET`, `JOBS_SECRET`, `SMTP_*` o `RESEND_API_KEY`, `SENTRY_DSN`, `APP_TIMEZONE=America/Santo_Domingo`, `DEFAULT_PROVINCE_CODE`. Validadas al arrancar con Zod (`config/env.ts`). Los secretos que usa Postgres (`JOBS_SECRET`) se cargan además en Vault por un script de despliegue.
-- **Auth en previews:** agregar `https://*-<equipo>.vercel.app/**` a las Redirect URLs de Supabase Auth del proyecto `staging`, para que los magic links y el login OAuth funcionen en cada preview.
-- **Migraciones:** solo hacia adelante y **siempre compatibles con el código anterior**, porque durante el release conviven esquema nuevo y código viejo unos minutos: patrón expandir → migrar datos → contraer (agregar columna → desplegar código que la usa → eliminar la vieja en un release posterior). Cada PR con migración se prueba desde cero en CI. En producción la Action aplica la migración **antes** de desplegar el código (§36).
-- **Backups:** con el plan Free **no hay backups**. Desde el primer dato real: `pg_dump` diario por GitHub Action a almacenamiento de la organización. Con Pro se suman los backups diarios de Supabase. La conexión de la Action usa el **pooler de Supabase (Supavisor, modo sesión)**, porque la conexión directa es solo IPv6 y los runners de GitHub no tienen IPv6 (verificar). Probar restauración una vez por trimestre.
-- **Rollback:** Vercel "Instant Rollback" al deployment anterior; migraciones con script de reversa documentado para cambios riesgosos.
-- **Demo del reto:** congelar un deployment etiquetado, mantener Supabase activo la semana previa (evitar pausa por inactividad), video de respaldo de la demo.
-
-## 38. Repository Structure
-
-```text
-sr-conecta/
-├─ src/
-│  ├─ app/
-│  │  ├─ (public)/            # inicio, turismo, negocios, fichas (SSR)
-│  │  ├─ (app)/mapa/          # mapa principal
-│  │  ├─ (app)/cuenta/        # perfil, notificaciones, privacidad
-│  │  ├─ (business)/negocio/  # panel del comercio
-│  │  ├─ (admin)/admin/       # panel municipal
-│  │  ├─ api/v1/              # Route Handlers (públicos, me/, internal/jobs, cron)
-│  │  ├─ auth/                # callback, reset
-│  │  └─ manifest.ts, sw.ts
-│  ├─ modules/
-│  │  ├─ map/                 # adaptador de proveedor, capas, viewport, clustering
-│  │  ├─ businesses/
-│  │  ├─ tourism/
-│  │  ├─ routes/              # eco-rutas (no confundir con rutas HTTP)
-│  │  ├─ traffic/
-│  │  ├─ citizen-reports/     # consultas ciudadanas
-│  │  ├─ notifications/       # channels/: in_app, push, email (futuro: native)
-│  │  ├─ jobs/                # worker de la cola, registro de handlers por `kind`
-│  │  ├─ media/               # procesamiento de imágenes (EXIF, WebP), rutas de Storage
-│  │  ├─ admin/
-│  │  ├─ analytics/           # KPIs
-│  │  └─ reports/             # PDF semanal
-│  │     # cada módulo: components/, server/, schemas.ts, types.ts, queries.ts, index.ts (API pública del módulo)
-│  ├─ components/ui/          # shadcn/ui
-│  ├─ components/shared/
-│  ├─ lib/                    # supabase (server, client, anon, admin[server-only]), google, push, email, sentry
-│  ├─ hooks/                  # useGeolocation, useOnlineStatus, useOfflineQueue
-│  ├─ types/                  # tipos generados de la base (supabase gen types)
-│  ├─ utils/
-│  ├─ config/                 # env.ts, constantes, zona horaria
-│  └─ proxy.ts
-├─ supabase/
-│  ├─ migrations/
-│  ├─ seed.sql
-│  └─ tests/                  # RLS, RPC y ataques directos a la API
-├─ data/                      # scripts de importación de datos abiertos (GDAL)
-├─ tests/e2e/                 # Playwright
-├─ docs/
-│  ├─ architecture/  api/  database/  deployment/  decisions/   # ADRs
-├─ README.md  ARCHITECTURE.md  DATABASE.md  API.md  DEPLOYMENT.md  SECURITY.md  CONTRIBUTING.md
-├─ LICENSE                    # MIT o Apache-2.0 según bases
-└─ .env.example
-```
-
-| Módulo | Responsabilidad |
-|---|---|
-| map | Única frontera con el proveedor de mapa; capas, viewport, clustering, selección |
-| businesses | Alta, perfil, verificación, miembros, promociones |
-| tourism | Lugares y atractivos |
-| routes | Eco-rutas: importación, geometría, cálculo de distancia |
-| traffic | Reportes de tránsito y su ciclo de vida |
-| citizen-reports | Consultas ciudadanas, estados, historial |
-| notifications | In-app, preferencias, suscripciones y canales de entrega (push, email) |
-| jobs | Worker de `private.jobs`: toma de lotes, reintentos, registro de handlers por `kind`. Los módulos registran sus handlers; `jobs` no conoce reglas de negocio |
-| media | Validación y procesamiento de imágenes, convención de rutas de Storage (§5.1) |
-| admin | Layout, navegación y cola de moderación del panel |
-| analytics | Definición y cálculo de KPIs |
-| reports | Generación, almacenamiento e historial del PDF |
-
-Regla de dependencias: un módulo solo importa de otro a través de su `index.ts`. `map` no conoce reglas de negocio; los demás módulos le entregan capas.
-
-## 39. Data Model
-
-Resumen por tabla (el detalle de columnas está en el ERD §15; `DATABASE.md` tendrá índices y políticas):
-
-| Tabla | Propósito | Índices clave | RLS (resumen) |
-|---|---|---|---|
-| provinces | Territorio raíz (multi-provincia sin migración) | code UNIQUE | Lectura pública |
-| profiles | Datos públicos mínimos del usuario | PK | Lectura propia; nombre visible si aplica |
-| user_roles | Roles con alcance territorial | PK `id`; UNIQUE NULLS NOT DISTINCT (user_id, role, province_id, municipality_id) | Solo lectura propia; escritura por RPC |
-| municipalities | Límites territoriales | GIST(geom), province_id | Lectura pública |
-| business_categories | Catálogo | slug UNIQUE | Lectura pública |
-| businesses | Negocios registrados | GIST(geom), GIST((geom::geography)), GIN(search_vector), GIN trgm(name), (status, category_id) | Público solo `approved`; miembros editan el suyo |
-| business_members | Relación usuario–negocio | PK | Miembros y admins |
-| tourism_places | Atractivos | GIST, GIN | Público `published` |
-| eco_routes | Senderos | GIST(geom), GIST(start_point) | Público `published` |
-| traffic_report_types | Catálogo de tipos con TTL y gravedad por defecto | PK code | Lectura pública; escritura municipal_admin provincial |
-| traffic_reports | Incidencias viales | GIST, (status, expires_at), municipality_id, UNIQUE (reporter_id, idempotency_key) | Público activos sin autor; autor ve los suyos; sin INSERT/UPDATE directo (solo RPC) |
-| citizen_requests | Consultas | GIST, (status, municipality_id), requester_id, UNIQUE (requester_id, idempotency_key) | Autor, asignados, moderadores del municipio; público si `is_public`; sin INSERT/UPDATE directo |
-| request_status_history | Historial | (request_id, created_at) | Igual que la consulta |
-| request_votes | Votos de prioridad (uno por usuario y consulta) | PK (request_id, user_id) | Lectura del recuento pública en consultas `is_public`; alta y baja del voto propio solo por RPC |
-| notifications | Centro de notificaciones | (user_id, read_at, created_at) | Propio |
-| notification_preferences | Preferencias | PK | Propio |
-| push_subscriptions | Dispositivos | UNIQUE endpoint | Propio |
-| attachments | Archivos | (entity_type, entity_id) | Según entidad padre (función helper) |
-| moderation_actions | Decisiones de moderación | (entity_type, entity_id) | Moderadores/admins |
-| audit_logs | Auditoría | PK (created_at, id), (entity_type, entity_id), (actor_id) | Admins (por alcance) |
-| report_runs | Ejecuciones del PDF | UNIQUE (province_id, period_start, version) | Admins |
-| weekly_kpi_snapshots | KPIs congelados por ejecución | UNIQUE NULLS NOT DISTINCT (report_run_id, municipality_id) | Admins |
-| jobs (`private`) | Cola asíncrona | (status, run_at) parcial WHERE status='pending'; UNIQUE parcial (dedupe_key) WHERE status IN ('pending','running') | Sin acceso por API; solo el worker (`service_role`) y funciones de sistema |
-| feature_flags | Activación por territorio | PK (key, province_id), municipality_id | Lectura pública de flags no sensibles; escritura municipal_admin provincial |
-
-Nota sobre `attachments` (v1.6): se reemplazó el diseño polimórfico (`entity_type` + `entity_id`, sin FK real) por un **arco exclusivo**: una FK real por entidad y `CHECK (num_nonnulls(...) = 1)`, con cascadas reales y sin adjuntos huérfanos. Ver DATABASE.md §5.6.
-
-KPIs de "visualizaciones": contador diario agregado (`daily_view_counts` en Fase 2, o Vercel Analytics en MVP) para no crear una tabla de eventos por cada vista.
-
-## 40. Sequence Diagrams
-
-### 40.1 Reporte de tránsito offline
-
-```mermaid
-sequenceDiagram
-    actor U as Ciudadano
-    participant C as PWA + IndexedDB
-    participant N as Next.js
-    participant ST as Storage
-    participant DB as PostgreSQL
-    U->>C: Crea reporte sin conexión
-    C->>C: Guarda borrador + foto comprimida + idempotency_key
-    Note over C: Vuelve la conexión
-    C->>N: POST /uploads/sign
-    N-->>C: signed upload URL
-    C->>ST: PUT foto (ruta incoming/, attachment pending)
-    C->>N: POST /reports {..., attachment_path, idempotency_key}
-    N->>DB: rpc create_traffic_report
-    DB->>DB: idempotencia, rate limit, rangos, municipio (ST_Covers), TTL por tipo
-    DB->>DB: estado inicial + jobs: image_process, notificar moderadores
-    DB-->>N: id
-    N-->>C: 201 (o 200 con el mismo id si ya existía)
-    Note over DB,N: El worker procesa la foto (EXIF, WebP) y envía los avisos
-```
-
-### 40.2 PDF semanal
-
-```mermaid
-sequenceDiagram
-    participant CR as Vercel Cron
-    participant N as Route Handler
-    participant DB as PostgreSQL
-    participant ST as Storage
-    CR->>N: GET /cron/weekly-report (CRON_SECRET), todos los días
-    N->>DB: INSERT report_runs ON CONFLICT DO NOTHING
-    alt Ya generado (succeeded) o tomado por otro proceso
-        N-->>CR: 200 skip
-    else Nuevo, running viejo o failed con reintentos
-        N->>DB: toma atómica (UPDATE ... attempts+1)
-        N->>DB: agregaciones por municipio (America/Santo_Domingo)
-        N->>DB: INSERT weekly_kpi_snapshots (report_run_id)
-        N->>N: render PDF
-        N->>ST: upload reports-pdf/{province}/...
-        N->>DB: report_runs succeeded + job de notificación a admins
-        N-->>CR: 200
-    end
-```
-
-## 41. ADRs
-
-> Cada ADR se guardará como archivo independiente en `docs/decisions/ADR-XXX-*.md`. Estado: **Aceptado** salvo ADR-010 y ADR-011, **Retirados** el 24/09/2026 (ADR-001 a 015: 23/09/2026; revisados y ADR-016 a 020 añadidos: 24/09/2026).
-
-### ADR-001 Frontend: React
-- **Contexto/Problema:** interfaz rica de mapa, formularios, paneles; equipo pequeño.
-- **Decisión:** React.
-- **Alternativas:** Vue/Nuxt, Svelte/SvelteKit, Flutter Web.
-- **Pros:** ecosistema de mapas (`@vis.gl/react-google-maps`), shadcn/ui, mayor oferta de desarrolladores para quien herede el proyecto.
-- **Contras:** más boilerplate que Svelte.
-- **Consecuencias:** todo el UI en componentes React/TS.
-- **Riesgos:** sobre-renderizado del mapa → aislar estado del mapa.
-
-### ADR-002 Next.js 16 App Router
-- **Contexto:** se necesitan páginas públicas indexables + app interactiva + API + cron en un solo despliegue.
-- **Decisión:** Next.js 16 App Router, Route Handlers para API pública y PWA, Server Actions para formularios admin, `proxy.ts` solo para sesión.
-- **Alternativas:** Vite SPA + backend aparte; Remix/React Router; Astro.
-- **Pros:** SSR/SSG, API y frontend juntos, integración nativa con Vercel.
-- **Contras:** complejidad del modelo servidor/cliente y del caching.
-- **Consecuencias:** disciplina de fronteras `server-only`.
-- **Riesgos:** cambios de API entre versiones mayores → fijar versión, actualizar con codemods.
-
-### ADR-003 TypeScript strict
-- **Decisión:** TypeScript `strict`, tipos generados desde la base (`supabase gen types`), Zod en fronteras.
-- **Alternativas:** JavaScript.
-- **Pros:** errores en compilación, refactor seguro, contratos claros.
-- **Contras:** curva inicial.
-- **Riesgos:** tipos desincronizados con la base → generar tipos en CI.
-
-### ADR-004 Google Maps como mapa base
-- **Contexto:** el mapa es el producto; demo con datos reales; usuarios dominicanos familiarizados con Google.
-- **Decisión:** Google Maps JS API + AdvancedMarker + MarkerClusterer; Places solo Autocomplete; navegación por deep link; Routes y Traffic opcionales. Adaptador propio de proveedor.
-- **Alternativas:** Leaflet/MapLibre + OSM (MapTiler/Stadia) + Nominatim/Photon + OSRM.
-- **Pros:** calidad cartográfica y búsqueda local, UX conocida.
-- **Contras:** costo variable, lock-in, términos restrictivos (sin caché de contenido, sin usarlo sobre mapas no-Google).
-- **Consecuencias:** datos de negocio 100% propios; migración a MapLibre posible cambiando el adaptador.
-- **Riesgos:** facturación inesperada → cuotas y alertas; cambios de precios → revisión trimestral.
-
-### ADR-005 Supabase como plataforma de datos
-- **Decisión:** Supabase (Postgres, Auth con SMTP propio, Storage, RLS, Realtime limitado, `pg_cron`, `pg_net`, Vault). Sin Edge Functions en MVP.
-- **Alternativas:** Firebase; Postgres gestionado (Neon/RDS) + Auth.js + S3; backend propio NestJS.
-- **Pros:** Postgres real con PostGIS, Auth y Storage integrados, RLS, planificador y secretos dentro de la base, open source y self-hosteable (salida del lock-in).
-- **Contras:** pausa en plan Free, límites de plan, dependencia de su Auth; la Data API expone `public` a cualquier usuario autenticado (ver ADR-018).
-- **Riesgos:** mal uso de `service_role` → módulo `server-only`, uso restringido al worker y revisión en PR.
-
-### ADR-006 PostgreSQL como única base de datos
-- **Decisión:** una sola base relacional; nada de Firestore/Mongo/Redis en MVP.
-- **Pros:** transacciones ACID para estados y auditoría, joins, reporting, una sola copia de la verdad.
-- **Contras:** escalar escrituras masivas requiere trabajo (irrelevante a esta escala).
-- **Riesgos:** consultas lentas → índices, advisors, `EXPLAIN` en PR de consultas nuevas.
-
-### ADR-007 PostGIS
-- **Decisión:** PostGIS con SRID 4326, `geometry` + cast a `geography` con índices de expresión para distancias.
-- **Alternativas:** cálculos en JS (Turf), Google para distancias.
-- **Pros:** consultas espaciales indexadas, gratis, estándar abierto, importación de datos abiertos de la provincia.
-- **Contras:** curva de aprendizaje SQL espacial.
-- **Riesgos:** geometrías inválidas en importación → `ST_MakeValid` y validación en staging.
-
-### ADR-008 Monolito modular
-- **Decisión:** un repositorio, un despliegue, módulos por dominio con API interna (`index.ts`).
-- **Alternativas:** microservicios, serverless fragmentado por funciones, backend separado.
-- **Pros:** velocidad, un solo pipeline, transacciones simples, bajo costo operativo.
-- **Contras:** despliegue acoplado.
-- **Consecuencias:** fronteras de módulo verificadas con reglas de lint (`eslint-plugin-boundaries` o `import/no-restricted-paths`).
-- **Riesgos:** "gran bola de lodo" → revisión de dependencias en PR.
-
-### ADR-009 PWA
-- **Decisión:** PWA con Serwist, offline solo para shell, borradores y cola de reportes.
-- **Alternativas:** app nativa (React Native/Expo), Capacitor.
-- **Pros:** un solo código para teléfono, tablet y PC; sin tiendas; permitido por las bases del reto.
-- **Contras:** sin GPS en segundo plano, push en iOS solo instalada, instalación manual en iOS.
-- **Riesgos:** usuarios iOS sin push → notificaciones in-app + email para eventos importantes.
-
-### ADR-010 Misiones — **Retirado** (24/09/2026)
-- **Decisión:** las misiones quedan fuera del alcance de SR Conecta. Se retira el diseño aceptado el 23/09/2026 (misiones de n pasos con verificación GPS/QR).
-- **Motivo:** decisión del proyecto de concentrar el alcance.
-- **Consecuencias:** sin tablas, endpoints ni pantallas de misiones; menos superficie de fraude y de mantenimiento. Si se retoma, será un módulo aditivo (§5.1, §19).
-
-### ADR-011 Recompensas — **Retirado** (24/09/2026)
-- **Decisión:** el sistema de recompensas y cupones queda fuera del alcance. Los comercios mantienen promociones informativas (texto con vigencia, moderadas), sin stock, códigos ni canje.
-- **Consecuencias:** desaparecen `rewards`, `reward_redemptions`, el pepper y la clave de cifrado de cupones en Vault, y el escáner de cupones del panel del comercio.
-
-### ADR-012 Realtime limitado
-- **Decisión:** Realtime para dos casos: (1) **alertas de tránsito en vivo en el mapa** (las bases piden "mapa en tiempo real" y el criterio de innovación premia el tiempo real), vía un canal **Broadcast** público por provincia que emite solo datos públicos del reporte (id, tipo, gravedad, punto), sin autor ni fotos; (2) la bandeja del panel municipal (Postgres Changes con RLS). El resto usa sondeo o push.
-- **Alternativas:** Realtime para todas las capas.
-- **Pros:** menos conexiones, menos complejidad, dentro de límites de plan.
-- **Contras:** un canal Realtime público más que operar; si falla, el mapa vuelve al sondeo de 60 s.
-- **Riesgos:** ninguno relevante a esta escala.
-
-### ADR-013 Notificaciones: Web Push + VAPID
-- **Decisión:** `notifications` como fuente de verdad in-app + Web Push con VAPID + email por SMTP propio, todos entregados por la cola (ADR-016) detrás de una interfaz de canales. Sin Firebase.
-- **Alternativas:** FCM, OneSignal, solo email; envío inline tras el commit (descartado: no cubre eventos nacidos en triggers o `pg_cron`).
-- **Pros:** sin segundo proveedor ni SDK en cliente; estándar web; ningún origen de notificación queda sin entrega.
-- **Contras:** iOS requiere PWA instalada; latencia de hasta ~1 min salvo despertar inmediato por `pg_net`.
-- **Riesgos:** suscripciones muertas → limpieza en 404/410; fan-out grande → lotes.
-
-### ADR-014 PDF con @react-pdf/renderer
-- **Decisión:** generación en Route Handler (Node) desde snapshots de KPIs inmutables por ejecución, disparada por un chequeo diario de Vercel Cron (compatible con Hobby), versionada en `report_runs` con toma atómica y reintentos acotados.
-- **Alternativas:** Puppeteer/Chromium headless (pesado en serverless), pdf-lib (bajo nivel), servicio externo.
-- **Pros:** componentes React, sin navegador headless, TypeScript.
-- **Contras:** CSS limitado (layout propio de la librería).
-- **Riesgos:** timeouts si crece → mover a job de mayor duración.
-
-### ADR-015 Despliegue Vercel + Supabase
-- **Decisión:** Vercel (Hobby en una cuenta con email de la organización para la demo; Team Pro para operación) + Supabase (organización Free en demo, Pro en producción). Entornos: CI local, preview, producción. Despliegue de producción disparado por la Action tras migrar (§36).
-- **Alternativas:** VPS con Docker (Coolify), Netlify, Cloudflare, self-host de Supabase.
-- **Pros:** cero operación de servidores, previews por PR, rollback instantáneo.
-- **Contras:** costo por miembro en Vercel Pro; límites Hobby (no comercial, cuenta individual, cron diario); en Supabase Pro cada proyecto paga cómputo.
-- **Riesgos:** lock-in de plataforma → Next.js y Supabase son portables (self-host documentado en Fase 3); cuentas personales → prohibidas desde el día uno (Anexo B).
-
-### ADR-016 Cola de trabajos en PostgreSQL (outbox)
-- **Contexto:** push, email, procesamiento de imágenes, fan-out de alertas y PDF son efectos secundarios lentos o externos. Muchos nacen en la base (triggers, `pg_cron`) y no en un request. Vercel Hobby no permite cron por minuto.
-- **Decisión:** tabla `private.jobs` insertada en la misma transacción que el evento; `pg_cron` despierta cada minuto, vía `pg_net`, un worker HTTP en Next.js que consume con `FOR UPDATE SKIP LOCKED`, reintentos exponenciales, `dead` tras N intentos y `dedupe_key`.
-- **Alternativas:** envío inline (pierde eventos), Inngest/QStash (proveedor extra), `pgmq` (válido; se deja para Fase 3), Edge Functions (segundo runtime).
-- **Pros:** atomicidad evento–efecto, cero proveedores nuevos, visible y reintentable desde el panel, contrato estable.
-- **Contras:** latencia de ~1 min por defecto; el worker compite por el tiempo máximo de las funciones serverless (lotes pequeños).
-- **Consecuencias:** productores y consumidor desacoplados: cambiar a `pgmq` o Inngest solo toca el módulo `jobs`.
-- **Riesgos:** cola detenida → `/health` y alertas (§34).
-
-### ADR-017 Evolución sin rupturas
-- **Contexto:** el proyecto pasará de un municipio piloto a producción provincial y quizá regional, heredado por otro equipo. Las reescrituras de esquema son el costo más alto de esa evolución.
-- **Decisión:** adoptar desde el MVP las medidas de §5.1: `province_id`, estados `text` + `CHECK`, catálogos configurables, PK particionables, snapshots inmutables, `translations jsonb`, rutas de Storage por convención, API solo aditiva, adaptadores en fronteras y feature flags.
-- **Alternativas:** construir lo mínimo y migrar después (YAGNI estricto).
-- **Pros:** Fase 2 y 3 se construyen agregando piezas; el costo hoy son columnas vacías y disciplina.
-- **Contras:** algo más de complejidad inicial en RLS (filtro por provincia).
-- **Riesgos:** sobre-diseño → solo se adoptan medidas con costo actual casi nulo; lo demás (tiles, réplicas, `pgmq`) sigue postergado.
-
-### ADR-018 La base de datos es la barrera de seguridad
-- **Contexto:** con Supabase, la anon key es pública y PostgREST expone el esquema `public` a cualquier usuario autenticado; Next.js no puede impedir llamadas directas.
-- **Decisión:** toda RPC es autosuficiente (valida identidad, rol, alcance y entradas), las tablas críticas no admiten escritura directa, los rechazos de negocio se devuelven (no se lanzan) para que el rate limit y la evidencia persistan, y el captcha se aplica en Supabase Auth. Zod en Next queda como UX y defensa temprana.
-- **Alternativas:** revocar `EXECUTE` a `authenticated` y llamar todo con `service_role` desde Next (descartado: concentra el riesgo en una clave y anula RLS como defensa en profundidad).
-- **Pros:** una sola barrera real, verificable con tests que atacan la API directamente.
-- **Contras:** más lógica en SQL; exige tests de base sólidos.
-- **Riesgos:** una RPC que omite una validación → checklist de revisión de RPC y tests de "ataque directo" en CI.
-
-### ADR-019 Orden de despliegue y bases por PR
-- **Contexto:** la integración Git de Vercel despliega al hacer merge, mientras la migración espera aprobación; los previews compartían una base de `staging` sin las migraciones del PR.
-- **Decisión:** producción la despliega una GitHub Action que primero migra y después ejecuta `vercel deploy --prod` (auto-deploy de `main` desactivado). E2E en CI contra Supabase local con las migraciones del PR; Supabase Branching para previews con base propia en Fase 2. Migraciones siempre compatibles con el código anterior.
-- **Alternativas:** migrar desde el build de Vercel (acopla build y base de datos); base compartida (pruebas inestables).
-- **Pros:** nunca hay código nuevo sobre un esquema viejo; cada PR se prueba con su esquema.
-- **Contras:** el deploy de producción deja de ser "automático al hacer merge": requiere que la Action termine.
-- **Riesgos:** fallo entre la migración y el deploy → las migraciones compatibles hacia atrás mantienen funcionando el código anterior.
-
-### ADR-020 Sin rol `super_admin`
-- **Contexto:** el diseño v1.1 tenía un `super_admin` con todos los permisos. Un rol así es el objetivo más valioso para un atacante y, en la práctica, acaba asignado "por comodidad".
-- **Decisión:** cinco roles (`visitor`, `citizen`, `entrepreneur`, `moderator`, `municipal_admin`). La gobernanza provincial es un `municipal_admin` con alcance provincial. Las operaciones de plataforma (crear el primer administrador provincial, rotar secretos) son scripts versionados, revisados en PR, ejecutados con `service_role` y auditados. Nadie puede ampliar su propio poder desde la aplicación.
-- **Alternativas:** `super_admin` con 2FA (descartada: sigue siendo un punto único de compromiso con acceso a todo desde la web).
-- **Pros:** mínimo privilegio, menor superficie de ataque, trazabilidad de los cambios de poder.
-- **Contras:** crear otro administrador provincial requiere un PR y a alguien con acceso de operación.
-- **Riesgos:** quedarse sin administradores provinciales → el script de operación está documentado en `DEPLOYMENT.md` y se prueba en `staging`.
-
-## 42. Risk Matrix
-
-| Riesgo | Prob. | Impacto | Mitigación | Plan alternativo |
-|---|---|---|---|---|
-| Costos de Google fuera de control | Media | Alto | Cuotas diarias, alertas, field masks, sin llamadas por eventos | Pasar a MapLibre + OSM vía adaptador |
-| Dependencia de Google / cambio de términos | Media | Alto | Datos propios, adaptador de mapa | Plan B MapLibre documentado |
-| Cobertura de tráfico/Places pobre en zonas rurales de SR | Alta | Medio | Reportes ciudadanos propios como fuente principal | Traffic Layer desactivado |
-| Clave de Google robada | Media | Medio | Restricción por referrer y API, cuotas | Rotación de clave |
-| Abuso/spam de reportes | Alta | Medio | Rate limit, captcha, moderación, reputación | Requerir aprobación previa para todos |
-| GPS impreciso en montaña/bajo techo | Alta | Medio | Pin ajustable por el usuario y precisión mostrada al reportar | Validación del moderador |
-| Datos falsos de negocios | Media | Medio | Verificación por moderador antes de publicar | Suspensión y auditoría |
-| Saturación del mapa | Media | Medio | Clustering, zoom, límites por request | Vector tiles (Fase 2) |
-| Crecimiento de la base | Baja | Medio | Retención, compresión de imágenes | Plan superior, particiones |
-| Brecha de seguridad (RLS mal configurado, service_role expuesta) | Media | Alto | Tests de RLS en CI, `server-only`, advisors Supabase | Rotación de claves, respuesta a incidentes |
-| Limitaciones PWA en iOS | Alta | Medio | Guía de instalación, notificaciones in-app | App nativa en Fase 3 si se justifica |
-| Push no entregado | Media | Bajo | Centro de notificaciones in-app | Email para eventos críticos |
-| Proyecto Supabase pausado antes de la demo | Media | Alto | Actividad regular / plan Pro la semana de la demo | Video de respaldo |
-| Caída de proveedor durante la demo | Baja | Alto | Demo congelada, video, datos seed | Presentar desde entorno de respaldo |
-| Mantenimiento tras el reto | Alta | Alto | Documentación, ADRs, código simple, transferencia de cuentas | Contrato de soporte con el equipo |
-| Lock-in de Vercel/Supabase | Baja | Medio | Tecnologías portables | Self-host (Docker/Coolify + Supabase self-hosted) |
-| Abandono del proyecto por el municipio | Media | Alto | Costos bajos, operación simple, KPIs útiles para el municipio | Licencia abierta permite continuidad por terceros |
-| Deuda técnica por prisa del reto | Alta | Medio | Límites de alcance MVP claros, tests en lo crítico | Sprint de estabilización antes de Fase 2 |
-| Incumplimiento de licencias (MIT/Apache) | Baja | Medio | Revisión de licencias de dependencias (`license-checker`) | Reemplazar dependencia |
-| Llamadas directas a la API saltando Next.js | Alta | Alto | RPC autosuficientes, sin escritura directa en tablas críticas, tests de ataque directo (ADR-018) | Revocar la RPC afectada y parchear por migración |
-| Cola de trabajos detenida (worker caído, `pg_net` mal configurado) | Media | Medio | `/health` con antigüedad de la cola, alerta en `dead`, panel Sistema | Reintento manual desde el panel; respaldo de disparo del worker con Vercel Cron diario |
-| Emails de OTP no entregados (SMTP por defecto, SPF/DKIM mal configurados) | Media | Alto | SMTP propio con dominio verificado (SPF, DKIM, DMARC) antes de abrir registro | Login con Google OAuth como alternativa |
-| Despliegue de código antes que su migración | Media | Alto | Action migra y luego despliega; migraciones compatibles hacia atrás (ADR-019) | Instant Rollback del código |
-| Pérdida de datos sin backups en plan Free | Media | Alto | `pg_dump` diario por Action desde el primer dato real | Restaurar el último dump |
-
-## 43. MVP Scope
-
-Objetivo: cubrir las **6 funcionalidades obligatorias** del reto con calidad demostrable en 25 minutos, más lo mínimo para que sea creíble como plataforma.
-
-**Las seis funcionalidades obligatorias** (texto literal de las bases, conectasr.com, 24/09/2026):
+| MVP funcional | 25 | Las 6 funcionalidades obligatorias en el alcance mínimo (§16.1) |
+| UX/UI para **baja alfabetización digital** | 20 | Reglas de lenguaje e interacción (§6.2) y prueba con vecinos |
+| Innovación (geolocalización, tiempo real, IA o automatización) | 20 | Alertas de tránsito en vivo (§11.1), alertas por municipio (§9.5), PDF automático (§9.6) |
+| Pertinencia territorial | 15 | Datos abiertos de la provincia, municipios como unidad de gestión |
+| Sostenibilidad: el municipio opera sin el equipo | 10 | Catálogos editables sin deploy, manuales, costos bajos (§13) |
+| Código y documentación | 10 | Base de datos probada, ADRs, este documento |
+
+### 1.2 Las seis funcionalidades obligatorias
+
+Texto literal de las bases:
 
 | F | Funcionalidad | Texto de las bases |
 |---|---|---|
@@ -1438,357 +109,1313 @@ Objetivo: cubrir las **6 funcionalidades obligatorias** del reto con calidad dem
 | F5 | Consultas Ciudadanas | "Canal digital para que los ciudadanos reporten problemas comunitarios, voten prioridades y den seguimiento a sus solicitudes." |
 | F6 | Reportes Semanales Automáticos | "Generación automática de informes en PDF con métricas de uso, reportes por municipio y estado de solicitudes." |
 
-Además, la aplicación debe permitir "que cualquier ciudadano ingrese datos y reciba notificaciones sobre el mapa", y los entregables exigen un **panel de administración municipal**, un **repositorio público en GitHub** con documentación técnica y manual de despliegue, y una **demo de 25 minutos con datos reales**.
+### 1.3 Trazabilidad: requisito → diseño
 
-**Dentro:**
-
-| # | Alcance | Obligatoria (bases) | ¿Se puede recortar? |
+| Requisito | Módulo | Piezas en la base de datos | Estado |
 |---|---|---|---|
-| 1 | Mapa con capas (municipios, turismo, rutas, negocios, tránsito, consultas públicas), clustering, filtros, búsqueda propia, **alertas de tránsito en vivo** (§26) y **propuestas ciudadanas de lugares** (§22) | ✅ F1 | No |
-| 2 | Negocios: alta abierta con verificación, categorías, fotos, horarios, contacto, ficha y panel básico | ✅ F2 | No |
-| 3 | Rutas de ecoturismo: consulta con dificultad, duración y servicios; **trazado** por el administrador (GPX/GeoJSON) y propuesta ciudadana | ✅ F3 | La propuesta ciudadana de rutas puede degradarse a "solo administrador" |
-| 4 | Reportes de tránsito (accidentes, cierres, baches, semáforos, desvíos) con foto, moderación, expiración y tiempo real | ✅ F4 | No |
-| 5 | Consultas ciudadanas: ciclo de estados con historial, **votación de prioridades** y notificación | ✅ F5 | No |
-| 6 | PDF semanal automático con métricas de uso, reportes por municipio y estado de solicitudes, más regeneración manual | ✅ F6 | No |
-| 7 | Panel municipal: KPIs, bandejas, moderación y PDF | ✅ Entregable | No |
-| 8a | Notificaciones **in-app** (centro de notificaciones) | ✅ Requisito general | No |
-| 8b | Web Push + email por la cola | Parcial ("recibir notificaciones") | Push puede degradarse; el email de OTP no |
-| 9 | PWA instalable, offline shell y cola de reportes | ✅ "móvil o web progresiva" | La cola offline sí; instalable no |
-| 10 | Roles: visitor, citizen, entrepreneur, moderator, municipal_admin (municipio o provincia) | — (seguridad) | No |
-| 11 | Repositorio **público** con documentación técnica, manual de despliegue, manual administrativo, ADRs y CI | ✅ Entregable | No |
-| 12 | Cimientos de §5.1 (`province_id`, cola de jobs, estados `text`, PK particionables) | — | **No**: su costo sube cada semana que se postergan |
-
-**Calendario de las bases:** desarrollo hasta el **27/10/2026**; demo del **28 al 30/10/2026**. Con unas 5 semanas, la regla de §48 se aplica en serio: lo que no esté marcado ✅ se recorta antes que cualquier ✅.
-
-**Fuera (explícitamente):** Routes API en app, vector tiles, mapas offline, inglés, exportación de datos del usuario, 2FA obligatorio, verificación por N confirmaciones, analítica avanzada, app nativa.
-
-## 44. Phase 2 — Producción municipal
-
-- **Usuarios:** miles a decenas de miles registrados; cientos a pocos miles activos diarios; picos en eventos/temporada turística.
-- **Datos:** miles de negocios y reportes/año; fotos en GB.
-- **Arquitectura:** misma, sin migraciones estructurales (los cimientos de §5.1 ya existen). Se agrega: Supabase Pro + Branching, Vercel Team Pro, backups de Supabase además del `pg_dump`, 2FA admin, Vercel Firewall, vistas materializadas para KPIs lentos, confirmaciones comunitarias de reportes, `daily_view_counts`, inglés para turistas (se rellenan las `translations` ya existentes), exportación de datos del usuario, vector tiles si negocios > ~20k.
-- **Costos:** base mensual en decenas de USD + Google según uso.
-- **Cambios organizativos:** proceso de moderación con responsables por municipio, SLA de consultas, acuerdo de datos con el municipio.
-
-## 45. Phase 3 — Escala regional
-
-- **Usuarios:** varias provincias (Región Noroeste); cientos de miles registrados.
-- **Datos:** millones de filas en auditoría y reportes históricos.
-- **Arquitectura:** multi-tenant por provincia en la misma base: **no requiere migración de datos**, porque `province_id` existe desde el MVP; se insertan nuevas `provinces` y se amplía el alcance en `user_roles`. Réplicas de lectura para reporting; particionado de `audit_logs`/históricos (la PK ya lo admite); tiles vectoriales cacheados en CDN; el consumidor de la cola pasa a `pgmq` o Inngest si el volumen lo exige (los productores no cambian); evaluación de MapLibre + tiles propios si el costo de Google lo justifica; app nativa solo si se necesitan capacidades nativas reales (GPS en segundo plano con consentimiento, NFC).
-- **Costos:** revisar compute de Supabase y SKUs de Google con volumen; considerar subscripción de Google Maps si el uso es estable.
-- **Lo que NO cambia:** Postgres como fuente de verdad, lógica crítica en la base, monolito modular (se extrae un servicio solo si una carga específica lo exige, p. ej. generación masiva de reportes).
-
-## 46. Final Architecture Diagram
-
-Ver Anexo D (diagrama Mermaid completo).
-
-## 47. Final Technology Matrix
-
-| Tecnología | Clasificación | Fase |
-|---|---|---|
-| Next.js 16, React, TypeScript | [OBLIGATORIA] | MVP |
-| Tailwind CSS, shadcn/ui | [RECOMENDADA] | MVP |
-| Google Maps JS API, AdvancedMarker, MarkerClusterer | [OBLIGATORIA]/[RECOMENDADA] | MVP |
-| `@vis.gl/react-google-maps` | [RECOMENDADA] | MVP |
-| Places Autocomplete (New) | [OPCIONAL] | MVP |
-| Google Maps deep links | [RECOMENDADA] | MVP |
-| TrafficLayer | [OPCIONAL] | MVP |
-| Geocoding | [OPCIONAL] | MVP/Fase 2 |
-| Routes API | [FUTURA] | Fase 2+ |
-| Supabase Postgres + PostGIS + pg_trgm + unaccent | [OBLIGATORIA] | MVP |
-| Supabase Auth, Storage, RLS, RPC | [OBLIGATORIA] | MVP |
-| Supabase Realtime | [OPCIONAL] | MVP (limitado) |
-| Supabase Edge Functions | [FUTURA] | Fase 3 si hace falta |
-| pg_cron | [OBLIGATORIA] | MVP |
-| pg_net + cola `private.jobs` | [OBLIGATORIA] | MVP |
-| Supabase Vault | [RECOMENDADA] | MVP |
-| SMTP transaccional (Resend/SES/Brevo) | [OBLIGATORIA] | MVP |
-| Supabase Branching | [RECOMENDADA] | Fase 2 |
-| pgmq / Inngest | [FUTURA] | Fase 3 si el volumen lo exige |
-| Serwist (PWA) | [OBLIGATORIA] | MVP |
-| Web Push + VAPID | [RECOMENDADA] | MVP |
-| Firebase Cloud Messaging / Firestore | [NO RECOMENDADA] | — |
-| React Hook Form + Zod | [RECOMENDADA] | MVP |
-| TanStack Query | [RECOMENDADA] | MVP |
-| Zustand | [OPCIONAL] | MVP |
-| Redux | [NO RECOMENDADA] | — |
-| Recharts | [RECOMENDADA] | MVP |
-| @react-pdf/renderer | [OBLIGATORIA] | MVP |
-| Vercel Cron (chequeo diario del PDF) | [RECOMENDADA] | MVP |
-| Vitest, Playwright | [RECOMENDADA] | MVP |
-| GitHub Actions | [OBLIGATORIA] | MVP |
-| Sentry | [RECOMENDADA] | MVP |
-| Cloudflare Turnstile | [OPCIONAL] | MVP/Fase 2 |
-| Vector tiles (`ST_AsMVT`) | [FUTURA] | Fase 2/3 |
-| Express/NestJS separado | [NO RECOMENDADA] | — |
-| Microservicios, Kubernetes | [NO RECOMENDADA] | — |
-
-## 48. Final Recommendation
-
-Construir SR Conecta como **Next.js 16 + Supabase (PostGIS) + Google Maps**, monolito modular, con **toda la lógica crítica en PostgreSQL, que además es la barrera de seguridad** (ADR-018), y Google reducido a mapa base y búsqueda de direcciones. Quitar Firebase, no usar Routes API en el MVP, tratar el tráfico como dato ciudadano propio, limitar Realtime al panel y llevar todo lo asíncrono por una cola en Postgres (ADR-016). Adoptar desde el primer día los cimientos de §5.1 para que las fases siguientes sean aditivas.
-
-Orden de construcción para el reto, ajustado al calendario de las bases (desarrollo del 24/09 al 27/10/2026, demo del 28 al 30/10):
-
-| Semana | Entrega | Cubre |
-|---|---|---|
-| 1 (24–30 sep) | **(0) Cimientos:** cuentas de la organización, SMTP propio, esquema con `province_id`, RLS con grants correctos, cola `private.jobs` + worker, CI con Supabase local y release "migrar → desplegar". **(1)** Datos abiertos importados (municipios con simplificación topológica) | Base de todo |
-| 2 (1–7 oct) | **(2)** Mapa con capas (endpoint público y autenticado), búsqueda y alertas en vivo. **(3)** Reportes de tránsito con escalado | F1, F4 |
-| 3 (8–14 oct) | **(4)** Consultas con estados y votación; panel municipal con moderación | F5, panel |
-| 4 (15–21 oct) | **(5)** Negocios, turismo, rutas y propuestas ciudadanas. **(6)** PDF semanal y KPIs | F2, F3, F6 |
-| 5 (22–27 oct) | **(7)** PWA y push, prueba con vecinos, guion y ensayo de la demo, manuales, repositorio público | Criterios UX, sostenibilidad y documentación |
-
-**Regla de recorte:** lo que se corte por tiempo sale solo de ítems **no marcados como obligatorios** en §43 y nunca de (0), de la seguridad, de las notificaciones in-app ni del PDF semanal. Push y la cola offline se pueden degradar; los cimientos no, porque postergarlos es exactamente el "cambio brusco" que este documento busca evitar.
+| F1 ver el mapa | §7, §9.1 | `map_features`, `map_aggregates`, `search_all` | ✅ SQL probado |
+| F1 agregar puntos de interés y rutas | §9.4 | `propose_place`, `propose_route`, `review_content` | ✅ |
+| F1 agregar negocios | §9.3 | `submit_business` | ✅ |
+| F1 alertas georreferenciadas en tiempo real | §9.2, §11.1 | `create_traffic_report`, trigger `traffic_reports_broadcast` | ✅ (canal Realtime: verificar en Supabase, §20) |
+| F2 registro abierto con categorías y contacto | §9.3 | `submit_business`, `update_business` | ✅ |
+| F2 fotos | §9.3, §10.5 | `register_attachment`, `worker_attachment_*` | ✅ |
+| F2 horarios | §9.3 | `set_business_hours`, tabla `business_hours` | ✅ |
+| F3 trazado y consulta | §9.4 | `propose_route` (GeoJSON), `update_route` | ✅ |
+| F3 dificultad, duración y servicios | §9.4 | columnas `difficulty`, `duration_min` y `services` de `eco_routes` | ✅ |
+| F4 los cinco tipos de alerta | §9.2 | catálogo `traffic_report_types` | ✅ |
+| F4 colaborativo | §9.2 | reputación y moderación en `moderate_traffic_report` | ✅ |
+| F5 reportar problemas | §9.2 | `create_citizen_request` | ✅ |
+| F5 votar prioridades | §9.2 | `toggle_request_vote`, `request_votes` | ✅ |
+| F5 dar seguimiento | §9.2 | `my_activity`, `request_status_history`, notificaciones | ✅ |
+| F6 PDF automático | §9.6 | `weekly_report_begin`/`weekly_report_finish`, `kpi_summary` | ✅ SQL · ⏳ generación del PDF |
+| "Recibe notificaciones sobre el mapa" | §9.5 | `notifications`, `worker_run_fanout_alert` | ✅ SQL · ⏳ envío push |
+| Panel municipal | §9.7 | RPC de moderación, `kpi_summary` | ✅ SQL · ⏳ interfaz |
 
 ---
 
-## Anexo A — Decisiones críticas
+## 2. La solución en una página
 
-| Decisión | Tecnología | Motivo | Riesgo | Mitigación | Alternativa |
-|---|---|---|---|---|---|
-| Framework | Next.js 16 App Router | SSR + API + PWA en un proyecto | Complejidad server/client | Fronteras `server-only`, convenciones | Vite SPA + API aparte |
-| Mapa base | Google Maps JS API | Calidad y familiaridad | Costo y lock-in | Cuotas, adaptador | MapLibre + OSM |
-| Fuente de verdad | PostgreSQL | Transacciones y reporting | Punto único de falla | Backups, Pro | — |
-| Geodatos | PostGIS (4326) | Consultas espaciales indexadas y gratis | Geometrías inválidas | Validación en importación | Turf en JS |
-| Arquitectura | Monolito modular | Velocidad y simplicidad | Acoplamiento | Reglas de lint de módulos | Microservicios |
-| Autorización | RLS + RPC autosuficientes + roles en tabla con alcance territorial | Seguridad junto a los datos; la API directa no puede saltarla | Políticas mal escritas; grants de helpers | Tests de RLS y de ataque directo en CI | Autorización solo en API (inviable con PostgREST expuesto) |
-| Asincronía | Cola `private.jobs` + `pg_cron` + `pg_net` | Atomicidad evento–efecto, sin proveedor extra | Cola detenida | `/health`, alertas, panel | pgmq / Inngest |
-| Evolución | Cimientos de §5.1 | Fases 2–3 aditivas | Sobre-diseño | Solo medidas de costo casi nulo | Migrar después (caro) |
-| Despliegue | Action: migrar → desplegar | Nunca código sobre esquema viejo | Fallo intermedio | Migraciones compatibles hacia atrás | Auto-deploy de Vercel |
-| Rutas ecoturísticas | LineString propios en PostGIS | Senderos no existen en Google | Datos incompletos | Carga GPX por admin | Routes API (no sirve para senderos) |
-| Navegación | Deep links Google Maps | Costo cero | Sale de la app | UX clara | Routes API |
-| Tráfico | Reportes ciudadanos + Traffic Layer opcional | Cobertura rural incierta de Google | Pocos reportes | Confirmaciones comunitarias (Fase 2) | Solo Traffic Layer |
-| Búsqueda | FTS español + trigram | Datos propios primero, gratis | Relevancia | Pesos y pruebas | Algolia/Meilisearch |
-| Notificaciones | In-app + Web Push VAPID | Sin segundo proveedor | iOS requiere instalación | In-app + email | FCM |
-| Realtime | Solo panel admin | Evitar complejidad | Retraso de 60 s en mapa | Polling | Realtime total |
-| PWA | Serwist | Mantenido, integrado con Next | Cambios de API | Fijar versión | Workbox manual |
-| PDF | @react-pdf/renderer + cron | TS, sin headless | Timeouts | Versionado y reintentos | Puppeteer |
-| Hosting | Vercel + Supabase | Cero ops | Planes gratuitos no comerciales / pausas | Pro en producción | VPS + Coolify |
-| Errores | Sentry | Diagnóstico en dispositivos variados | Datos personales en eventos | Scrubbing de PII | Solo logs |
+SR Conecta es un **monolito modular**:
+- **Aplicación:** Next.js 16 (App Router) con TypeScript, desplegada en Vercel.
+- **Datos:** Supabase (PostgreSQL + PostGIS, Auth, Storage).
+- **Mapa base:** Google Maps, detrás de un adaptador propio.
 
-## Anexo B — No hacer
+Tres ideas sostienen todo el diseño:
 
-| No hacer | Por qué | Qué hacer en su lugar |
-|---|---|---|
-| Usar Google Places como base de negocios | Términos prohíben almacenar su contenido; no controlas los datos | Tabla `businesses` propia; guardar solo `google_place_id` |
-| Llamar Places/Geocoding en cada movimiento del mapa | Facturación explosiva | Consultar PostGIS por viewport; Google solo por intención |
-| Cargar todos los puntos de la provincia que crecen | Payload y render lentos | Viewport + zoom + clustering (salvo capas pequeñas estáticas) |
-| Exponer `service_role` o usarla para requests de usuario | Salta RLS | Cliente con JWT del usuario; `service_role` solo en el worker y el cron `server-only` |
-| Confiar en que Next.js valida | La API de Supabase se puede llamar directamente | Validación autoritativa dentro de cada RPC (ADR-018) |
-| `RAISE EXCEPTION` en rechazos de negocio | El rollback borra el contador de rate limit y la evidencia | Devolver `{status: 'rejected'}` y hacer commit |
-| `enum` de Postgres para estados que evolucionan | No se pueden quitar ni renombrar valores | `text` + `CHECK` o tabla catálogo |
-| `UNIQUE` con columnas `NULL` significativas | Los `NULL` no chocan: duplicados silenciosos | `UNIQUE NULLS NOT DISTINCT` |
-| Revocar permisos a los helpers de RLS | Las políticas fallan con "permission denied" | Esquema no expuesto + `GRANT EXECUTE` al rol |
-| Mezclar datos públicos y privados en un endpoint cacheado | Un usuario recibe datos de otro desde la CDN | Endpoints separados: público cacheable y `me/` con `no-store` |
-| Enviar push inline "después del commit" | Los eventos nacidos en triggers o cron nunca se notifican | Cola `private.jobs` |
-| Auto-deploy de producción con migración manual aparte | Código nuevo sobre esquema viejo | Action: migrar → desplegar |
-| Usar el SMTP por defecto de Supabase con usuarios reales | Límites muy bajos: los OTP no llegan | SMTP propio con dominio verificado |
-| Posponer `province_id` "hasta que haya otra provincia" | Backfill y reescritura de todo el RLS | `province_id` desde el MVP (§5.1) |
-| Confiar en `proxy.ts` como autorización | Se puede omitir en ciertos caminos | Verificar sesión y rol en cada handler/acción + RLS |
-| Tracking GPS continuo | Invasivo, no viable en PWA, drena batería | Ubicación puntual por acción |
-| Firebase + Supabase | Dos fuentes de verdad | Solo Supabase; Web Push para notificaciones |
-| Microservicios/Kubernetes en MVP | Costo operativo sin beneficio | Monolito modular |
-| Redux por costumbre | Complejidad sin necesidad | Estado local, Zustand para el mapa, TanStack Query |
-| Buckets públicos para evidencias | Fuga de datos personales | Buckets privados + signed URLs |
-| Publicar fotos con EXIF | Revela ubicación y dispositivo | Quitar EXIF al procesar |
-| Cambios de esquema desde el dashboard en producción | No reproducible | Migraciones versionadas |
-| Claves de Google sin restricciones | Robo y facturación ajena | Restricción por referrer y API + cuotas |
-| Cron no idempotente | PDFs duplicados | `report_runs` con clave única |
-| Guardar fechas sin zona horaria | Reportes semanales incorrectos | `timestamptz` + cálculo en `America/Santo_Domingo` |
-| Cuentas personales de integrantes en Google/Vercel/Supabase | Imposible transferir al ganador/patrocinador | Cuentas de organización desde el inicio |
-
-## Anexo C — MVP vs Futuro
-
-| Capacidad | MVP | Fase 2 | Fase 3 |
-|---|---|---|---|
-| Mapa y capas | Google Maps, viewport, clustering | Vector tiles si hace falta | Multi-provincia, evaluación MapLibre |
-| Búsqueda | FTS + trigram + Autocomplete | Ranking por popularidad | Motor dedicado si hace falta |
-| Negocios | Alta verificada, panel básico | Promociones avanzadas, estadísticas | Programa regional |
-| Turismo y rutas | Lugares, rutas GeoJSON/GPX | Inglés, descarga GPX, elevación | Paquetes regionales |
-| Tránsito | Reportes + moderación + expiración | Confirmaciones comunitarias | Integración con datos oficiales (INTRANT/COE) si existen |
-| Consultas | Ciclo completo + historial | SLA, asignación automática por categoría | Integración con sistemas municipales |
-| Notificaciones | In-app + Web Push + email por cola | Preferencias avanzadas, digest | Canal nativo si hay app (misma interfaz) |
-| Cola de trabajos | `private.jobs` + `pg_cron` + `pg_net` | Más tipos de job | `pgmq`/Inngest (mismo contrato) |
-| Territorio | 1 provincia con `province_id` | Feature flags por municipio | Varias provincias sin migración |
-| Realtime | Panel admin | Pantalla de cupón | Según necesidad |
-| PWA | Shell, borradores, cola | Mejoras offline de catálogo | App nativa opcional |
-| KPIs | Funciones SQL | Vistas materializadas | Réplica de lectura/BI |
-| PDF | Semanal + regeneración | Mensual, por municipio | Por provincia |
-| Seguridad | RLS, rate limit, captcha, auditoría | 2FA admin, WAF | Pentest externo |
-| Observabilidad | Sentry, logs, consola Google | Uptime, alertas | Stack de métricas |
-| Infra | Hobby (cuenta de la organización) / Free (demo) | Vercel Team Pro + Supabase Pro + Branching | Compute mayor, réplicas, multi-tenant |
-
-## Anexo D — Diagrama final
+1. **PostgreSQL es la fuente de verdad y la barrera de seguridad.** Toda operación que cambia estado, permisos o contadores es una función SQL (RPC) que valida todo por sí misma. Cualquiera puede llamar la API de Supabase directamente, sin pasar por Next.js (ADR-018).
+2. **Google aporta el mapa base, nunca los datos.** Negocios, rutas, reportes y consultas viven en PostGIS. Google solo pinta el mapa, busca direcciones y ofrece el enlace "Cómo llegar".
+3. **Todo efecto lento o externo va por una cola.** Push, procesamiento de fotos y alertas se encolan en la misma transacción que los origina y los ejecuta un worker con reintentos (ADR-016).
 
 ```mermaid
-flowchart TD
-    U[Usuario: ciudadano / turista / comercio / municipio] --> PWA[PWA: manifest + Serwist + cola offline]
-    PWA --> NX[Next.js 16 en Vercel]
-    PWA -->|Maps JS + Autocomplete| GM[Google Maps Platform]
-    PWA -->|Web Push| PUSH[Servicios push del navegador]
-
-    subgraph VERCEL[Vercel]
-        NX --> RSC[Server Components: páginas y panel]
-        NX --> API[Route Handlers /api/v1]
-        NX --> SA[Server Actions: admin y comercio]
-        NX --> PX[proxy.ts: sesión]
-        NX --> WK[Worker /api/v1/internal/jobs]
-        CRON[Vercel Cron diario: PDF] --> API
-    end
-
-    API --> SB
-    SA --> SB
-    RSC --> SB
-    WK --> SB
-    WK -->|VAPID| PUSH
-    WK -->|SMTP| MAIL[Proveedor de email]
-
-    subgraph SB[Supabase]
-        AUTH[Auth + SMTP propio + captcha]
-        PG[(PostgreSQL)]
-        GIS[PostGIS + pg_trgm + unaccent]
-        RLS[RLS + RPC autosuficientes]
-        JOBS[(private.jobs)]
-        PGC[pg_cron + pg_net + Vault]
-        ST[Storage privado + signed URLs]
-        RT[Realtime: solo panel]
-        PG --- GIS
-        PG --- RLS
-        RLS -->|encola| JOBS
-        PGC -->|cada minuto| JOBS
-    end
-
-    PGC -->|despierta| WK
-
-    RLS --> REP[Reportes de tránsito y consultas]
-    RLS --> BIZ[Negocios y turismo]
-
-    RT --> ADM[Panel municipal]
-    RSC --> ADM
-    ADM --> KPI[KPIs: funciones SQL]
-    KPI --> PDF[PDF semanal: @react-pdf/renderer]
-    PDF --> ST
-    PDF --> RUNS[(report_runs)]
+flowchart LR
+    U[Ciudadano · turista · comercio · municipio] --> PWA[PWA Next.js]
+    PWA -->|mapa base y direcciones| G[Google Maps]
+    PWA -->|/api/v1 · Server Actions| NX[Next.js en Vercel]
+    PWA -.->|alertas en vivo · Broadcast| RT[Supabase Realtime]
+    NX -->|JWT del usuario| DB[(PostgreSQL + PostGIS<br/>RLS + RPC)]
+    DB -->|encola| Q[(private.jobs)]
+    CRON[pg_cron cada minuto] -->|pg_net| W[Worker /api/v1/internal/jobs/run]
+    W --> Q
+    W -->|VAPID| PUSH[Web Push]
+    W --> ST[Supabase Storage]
+    VC[Vercel Cron diario] --> PDF[PDF semanal] --> ST
+    DB -->|realtime.send| RT
 ```
 
-## Anexo E — Fuentes consultadas (23/09/2026)
+---
 
-- Google Maps Platform, pricing overview y categorías: https://developers.google.com/maps/billing-and-pricing/overview · https://developers.google.com/maps/billing-and-pricing/pricing-categories · FAQ de cambios de marzo 2025: https://developers.google.com/maps/billing-and-pricing/faq
-- Políticas de Places API (New), exención de place ID: https://developers.google.com/maps/documentation/places/web-service/policies
-- Google Maps Platform Service Specific Terms (caché de lat/lng 30 días, prohibición de uso con mapas no-Google)
-- Supabase pricing y billing: https://supabase.com/pricing · https://supabase.com/docs/guides/platform/billing-on-supabase
-- Vercel pricing, plan Hobby y cron: https://vercel.com/pricing · https://vercel.com/docs/plans/hobby · https://vercel.com/docs/cron-jobs/usage-and-pricing
-- Next.js 16: `middleware.ts` renombrado a `proxy.ts` (runtime Node)
-- Bases del reto: https://conectasr.com
+## 3. Principios
 
-Cifras tomadas de fuentes secundarias recientes (p. ej. precio de Dynamic Maps tras la cuota, límites de cron Hobby) deben confirmarse en la página oficial antes de presupuestar.
+1. **La base de datos decide.** El cliente propone (ubicación, fotos, texto) y la RPC valida y decide. Zod en Next.js es UX y defensa temprana, no la barrera.
+2. **Una operación crítica es una transacción.** Nunca "leer en JS, decidir en JS, escribir en JS".
+3. **Rechazar no es fallar.** Un rechazo de negocio (límite alcanzado, transición no válida) se **devuelve** como `{status:'rejected', reason}` y hace commit, para que el contador de rate limit y la auditoría persistan. `RAISE EXCEPTION` queda solo para errores de programación.
+4. **Mínimo privilegio.** No hay `super_admin` (ADR-020). Cada rol tiene alcance territorial, y las columnas personales están ocultas por grants.
+5. **Google por intención del usuario, nunca por evento del mapa.**
+6. **Privacidad por defecto.** Ubicación puntual ligada a una acción, nunca rastreo. Sin EXIF en las fotos. Sin autor en el mapa público.
+7. **Todo cambio relevante deja rastro:** historial de estados, acciones de moderación y auditoría.
+8. **Reintentar es seguro.** Idempotencia en creaciones reintentables, compare-and-set en cambios de estado y bloqueo optimista en ediciones.
+9. **Evolución aditiva.** Esquema, API y eventos crecen agregando, nunca renombrando ni borrando en el mismo release. Lo que costará caro después y poco hoy se prepara ya: `province_id`, estados como texto, catálogos en tablas y PK particionables (ADR-017).
+10. **Diseñar para transferir.** Otro equipo debe poder operar la plataforma con lo que hay en el repositorio.
 
-Puntos añadidos en v1.1 **a verificar** en documentación oficial antes de implementarlos: límites del SMTP por defecto de Supabase; conexión directa de Supabase solo por IPv6 frente a runners de GitHub (usar el pooler); disponibilidad y precio de Supabase Branching por plan; política de Vercel Hobby con commits de colaboradores en repos privados; límite de usuarios del plan gratuito de Sentry; disponibilidad de `ST_CoverageSimplify` en la versión de PostGIS del proyecto; nombre actual del método de validación de sesión en `@supabase/ssr` (`getUser`/`getClaims`).
+---
 
-## Anexo F — Registro de cambios v1.1 (24/09/2026)
+## 4. Stack
 
-Correcciones de contradicciones detectadas en la revisión de v1.0 y dónde quedaron resueltas:
+Una sola tabla, con la fase en que entra cada pieza.
 
-| # | Problema en v1.0 | Resolución | Dónde |
+| Área | Tecnología | Fase | Nota |
 |---|---|---|---|
-| 1 | "RPC invocadas únicamente desde el servidor" es falso con PostgREST expuesto | RPC autosuficientes; la base es la barrera | §1, §5, §12, §17, ADR-018 |
-| 2 | `REVOKE EXECUTE` rompía los helpers de RLS | Esquema `private` no expuesto con grants a `authenticated`; RPC en `public` | §14, §17 |
-| 3 | HMAC verificado contra `qr_secret_hash` (imposible) | Secreto en Vault (`qr_secret_id`) | §15, §19.3 |
-| 4 | Idempotencia de cupón imposible si solo se guardaba el hash | `code_hash` HMAC + `code_ciphertext`; código Crockford de 10 caracteres | §15, §20.3, ADR-011 |
-| 5 | Rate limit revertido por el rollback de los rechazos | Rechazos devueltos, no lanzados | §12, §17, §19.3 |
-| 6 | Cookies "httpOnly" incompatibles con `@supabase/ssr` y Realtime | Cookies legibles por JS + CSP estricta | §16, §17 |
-| 7 | Código desplegado antes que su migración | Action: migrar → desplegar | §36, §37, ADR-019 |
-| 8 | Previews contra `staging` sin las migraciones del PR | E2E con Supabase local; Branching en Fase 2 | §36, §37 |
-| 9 | `pg_cron` "opcional" pese a ser imprescindible | Obligatorio | §3, §13, §47 |
-| 10 | Push perdido para eventos de triggers/cron; fan-out inline | Cola `private.jobs`, lotes | §12, §25, ADR-016 |
-| 11 | Vercel Hobby incompatible con "cuentas de organización" | Cuenta con email de la organización → Team Pro | §31, §37, ADR-015 |
-| 12 | "staging + production en Free" contradecía producción en Pro | Plan por organización y costo por proyecto | §31, §37 |
-| 13 | Sin proveedor de email | SMTP propio obligatorio | §3, §13, §25 |
-| 14 | Backups inexistentes en Free y `pg_dump` sin IPv6 | `pg_dump` diario vía pooler | §37 |
-| 15 | Endpoint cacheado con datos públicos y privados | Endpoints público y `me/` separados | §8, §9, §28 |
-| 16 | `service_role` necesaria fuera del cron | Worker con `service_role` para imágenes, push, email y PDF | §17 |
-| 17 | `user_roles` sin varios municipios por moderador | PK sustituta + `UNIQUE NULLS NOT DISTINCT` | §15, §39 |
-| 18 | `UNIQUE` con `NULL` duplicaba snapshots provinciales | `NULLS NOT DISTINCT` | §14, §39 |
-| 19 | Snapshots sobrescritos al regenerar un PDF | Snapshots por `report_run_id` | §15, §27 |
-| 20 | "Append-only" en tablas que cambian de estado | Tres clases de tablas de rastro | §14 |
-| 21 | `rewards.mission_id` contra escalado por nivel; `per_user_limit` inalcanzable | Regla única de elegibilidad; `mission_id` opcional | §15, §20.2 |
-| 22 | Carrera en `max_completions` | `completions_count` con UPDATE condicional | §15, §19.3 |
-| 23 | Paso virtual sin encaje en el modelo | `kind` = `location` o `virtual` | §11.2, §15, §19.1 |
-| 24 | Faltaban columnas `idempotency_key` | Añadidas con unicidad por usuario | §14, §15 |
-| 25 | `ST_Contains` dejaba municipios en NULL | `ST_Covers`, vecino ≤ 2 km, `out_of_area`, municipio obligatorio | §11.1, §21 |
-| 26 | Borrar una cuenta rompía claves foráneas | Política CASCADE / SET NULL | §14, §32 |
-| 27 | Regla de recorte permitía quitar lo obligatorio | Tabla de alcance con columna de obligatoriedad | §43, §48 |
-| 28 | Celda contradictoria en la tabla de roles | Filas separadas por tipo de rol asignable | §16 |
-| 29 | Fórmula del radio distinta en §11.3 y §19.3 | Unificada | §11.3 |
-| 30 | Referencias cruzadas rotas | Corregidas | §6, §22 |
-| 31 | Server Actions presentadas como endpoints REST | Tabla separada de operaciones internas | §28 |
-| 32 | Simplificación por polígono rompía fronteras | Simplificación topológica en importación | §9.1 |
-| 33 | Sentry "gratis para equipos" | Plan gratuito de 1 usuario (verificar) | §3, §31 |
+| Framework | Next.js 16 (App Router) + React + TypeScript `strict` | MVP | `proxy.ts` (antes `middleware.ts`) solo refresca la sesión |
+| UI | Tailwind CSS + shadcn/ui | MVP | Componentes copiados al repo, sin dependencia en runtime |
+| Formularios | React Hook Form + Zod | MVP | Un esquema Zod por operación, compartido cliente/servidor |
+| Estado | TanStack Query (datos del mapa) + Zustand (UI del mapa) | MVP | Sin Redux |
+| Gráficos | Recharts | MVP | Panel municipal |
+| Mapa | Google Maps JavaScript API vía `@vis.gl/react-google-maps`, AdvancedMarkerElement (requiere Map ID), `@googlemaps/markerclusterer` | MVP | Detrás del adaptador `modules/map/provider` |
+| Direcciones | Places Autocomplete (New) con session tokens | MVP (opcional) | Solo si la búsqueda propia no encuentra nada |
+| Navegación | Enlace `https://www.google.com/maps/dir/?api=1&destination=lat,lng` | MVP | Sin costo de API |
+| Tráfico de Google | TrafficLayer como capa opcional | MVP (opcional) | Apagada por defecto |
+| Base de datos | Supabase PostgreSQL + PostGIS + `pg_trgm` + `unaccent` + `pgcrypto` | MVP | Probado en PostgreSQL 18.3 + PostGIS 3.6.2; compatible con 15+ |
+| Lógica crítica | RPC PL/pgSQL + RLS + grants por columna | MVP | ADR-018 |
+| Auth | Supabase Auth: email con contraseña u OTP/magic link; Google OAuth opcional; captcha Turnstile nativo | MVP | SMS postergado por costo |
+| Email | SMTP propio (Resend, Amazon SES o Brevo) configurado en Supabase Auth | MVP | El SMTP por defecto de Supabase es solo para pruebas |
+| Archivos | Supabase Storage: `report-evidence` (privado), `public-media` (público), `reports-pdf` (privado) | MVP | §10.5 |
+| Tiempo real | Supabase Realtime **Broadcast**, solo para alertas de tránsito públicas | MVP | ADR-012 |
+| Cola y planificador | `private.jobs` + `pg_cron` + `pg_net` + Supabase Vault | MVP | ADR-016 |
+| PWA | Web App Manifest + Serwist | MVP | §6.4 |
+| Push | Web Push + VAPID (librería `web-push`) | MVP | Sin Firebase |
+| PDF | `@react-pdf/renderer` en Route Handler (runtime Node) | MVP | Vercel Cron diario |
+| Errores | Sentry | MVP | Plan gratuito de 1 usuario (verificar, §20) |
+| Pruebas | PGlite (base de datos) ✅, Vitest y Playwright ⏳ | MVP | §14 |
+| CI/CD | GitHub Actions + Vercel | MVP | Producción: migrar → desplegar (ADR-019) |
+| Hosting | Vercel (Hobby en demo → Team Pro) + Supabase (Free en demo → Pro) | MVP → Fase 2 | Cuentas de la organización |
+| Por PR | Supabase Branching | Fase 2 | Requiere plan Pro |
+| Protección extra | Vercel Firewall | Fase 2 | |
+| Tiles propios | `ST_AsMVT` | Fase 2/3 | Solo si los negocios superan ~20 000 |
+| Cola dedicada | `pgmq` o Inngest | Fase 3 | Mismo contrato de productores |
+| Routes API | — | Futura | Solo si se exige ruta dibujada dentro de la app |
+| **No usar** | Firebase (FCM, Firestore), Redux, Express/NestJS, microservicios, Kubernetes, Edge Functions en MVP | — | §19 |
 
-Mejoras de evolución añadidas: §5.1, principios 11–12, ADR-016 a ADR-019, tablas `provinces`, `traffic_report_types`, `jobs` y `feature_flags`, módulos `jobs` y `media`, nuevas filas en la matriz de riesgos y en el Anexo B.
+---
 
-### v1.2 (24/09/2026): alineación con el prompt de auditoría y con el prototipo
+## 5. Arquitectura del sistema
 
-| Cambio | Motivo | Dónde |
-|---|---|---|
-| Eliminado `super_admin`; gobernanza por `municipal_admin` provincial + scripts de operación | Mínimo privilegio | §16, ADR-020 |
-| Estados de consultas/incidencias: `pending → under_review → approved → in_progress → resolved → archived`, `rejected` con motivo; tabla de transiciones; un paso por llamada | Estados exigidos por el prompt; nadie salta a `resolved` | §15, §21.1 |
-| `citizen_requests.kind` = `incident` o `inquiry`; formulario único agrupado en Tránsito / Servicios municipales | El prototipo mezclaba tránsito y servicios municipales | §21 |
-| Estados de negocio: `draft, pending, under_review, approved, rejected, suspended, archived` | Estados exigidos por el prompt | §15, §23, §39 |
-| Cuatro niveles de misión (`special` añadido) con método mínimo por nivel | El prototipo y el producto usan 4 niveles | §15, §19.2 |
-| Misión de "reportar" se cumple al aprobarse el reporte | Evita premiar reportes basura | §19.1, §21.1 |
-| Cabeceras (`nosniff`, `Referrer-Policy`, `Permissions-Policy`, `frame-ancestors`), CORS, límites y anti-enumeración en Auth, sin open redirect | Hardening exigido por el prompt | §17 |
-| Subidas: límite de dimensiones, re-codificación, nombre generado por el servidor | Archivos maliciosos y path traversal | §17 |
-| Modos ONLINE / DEGRADED / OFFLINE | No declarar un offline que no existe | §18 |
-| Estados obligatorios por pantalla, formularios, responsive y accesibilidad | UX y WCAG exigidos por el prompt | §7 |
+### 5.1 Despliegue
 
-Las filas de v1.1 y v1.2 que mencionan misiones o recompensas se conservan como historial; ese diseño fue retirado en v1.3.
+```text
+┌──────────────────────── Dispositivo (PWA) ─────────────────────────┐
+│ Next.js client · Mapa (Google Maps JS) · Service Worker (Serwist)   │
+│ Borradores y cola offline (IndexedDB) · Web Push · canal Broadcast  │
+└──────────────┬──────────────────────────────┬───────────────────────┘
+               │ HTTPS (cookie de sesión)       │ Maps JS / Autocomplete
+               ▼                                ▼
+┌──────────── Vercel ─────────────┐   ┌──── Google Maps Platform ────┐
+│ Next.js 16                      │   │ Maps JS · Places Autocomplete │
+│ · Server Components (páginas)   │   └──────────────────────────────┘
+│ · Route Handlers /api/v1        │
+│ · Server Actions (paneles)      │
+│ · proxy.ts (solo sesión)        │
+│ · Vercel Cron diario → PDF      │
+│ · Worker /api/v1/internal/jobs  │◄──── pg_net (pg_cron, cada minuto)
+└──────────────┬──────────────────┘
+               │ supabase-js con el JWT del usuario
+               │ (service_role solo en worker y cron)
+               ▼
+┌──────────────────────── Supabase ─────────────────────────┐
+│ PostgreSQL + PostGIS + pg_trgm + unaccent                   │
+│ RLS · RPC SECURITY DEFINER · grants por columna · triggers  │
+│ private.jobs · pg_cron · pg_net · Vault                     │
+│ Auth (SMTP propio, Turnstile) · Storage · Realtime Broadcast│
+└─────────────────────────────────────────────────────────────┘
+```
 
-### v1.3 (24/09/2026): misiones y recompensas fuera de alcance
+### 5.2 Capas del backend
 
-| Cambio | Dónde |
+No hay un servidor de aplicación separado. Son **cuatro capas con una sola autoridad**:
+
+| # | Capa | Responsabilidad | No debe |
+|---|---|---|---|
+| 1 | Route Handler / Server Action | Transporte HTTP, sesión (`getUser()`), validación de forma con Zod, traducción de `reason` a HTTP | Decidir permisos o estados; usar `service_role` en requests de usuario |
+| 2 | Servicio TS (`modules/<dominio>/server`) | Orquestar, combinar lecturas, firmar URLs de Storage | Encadenar varias escrituras esperando atomicidad (entre RPC no hay transacción) |
+| 3 | **RPC en `public`** | Regla de negocio completa y atómica: identidad, rol, alcance, entradas, rate limit, historial, auditoría, encolado | Llamar servicios externos de forma síncrona |
+| 4 | Tablas | Invariantes: `CHECK`, FK, `UNIQUE`, RLS, grants por columna, triggers de derivados | Contener reglas de negocio ocultas |
+
+**Lecturas:**
+- Las simples van a las tablas con el JWT del usuario, y RLS filtra.
+- Las compuestas o públicas van por RPC `SECURITY INVOKER` (`map_features`, `map_aggregates`, `search_all`), así RLS sigue aplicando.
+
+**Escrituras:** siempre por RPC. Las únicas excepciones son las filas propias de preferencias, suscripciones push, marcar una notificación como leída y 4 columnas del perfil (DATABASE.md §7).
+
+### 5.3 Dónde corre cada cosa
+
+| Lugar | Qué hace |
 |---|---|
-| Retirados misiones y recompensas (ADR-010 y ADR-011 pasan a "Retirado"); §19 y §20 quedan como secciones retiradas para conservar la numeración | §19, §20, §41 |
-| Eliminadas del ERD y del modelo de datos: `missions`, `mission_steps`, `mission_step_checkins`, `mission_completions`, `rewards`, `reward_redemptions` | §15, §39 |
-| Eliminados los endpoints de misiones, check-ins, reclamo y canje; los diagramas de secuencia pasan de 4 a 2 | §28, §40 |
-| Vault queda solo para el secreto del worker y credenciales de `pg_net` (sin pepper ni clave de cupones) | §3, §13, §17, §37 |
-| Los comercios conservan promociones informativas y moderadas, sin stock ni canje; su panel mide vistas y clics | §20, §23 |
-| Ajustados roles, rate limits, offline, notificaciones, PDF, auditoría, retención, pruebas, riesgos, alcance del MVP y orden de construcción | §7–§48, anexos |
+| Navegador | Render, ubicación (con permiso), compresión de fotos, borradores y cola offline, validación temprana |
+| Next.js (Vercel) | Páginas, API `/api/v1`, Server Actions, firma de URLs de Storage, worker de la cola (procesamiento de fotos, push, alertas), PDF |
+| PostgreSQL | Reglas de negocio, pertenencia territorial, transiciones, historial, auditoría, rate limits, encolado, broadcast |
+| Google | Mapa base, autocompletado de direcciones, navegación externa |
 
-### v1.4 (24/09/2026): concurrencia explícita
+---
 
-| Cambio | Motivo | Dónde |
+## 6. Frontend y experiencia de uso
+
+### 6.1 Organización
+
+- **Dos caras en una app.** El sitio público con SSR (inicio, fichas de negocio, lugar y ruta) y la aplicación de mapa del lado del cliente.
+- **Route groups:** `(public)`, `(app)` (mapa y cuenta), `(business)` (panel del comercio) y `(admin)` (panel municipal). Cada uno tiene su layout, `loading.tsx`, `error.tsx` y `not-found.tsx`.
+- **El mapa se carga con `dynamic(..., { ssr: false })`** detrás de un esqueleto. La primera pintura nunca espera a Google.
+- **Todo lo que está en el mapa tiene equivalente en lista.** Es un requisito de accesibilidad y el plan B si Google falla.
+- **Filtros en la URL** (`?capas=turismo,transito&cat=…`), para poder compartir enlaces.
+- **Idioma:** solo español en el MVP, con los textos centralizados. El inglés para turistas llega en Fase 2, usando la columna `translations` que ya existe.
+
+### 6.2 Baja alfabetización digital (criterio de 20 puntos)
+
+- Lenguaje simple y en segunda persona: "Reportar un problema", no "Crear incidencia".
+- Cada acción lleva ícono **y** texto. Las categorías usan íconos grandes.
+- Flujos de 3 pasos como máximo, con una decisión por pantalla.
+- Un reporte se puede enviar solo con tipo, ubicación y foto, sin escribir texto.
+- Los estados se explican con palabras ("Lo están revisando"), no con códigos.
+- El texto base mide 16 px o más, y los objetivos táctiles al menos 44×44 px.
+- Antes de la demo se prueba con al menos 5 vecinos reales.
+
+### 6.3 Estados de pantalla, formularios y accesibilidad
+
+- **Estados de pantalla.** Toda vista con datos implementa `LOADING` (esqueleto), `EMPTY` (explica por qué y qué hacer), `ERROR` (mensaje claro y botón de reintentar, sin detalles internos), `DISABLED` (con motivo, por ejemplo "sin conexión"), `UNAUTHORIZED` y `NOT FOUND`.
+- **Formularios:**
+  - el botón se desactiva mientras se envía, y la `idempotency_key` evita duplicados;
+  - los errores van por campo, asociados con `aria-describedby`;
+  - el foco pasa al primer error.
+- **Responsive, mobile-first,** con cortes en 640 / 768 / 1024 / 1280 px:
+  - móvil: mapa a pantalla completa, barra inferior y bottom sheets;
+  - escritorio: panel lateral fijo.
+- **WCAG 2.1 AA:**
+  - controles reales (`<button>`, `<a>`) y foco visible;
+  - se respeta `prefers-reduced-motion`, también en las animaciones del mapa;
+  - el contraste AA se verifica con axe en los E2E.
+
+### 6.4 PWA y modos de conexión
+
+- **Instalación.** Manifest con `display: standalone` y `start_url: /mapa`; service worker con Serwist.
+- **iPhone.** Se muestran instrucciones para "Añadir a pantalla de inicio". En iOS, Web Push solo funciona con la PWA instalada (iOS 16.4+).
+- **Modos de conexión.** Siempre visibles en la barra superior; nunca se simula un offline que no existe:
+
+| Modo | Cuándo | Funciona | Se bloquea (con explicación) |
+|---|---|---|---|
+| **ONLINE** | Red y API responden | Todo | — |
+| **DEGRADED** | Hay red, pero falla un servicio (Google, API con 5xx, Storage) | Lista en lugar de mapa; caché con aviso "datos de hace X min"; borradores y cola | Lo que dependa del servicio caído |
+| **OFFLINE** | Sin red | Shell, pantallas visitadas, última lista de lugares y rutas, borradores de reporte y consulta con foto comprimida, cola de envío, "mis reportes" (último estado sincronizado) | Mapa base de Google (sus términos no permiten cachear tiles), búsqueda, alta de negocios, panel |
+
+**Cola offline:**
+- cada item lleva una `idempotency_key` generada en el cliente;
+- se reintenta con Background Sync donde exista, o al abrir la app en iOS;
+- si la sesión expiró, el item queda como "requiere iniciar sesión" y nunca se descarta en silencio.
+
+**Actualizaciones.** Aviso "nueva versión disponible" y recarga, sin `skipWaiting` silencioso durante un formulario.
+
+**Caché:**
+
+| Tipo de recurso | Estrategia |
+|---|---|
+| Estáticos | `CacheFirst` versionado |
+| Catálogos públicos | `StaleWhileRevalidate` |
+| Datos de usuario | `NetworkOnly` |
+
+---
+
+## 7. Mapa y geografía
+
+### 7.1 Capas
+
+| Capa | Geometría | Volumen | Carga |
+|---|---|---|---|
+| Municipios (3) | MultiPolygon | 3 | Una vez por sesión: `geom_simplified`, con caché CDN larga |
+| Rutas de ecoturismo | MultiLineString | decenas | Una vez por sesión (simplificadas); geometría completa al abrir la ruta |
+| Lugares turísticos | Point | decenas–cientos | Por viewport (`map_features`, capa `tourism`) |
+| Negocios aprobados | Point | cientos → miles | Por viewport (capa `business`) |
+| Alertas de tránsito | Point | decenas | Por viewport (capa `traffic`): solo `active`/`verified` no vencidas, sin autor. Además, en vivo por Broadcast (§11.1) |
+| Consultas públicas | Point | cientos | Por viewport (capa `request`): solo `is_public` en `approved`, `in_progress` o `resolved`, sin autor |
+
+Las consultas **no públicas** no están en el mapa público:
+- el ciudadano ve las suyas en "Mi actividad" (`my_activity`);
+- el personal las ve en la bandeja del panel, que lee las tablas filtradas por RLS.
+
+No existe un endpoint de mapa autenticado aparte.
+
+### 7.2 Zoom y viewport
+
+| Zoom de Google | Qué se muestra | Fuente |
 |---|---|---|
-| Cambios de estado con compare-and-set (`expected_status`, respuesta `stale_state`) | Dos moderadores sobre el mismo reporte: nunca gana silenciosamente el último | §14, §21.1 |
-| Ediciones de contenido con bloqueo optimista (`version`, respuesta `409`) | Dos personas editando la misma ficha | §14 |
+| ≤ 10 (provincia) | Municipios con conteos por capa | `map_aggregates()`: conteos públicos por municipio y un punto dentro de cada polígono |
+| 11–14 (municipio) | Clusters | `map_features` + MarkerClusterer en cliente |
+| ≥ 15 (calle) | Todos los puntos, con ícono por categoría | `map_features`; el detalle se pide al tocar un punto |
 
-### v1.5 (24/09/2026): alineación con las bases oficiales
+**Flujo de consulta:**
+1. El mapa emite el evento `idle` (no `bounds_changed`); se espera 300 ms de debounce.
+2. El bbox se redondea hacia afuera a una rejilla de 0.01°, para compartir caché.
+3. No se consulta si el bbox está contenido en uno ya cargado con los mismos filtros.
+4. `map_features` rechaza bbox inválidos o de más de 2° por lado, y devuelve como máximo 500 features con `truncated: true` cuando hay más. El cliente sugiere entonces acercar el mapa.
+5. La respuesta de viewport lleva solo `id`, tipo, categoría, coordenadas y título. Fotos, horario y descripción se piden al abrir la ficha.
 
-Fuente: bases publicadas en conectasr.com (`/api/convocatoria`), leídas el 24/09/2026.
+**[Fase 2/3]:** si los negocios superan ~20 000, se pasa a vector tiles propios (`ST_AsMVT`) con caché CDN.
 
-| Cambio | Requisito de las bases | Dónde |
+### 7.3 Uso de Google Maps
+
+| API | Uso | Nunca |
 |---|---|---|
-| Las 6 funcionalidades citadas textualmente y columna "Obligatoria" completada | "Seis funcionalidades obligatorias" | §43 |
-| Votación de prioridades en consultas (`request_votes`, `support_count`) | F5: "voten prioridades" | §15, §21.1, §39 |
-| Bache y desvío pasan a tránsito; escalado de un reporte de tránsito a incidencia municipal | F4: "accidentes, cierres, baches, semáforos dañados y desvíos" | §21 |
-| Propuestas ciudadanas de lugares y rutas (moderadas) | F1: "cualquier usuario puede ver y agregar puntos de interés… rutas"; F3: "trazado" | §15, §16, §22 |
-| Alertas de tránsito en vivo por Realtime Broadcast | F1: "mapa en tiempo real"; criterio de innovación | §26, ADR-012 |
-| UX para baja alfabetización digital | Criterio UX/UI (20 pts) | §7 |
-| Hechos del reto: criterios, entregables, calendario | Bases | §0 |
-| Plan por semanas hasta la demo | Calendario | §48 |
+| Maps JavaScript (Dynamic Maps) | Una carga por apertura de la vista mapa | Recargar el mapa al cambiar de pestaña interna |
+| AdvancedMarkerElement + MarkerClusterer | Marcadores y clusters (requiere Map ID) | Miles de marcadores sin clustering |
+| Places Autocomplete (New) | "Buscar una dirección" cuando la búsqueda propia no encuentra nada; vincular `google_place_id` en el alta de negocio | Una llamada por tecla sin session token; poblar la capa de negocios |
+| Place Details (New) | Al elegir una sugerencia: solo `location` y `formattedAddress` (field mask) | Pedir fotos, reseñas o rating |
+| Navegación | Botón "Cómo llegar" con enlace (sin costo de API) | — |
+| TrafficLayer | Capa opcional que enciende el usuario | Encendida por defecto (la cobertura rural es incierta) |
+| Geocoding inverso | Opcional: dirección legible al reportar | Calcular el municipio (eso lo hace PostGIS) |
 
-### v1.6 (24/09/2026): base de datos definida en SQL y verificada
+**Qué se guarda de Google:**
+- **`google_place_id`:** se puede guardar indefinidamente, en `businesses.google_place_id`.
+- **Coordenadas de Google:** nunca son la coordenada oficial. El dueño o el moderador confirman el pin, y esa coordenada es un dato propio.
+- **Nombre, fotos y reseñas de Google:** no se almacenan.
 
-El diseño de datos deja de ser solo documento: 15 migraciones reales en `supabase/migrations/`, explicadas en [DATABASE.md](DATABASE.md) y verificadas con 87 pruebas (PostgreSQL 18.3 + PostGIS 3.6.2). La revisión y la ejecución corrigieron:
+**Claves:**
+- La clave de navegador se restringe por referrer (dominios de producción y previews) y por API.
+- Proyectos de Google Cloud separados para dev y prod.
+- Cuotas diarias por API y alertas de presupuesto al 50/80/100 %.
+- Facturación a nombre de la organización.
 
-| Cambio | Motivo | Dónde |
+**Plan B: MapLibre GL + tiles OSM.** Toda la app habla con el adaptador (`MapView`, `addLayer(geojson)`, `onFeatureClick`), nunca con `google.maps.*`, y nuestra API devuelve GeoJSON neutral. Como los términos de Google prohíben mostrar su contenido sobre mapas no-Google, solo nuestros datos migrarían.
+
+### 7.4 PostGIS
+
+| Tema | Decisión |
+|---|---|
+| SRID | 4326 (WGS84) en todas las columnas, con typmod `geometry(<Tipo>, 4326)` |
+| Distancias en metros | Cast a `geography`, con índice GiST de expresión `((geom::geography))` |
+| Viewport | `geom && ST_MakeEnvelope(...)` con índice GiST |
+| Pertenencia a municipio | `private.locate(geom)`, **llamada dentro de cada RPC** que crea o mueve un punto: el municipio que cubre el punto (`ST_Covers`, el borde cuenta). Si ninguno lo cubre, el más cercano a ≤ 2 km. Si tampoco hay, ninguno |
+| Fuera de la provincia | Un reporte de tránsito queda `out_of_area`, visible solo para el alcance provincial. Una consulta o propuesta se rechaza con `out_of_area`. Una consulta sin ubicación exige que el ciudadano elija el municipio |
+| Rutas | `municipality_id` = municipio del punto de inicio. `municipality_ids` = todos los municipios que cruza (trigger `eco_routes_municipalities`). `distance_km`, `start_point` y `geom_simplified` son columnas generadas. Entre 2 y 5 000 vértices |
+| Provincia | `province_id` en toda tabla territorial, con FK compuesta `(municipality_id, province_id)`: es imposible guardar un municipio de otra provincia |
+| Importación | Datos abiertos con `ogr2ogr` → staging → `ST_IsValid`/`ST_MakeValid` → tablas finales. **Simplificación topológica en la importación** (mapshaper, o `ST_CoverageSimplify` si la versión lo soporta, §20), para que las fronteras compartidas no queden con huecos |
+
+`supabase/seed.sql` trae municipios **rectangulares de demostración**, que se reemplazan por los límites oficiales.
+
+---
+
+## 8. Backend y datos
+
+Resumen. El detalle (columnas, índices, políticas, matriz de grants) está en [DATABASE.md](DATABASE.md).
+
+### 8.1 Cifras del esquema verificado
+
+| | |
+|---|---|
+| Migraciones | 16 (`20260924120000` a `20260924120220`) |
+| Tablas | 27 en `public` (todas con RLS) y 6 en `private` |
+| Funciones | 34 en `public` (31 `SECURITY DEFINER`, 3 `SECURITY INVOKER`) y 33 en `private` |
+| Seguridad | 31 políticas RLS + 3 de Storage; grants por columna; `EXECUTE` explícito por función |
+| Índices | 109, incluidos GiST, GIN y parciales |
+| Triggers | 16 |
+| Pruebas | 107, todas pasan (§14.1) |
+
+### 8.2 Esquemas y roles de base de datos
+
+| Esquema | Expuesto por la Data API | Contenido |
 |---|---|---|
-| FK compuestas `(municipality_id, province_id)` | Impedir un municipio de otra provincia | DATABASE.md §3, §5 |
-| `f_unaccent()` inmutable | `unaccent()` no se puede usar en columnas generadas ni índices | DATABASE.md §8 |
-| `ALTER DEFAULT PRIVILEGES` global (sin `IN SCHEMA`) | La forma por esquema no puede revocar el `EXECUTE` que Postgres concede a `PUBLIC` | DATABASE.md §8 |
-| Helpers `SECURITY DEFINER` en políticas que tocan columnas ocultas | Las subconsultas de una política respetan los grants por columna | DATABASE.md §8 |
-| `USAGE` explícito sobre `extensions` | Las funciones `SECURITY INVOKER` con tipos PostGIS fallaban para `anon` | DATABASE.md §8 |
-| Adjuntos con arco exclusivo (FK reales) | El diseño polimórfico no admitía FK ni cascadas | §39, DATABASE.md §5.6 |
-| Horarios normalizados (`business_hours`) | Consultar "abierto ahora" y validar rangos | DATABASE.md §5.4 |
-| Grants por columna (autor, asignado, claves) | RLS protege filas, no columnas | DATABASE.md §7 |
-| Índices en toda FK hacia `profiles` | Baja de cuentas sin recorridos completos | DATABASE.md §5.9 |
-| Contrato de RPC → HTTP y capas del backend | Una sola autoridad (PostgreSQL), sin capa "repositorio" extra | DATABASE.md §2 |
+| `public` | Sí | Tablas de negocio con RLS y las RPC invocables |
+| `private` | No | Helpers de RLS, transiciones, rate limit, cola, mantenimiento. Los helpers que usan las políticas tienen `EXECUTE` concedido a `anon`/`authenticated`, porque las políticas se evalúan con el rol del usuario |
+| `extensions` | No | PostGIS, `pg_trgm`, `unaccent`, `pgcrypto`, `pg_net`. Con `USAGE` concedido, para que las funciones INVOKER vean los tipos de PostGIS |
+
+| Rol de Postgres | Quién |
+|---|---|
+| `anon` | Visitante sin sesión |
+| `authenticated` | Usuario con sesión. Su rol de negocio real sale de `user_roles` |
+| `service_role` | Solo el worker y el cron, en el servidor |
+
+### 8.3 Contrato de las RPC
+
+1. La identidad sale de `auth.uid()`, nunca de un parámetro.
+2. Cada RPC asume que la llaman directamente con la anon key y valida todo por sí misma.
+3. Los rechazos se devuelven (`{status:'rejected', reason}`), no se lanzan.
+4. **Idempotencia** con `p_idempotency_key` y `UNIQUE (autor, clave)` en las tres creaciones que se reintentan desde la cola offline o un doble envío: `create_traffic_report`, `create_citizen_request` y `submit_business`. Las demás creaciones se protegen con rate limit y restricciones únicas (`request_votes`, `business_hours`) o con `FOR UPDATE` (`escalate_traffic_report` devuelve la incidencia existente).
+5. **Compare-and-set** en cambios de estado: `p_expected_status`. Si otro se adelantó, se devuelve `stale_state` con el estado actual.
+6. **Bloqueo optimista** en ediciones: `p_version`. Si no coincide, se devuelve `version_conflict`. Lo usan `update_business`, `update_place` y `update_route`.
+7. Los efectos secundarios se encolan con `private.enqueue()` en la misma transacción.
+8. `SECURITY DEFINER` siempre con `search_path` fijo:
+   - RPC de `public`: `pg_catalog, extensions, public`, porque usan tipos de PostGIS;
+   - helpers internos: `''`, con nombres totalmente calificados.
+
+**Mapeo de `reason` a HTTP** (capa 1):
+
+| Resultado | HTTP |
+|---|---|
+| `status: ok` | 200 / 201 |
+| `not_authenticated` | 401 |
+| `forbidden`, `own_request` | 403 |
+| `not_found` | 404 |
+| `stale_state`, `version_conflict`, `conflict` | 409 |
+| Errores de validación (`invalid_*`, `*_required`, `out_of_area`, `not_votable`, `no_changes`, `unknown_field`, `bbox_too_large`, …) | 422 |
+| `rate_limited` | 429 |
+| Excepción no controlada | 500 sin detalles; el detalle va a Sentry |
+
+### 8.4 Modelo de datos (resumen)
+
+```mermaid
+erDiagram
+    provinces ||--|{ municipalities : agrupa
+    profiles ||--o{ user_roles : tiene
+    municipalities ||--o{ user_roles : "alcance (NULL = provincia)"
+    business_categories ||--o{ businesses : clasifica
+    businesses ||--o{ business_members : "dueños y personal"
+    profiles ||--o{ business_members : administra
+    businesses ||--o{ business_hours : horario
+    businesses ||--o{ promotions : publica
+    municipalities ||--o{ businesses : contiene
+    municipalities ||--o{ tourism_places : contiene
+    municipalities ||--o{ eco_routes : "inicio (y cruza)"
+    request_categories ||--o{ citizen_requests : "categoría y tipo"
+    profiles ||--o{ citizen_requests : "crea / atiende"
+    citizen_requests ||--o{ request_status_history : historial
+    citizen_requests ||--o{ request_votes : apoyos
+    profiles ||--o{ request_votes : vota
+    traffic_report_types ||--o{ traffic_reports : tipifica
+    profiles ||--o{ traffic_reports : reporta
+    citizen_requests |o--o| traffic_reports : "escalado desde"
+    businesses ||--o{ attachments : fotos
+    tourism_places ||--o{ attachments : fotos
+    eco_routes ||--o{ attachments : fotos
+    traffic_reports ||--o{ attachments : evidencia
+    citizen_requests ||--o{ attachments : evidencia
+    profiles ||--o{ notifications : recibe
+    profiles ||--o| notification_preferences : configura
+    profiles ||--o{ push_subscriptions : dispositivos
+    report_runs ||--|{ weekly_kpi_snapshots : congela
+```
+
+Tablas que no aparecen en el diagrama porque no tienen relaciones que aporten:
+- **en `public`:** `feature_flags`, `engagement_daily` (métricas diarias agregadas), `moderation_actions` y `audit_logs`;
+- **en `private`:** `jobs`, `rate_limit_rules`, `rate_limit_hits` y las tres tablas de transiciones.
+
+**Decisiones de modelo que conviene conocer antes de programar:**
+
+| Decisión | Motivo |
+|---|---|
+| Estados como `text` + `CHECK`, con transiciones en tablas `private.*_transitions` | Un `enum` no permite quitar ni renombrar valores |
+| Adjuntos como **arco exclusivo**: una FK real por entidad y `CHECK (num_nonnulls(...) = 1)` | Cascadas reales y ningún adjunto huérfano |
+| Horario normalizado en `business_hours` (`weekday`, `opens`, `closes`) | Permite consultar "abierto ahora". Si `closes < opens`, el negocio cierra después de medianoche |
+| Grants por columna: `requester_id`, `reporter_id`, `assigned_to`, `created_by`, `proposed_by` e `idempotency_key` ocultos | RLS protege filas, no columnas |
+| `audit_logs` con PK `(created_at, id)` | Lista para particionado mensual sin reescribir la tabla |
+| `weekly_kpi_snapshots` inmutables por `report_run_id` | Cada PDF se puede auditar contra sus propios datos |
+| `UNIQUE NULLS NOT DISTINCT` donde `NULL` significa "provincia" | Sin eso, dos `NULL` no chocan y se duplican filas |
+| FK hacia `profiles`: `CASCADE` en los datos propios, `SET NULL` en el historial | La baja de una cuenta no rompe estadísticas ni historial |
+| `translations jsonb` en negocios, lugares, rutas y categorías | Inglés en Fase 2 sin cambiar el esquema |
+| En Storage se guarda `bucket` + `path`, nunca URLs | Se puede cambiar de dominio o CDN sin migrar datos |
+
+### 8.5 Catálogos editables sin deploy
+
+| Catálogo | Contenido inicial |
+|---|---|
+| `traffic_report_types` | accidente (gravedad 3, dura 3 h) · bache (2, 7 días) · calle_cerrada (2, 12 h) · derrumbe (3, 2 días) · desvio (1, 2 días) · obra (1, 7 días) · otro (1, 6 h) · semaforo (2, 2 días) · via_inundada (3, 12 h) |
+| `request_categories` | Incidencias: agua, alumbrado, basura, infraestructura, otro_incidente · Consultas: consulta, propuesta, queja |
+| `business_categories` | agroturismo, artesania, cafeteria, colmado, hotel, otro, restaurante, salud, servicios |
+| `private.rate_limit_rules` | §10.6 |
+| `feature_flags` | Activación por provincia o municipio |
+
+En el MVP se editan por migración o SQL de operación. La pantalla de administración de catálogos llega en **[Fase 2]**.
+
+---
+
+## 9. Módulos funcionales
+
+### 9.1 Mapa y búsqueda (F1)
+
+- **Capas y zoom:** §7.
+- **Búsqueda propia:** `search_all(q, limit)`.
+  - Busca en negocios aprobados, lugares publicados y rutas publicadas.
+  - Relevancia: el mayor valor entre `ts_rank` sobre `search_vector` (español, sin acentos; nombre con peso A, descripción con peso C) y la similitud por trigramas sobre `f_unaccent(name)`, que tolera errores como "monsion" → Monción.
+  - La consulta admite de 2 a 80 caracteres y devuelve como máximo 50 resultados.
+  - No ordena por cercanía. Eso queda para **[Fase 2]** si hace falta.
+- **Dirección externa:** si `search_all` no encuentra nada, o si el usuario elige "Buscar una dirección", se usa Autocomplete de Google. El mapa se centra en el resultado, que no se guarda.
+- **Aportes ciudadanos al mapa:**
+  - lugares y rutas (§9.4);
+  - negocios (§9.3);
+  - alertas de tránsito (§9.2).
+
+### 9.2 Participación ciudadana (F4 y F5)
+
+Un solo botón "Reportar", con dos grupos. El servidor enruta cada tipo a su flujo:
+
+| Grupo | Tabla | Naturaleza |
+|---|---|---|
+| **Tránsito** (los tipos de `traffic_report_types`) | `traffic_reports` | Temporal: vence solo y se ve en el mapa en vivo mientras está activo |
+| **Servicios municipales**: incidencias (`kind = incident`) y consultas, quejas o propuestas (`kind = inquiry`) | `citizen_requests` | La gestiona el municipio hasta resolverla; los vecinos votan prioridades |
+
+#### Reportes de tránsito
+
+| Aspecto | Diseño |
+|---|---|
+| Crear | `create_traffic_report`: idempotente, 5 por hora. Punto obligatorio; gravedad 1–3 (si no se indica, la del tipo); descripción opcional (≤ 500) |
+| Estado inicial | `out_of_area` si está fuera de la provincia; `active` si el autor tiene reputación ≥ 5; en otro caso `pending`, que modera el personal |
+| Transiciones (`moderate_traffic_report`, compare-and-set) | `pending → active / rejected` · `active → verified / resolved / rejected` · `verified → resolved` · `out_of_area → rejected` |
+| Reputación | +1 cuando un reporte pasa a `active` o `verified`; −2 cuando se rechaza (rango −100 a 100) |
+| Vencimiento | `expires_at = now() + default_ttl` del tipo. Las lecturas filtran siempre por `expires_at > now()`, así que la visibilidad no depende del job. `pg_cron` marca `expired` cada 15 minutos, para los KPIs y para avisar por Broadcast |
+| Tiempo real | Cada cambio a `active`, `verified`, `resolved`, `expired` o `rejected` se emite por Broadcast (§11.1) |
+| Alerta a vecinos | Al activarse un reporte de gravedad ≥ 2 se encola una alerta por municipio (§9.5) |
+| Fotos | Hasta 3, en el bucket privado (§10.5) |
+| Escalar | `escalate_traffic_report(id, categoría)`: el personal convierte, por ejemplo, un bache que no se resuelve solo en una incidencia municipal enlazada (`escalated_request_id`). Conserva autor y ubicación. Repetir la llamada devuelve la misma incidencia |
+| "Ya no está" | **[Fase 2]**: confirmación comunitaria del ciudadano |
+
+#### Incidencias y consultas municipales
+
+```text
+pending → under_review → approved → in_progress → resolved → archived
+   │            │            │
+   └────────────┴────────────┴──→ rejected   (motivo obligatorio y visible)
+```
+
+| Aspecto | Diseño |
+|---|---|
+| Crear | `create_citizen_request`: idempotente, 5 por hora. `incident` exige punto. `inquiry` admite punto o municipio elegido. La categoría debe coincidir con el `kind` (FK compuesta) |
+| Transiciones | `change_request_status` con compare-and-set, **un paso por llamada**, según `private.request_transitions`. Personal del municipio (o el asignado) salvo `resolved → archived`, que requiere `municipal_admin`. `in_progress` exige responsable; `resolved` exige nota; `rejected` exige motivo |
+| Protección del estado | El estado no se puede actualizar directamente: los usuarios no tienen permiso de `UPDATE` sobre la tabla, y la única vía es la RPC. Un ciudadano no mueve su propio reporte, y nadie salta de `pending` a `resolved` |
+| Asignar | `assign_request`: el responsable debe ser personal del municipio de la consulta |
+| Visibilidad | `set_request_public`: solo el personal hace pública una consulta, y el mapa la muestra sin autor |
+| Votar prioridades | `toggle_request_vote`: un voto por persona (PK `(request_id, user_id)`), solo en consultas públicas en `approved` o `in_progress`, nunca en la propia, 30 por hora. `support_count` lo mantiene un trigger. El panel ordena la bandeja por apoyos |
+| Archivo automático | `pg_cron` diario: `resolved` → `archived` a los 30 días |
+| Seguimiento | `my_activity()` devuelve los reportes de tránsito, las consultas y los votos del usuario con su estado. El estado de negocios y propuestas llega por notificación (`content_status`). Cada cambio de estado notifica al autor (§9.5) |
+| Tiempo de resolución | Se calcula desde `request_status_history` |
+
+### 9.3 Negocios (F2)
+
+```text
+pending → under_review → approved ⇄ suspended → archived
+   │            │                        (approved → archived)
+   └────────────┴──→ rejected → archived
+```
+
+| Aspecto | Diseño |
+|---|---|
+| Alta | `submit_business`: idempotente, 3 por día. Pin, categoría y contacto (teléfono, WhatsApp, email y web validados por `CHECK`). Entra como `pending`. El estado `draft` existe en el esquema para un futuro guardado de borradores en el servidor |
+| Revisión | `review_content('business', …)` con compare-and-set. El solicitante queda como `owner` en `business_members` desde el alta; al aprobarse el negocio recibe el rol `entrepreneur`. `rejected` y `suspended` exigen motivo |
+| Suspensión o archivo | El negocio sale del mapa y **sus promociones activas pasan a `paused`** |
+| Edición | `update_business`: lista blanca de campos (incluido `google_place_id`), `p_version` y 30 por hora. Miembros del negocio o personal del municipio |
+| Horario | `set_business_hours`: reemplaza el horario completo, validado |
+| Promociones | `create_promotion`: informativas (texto y vigencia de hasta 90 días), sin stock, códigos ni canje. Entran como `pending` y se moderan: `pending → active / rejected`, `active ⇄ paused` |
+| Fotos | Hasta 10 por negocio (§10.5) |
+| Estadísticas del comercio | `track_engagement(entidad, id, métrica)` suma vistas, clics en "Cómo llegar" y clics en WhatsApp por día en `engagement_daily`. Nunca se guarda una fila por evento ni se identifica al visitante. El comercio ve las de su negocio. No tiene límite por usuario porque la llaman visitantes anónimos: las cifras son orientativas, y el cliente cuenta como máximo una vista por ficha y sesión |
+| Google | Solo los negocios **registrados y aprobados** aparecen en la capa de negocios. Un lugar de Google sin registro solo aparece como resultado de búsqueda de dirección |
+
+### 9.4 Turismo y rutas (F1 y F3)
+
+| Aspecto | Diseño |
+|---|---|
+| Lugares | Tipo (mirador, río/balneario, cultural, histórico, agroturismo, naturaleza, otro), servicios (`jsonb` validado), accesibilidad, información de horario |
+| Rutas | `MultiLineString` con tipo (ecológica, cultural, aventura), dificultad (baja, media, alta), duración, servicios, y distancia calculada por la base |
+| Proponer | `propose_place` / `propose_route`, 5 por día. Un ciudadano propone (`pending`, `proposed_by`); si lo hace el personal, se publica directamente. La ruta llega como GeoJSON: dibujada en el mapa o convertida desde un GPX en el cliente. Se valida geometría, pertenencia a la provincia y entre 2 y 5 000 vértices |
+| Revisar | `review_content('place' / 'route', …)`: `pending → published / rejected`, `published → archived`. El autor recibe una notificación |
+| Editar | `update_place` / `update_route`: lista blanca, `p_version` y 30 por hora. Puede editar el personal del municipio, o el autor mientras la propuesta siga `pending`. Solo el personal cambia la geometría de una ruta |
+| Cómo llegar | Enlace de Google Maps al `start_point` de la ruta o al punto del lugar |
+| Fotos | Hasta 10 por lugar o ruta (§10.5) |
+| Métricas | Vistas y clics en "Cómo llegar" con `track_engagement` |
+| **[Fase 2]** | Descarga GPX, perfil de elevación, inglés |
+
+### 9.5 Notificaciones
+
+**Web Push + VAPID, sin Firebase (ADR-013).** `notifications` es la fuente de verdad: centro in-app con `read_at`. Push es un canal de entrega.
+
+| Tema (`kind`) | Cuándo | Destinatario |
+|---|---|---|
+| `request_status` | Cambia el estado de una consulta | Autor |
+| `traffic_status` | Se modera un reporte de tránsito | Autor |
+| `content_status` | Se revisa un negocio, lugar, ruta, promoción o foto | Autor o dueño |
+| `traffic_nearby` | Un reporte de gravedad ≥ 2 pasa a `active` o `verified` | Vecinos del municipio (ver abajo) |
+| `system` | Avisos de operación | Según el caso |
+
+- **Entrega:**
+  - `private.notify()` inserta la notificación y, si el usuario activó push, encola un job `push`.
+  - El worker envía con `web-push` y marca `sent` o `failed`, con reintentos.
+  - Una suscripción que responde 404 o 410 se elimina.
+- **Alertas sobre el mapa** ("recibe notificaciones sobre el mapa"):
+  - Por municipio, no por ubicación en vivo.
+  - El trigger `traffic_reports_alert` encola **una sola** alerta `fanout_alert` por reporte.
+  - `worker_run_fanout_alert` notifica a quienes tienen ese municipio como municipio de residencia y no han configurado preferencias (el tema viene activado por defecto), y a quienes tienen el tema `traffic_nearby` con ese municipio en su lista.
+  - Excluye al autor. Solo reciben push quienes lo activaron.
+- **Preferencias:** `notification_preferences` (temas, municipios de interés, push, email).
+- **Canales:** `modules/notifications/channels/` con `in_app` y `push` en el MVP. El canal `email` para notificaciones llega en **[Fase 2]**: el job existe en el contrato de la cola, pero todavía ningún productor lo usa. En el MVP, el email se limita a lo que envía Supabase Auth (OTP, recuperación) por el SMTP propio.
+- **iOS sin PWA instalada:** solo notificaciones in-app hasta que llegue el canal email.
+
+### 9.6 KPIs e informe semanal (F6)
+
+- **Una sola fuente de KPIs: `kpi_summary(desde, hasta, municipio)`.** Cubre:
+  - tránsito por tipo;
+  - consultas recibidas, resueltas, rechazadas y abiertas;
+  - tiempo medio de resolución y consultas más apoyadas;
+  - negocios, turismo y usuarios nuevos;
+  - vistas.
+
+  El panel la llama en vivo, y el PDF se genera desde snapshots de esa misma función. Una prueba verifica que el snapshot sea igual a `kpi_summary` para el mismo periodo, así que "dashboard = 72 / PDF = 69" es imposible por construcción.
+- **Acceso:** `municipal_admin` de su municipio, o provincial para toda la provincia. Los moderadores no ven KPIs.
+
+```text
+Vercel Cron DIARIO 10:00 UTC (06:00 America/Santo_Domingo)
+  → GET /api/v1/cron/weekly-report   (Authorization: Bearer CRON_SECRET)
+  → weekly_report_begin(periodo = semana anterior, lunes a domingo)
+       · ya 'succeeded' → termina (así pasa 6 de cada 7 días)
+       · 'running' con más de 15 min o 'failed' con < 5 intentos → toma atómica, attempts + 1
+       · guarda weekly_kpi_snapshots (provincia + cada municipio) desde kpi_summary
+  → @react-pdf/renderer (runtime Node) → reports-pdf/{provincia}/{año}/semana-{nn}/v{n}.pdf
+  → weekly_report_finish(ok, storage_path) → notifica a los administradores
+```
+
+- **Idempotencia:** `UNIQUE (province_id, period_start, version)`. Vercel y el respaldo de GitHub Actions pueden dispararlo dos veces sin duplicar.
+- **Regenerar:** solo el **administrador provincial**, con `weekly_report_begin(periodo, p_manual => true)`. Crea `version = máx + 1` con snapshots nuevos; nunca sobrescribe.
+- **Descarga:** URL firmada de 5 minutos para administradores.
+- **Contenido del PDF:**
+  - portada y resumen;
+  - KPIs por municipio;
+  - tránsito por tipo y gravedad;
+  - consultas y tiempos de resolución, con las más apoyadas;
+  - negocios y turismo.
+- **Zona horaria:** todos los periodos se calculan en `America/Santo_Domingo` (UTC−4, sin horario de verano) y se guardan como `timestamptz`.
+- **Plan Hobby de Vercel:** el cron solo corre una vez al día. Por eso el diseño es un chequeo diario que genera el informe si falta; todo lo más frecuente vive en `pg_cron`.
+
+### 9.7 Panel municipal y panel del comercio
+
+**Panel municipal** (`/admin`): Server Components, con filtros en la URL. La bandeja se actualiza por **sondeo cada 30 s**, no por Realtime (ADR-012).
+
+| Sección | Contenido | Fase |
+|---|---|---|
+| Resumen | `kpi_summary` del periodo; alertas (tránsito de gravedad 3 abierto, consultas antiguas) | MVP |
+| Bandejas | Tránsito, consultas e incidencias: detalle, cambio de estado, asignación, escalado, historial | MVP |
+| Validaciones | Cola única de negocios, lugares, rutas, promociones y fotos (`review_content`) | MVP |
+| Turismo y rutas | Alta y edición (`propose_*` publica directo si lo hace el personal; `update_place`, `update_route`) | MVP |
+| Usuarios y roles | `assign_role`, `revoke_role`, según la matriz de §10.2 | MVP |
+| Auditoría | Consulta de `audit_logs` por alcance | MVP |
+| Informes | Historial de `report_runs`, descarga; regenerar (solo provincial) | MVP |
+| Sistema | Estado de la cola (`worker_queue_health`), catálogos, feature flags, reintento de jobs `dead` | Fase 2 |
+| Suspensión de usuarios | Bloqueo de cuentas abusivas | Fase 2 |
+
+**Panel del comercio** (`/negocio`): datos, horario, fotos, promociones y estadísticas propias.
+
+---
+
+## 10. Seguridad y privacidad
+
+### 10.1 Autenticación
+
+- **Registro e inicio de sesión:**
+  - métodos: email con contraseña u OTP/magic link; Google OAuth opcional;
+  - Turnstile con la integración nativa de Supabase Auth: se valida en el servidor de Auth y no se puede saltar;
+  - al registrarse, el trigger `on_auth_user_created` crea el perfil y el rol `citizen`. Si falla, el registro falla.
+- **Sesión:**
+  - `@supabase/ssr` con cookies `Secure` y `SameSite=Lax`;
+  - no son `httpOnly`, porque el cliente de Supabase las lee; se compensa con una CSP estricta (§10.7);
+  - en el servidor se autoriza con `getUser()` (o `getClaims()` verificado, §20), nunca con `getSession()` a secas;
+  - `proxy.ts` solo refresca la sesión y hace redirecciones gruesas. **No es autorización.**
+- **Anti-enumeración:** respuestas genéricas en login y recuperación; límites de Supabase Auth configurados; redirecciones post-login solo a rutas internas.
+- **2FA (TOTP) obligatorio para `municipal_admin`:** **[Fase 2]**, con verificación `aal2` en las RPC administrativas.
+
+### 10.2 Roles y permisos
+
+Cinco roles:
+- `visitor` (sin sesión);
+- `citizen`;
+- `entrepreneur` (se obtiene al aprobarse un negocio, nunca lo pide el usuario);
+- `moderator`;
+- `municipal_admin` (con alcance de municipio, o provincial si `municipality_id` es `NULL`).
+
+**No hay `super_admin` (ADR-020).** El primer administrador provincial se crea con [`supabase/ops/grant_provincial_admin.sql`](supabase/ops/grant_provincial_admin.sql), ejecutado por la organización con `service_role` y auditado.
+
+| Capacidad | visitor | citizen | entrepreneur | moderator | admin municipal | admin provincial |
+|---|---|---|---|---|---|---|
+| Ver mapa, turismo, rutas y negocios aprobados | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Reportar tránsito, crear consultas, votar, proponer lugares y rutas, registrar un negocio | — | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Ver su actividad y sus notificaciones | — | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Editar su negocio, horario, fotos y promociones | — | — | ✓ (los suyos) | — | — | — |
+| Moderar tránsito, consultas, negocios, lugares, rutas, promociones y fotos | — | — | — | su municipio | su municipio | toda la provincia |
+| Ver tránsito fuera de la provincia (`out_of_area`) | — | — | — | — | — | ✓ |
+| Archivar consultas resueltas | — | — | — | — | su municipio | ✓ |
+| Ver KPIs y descargar el PDF | — | — | — | — | su municipio | ✓ |
+| Regenerar el PDF | — | — | — | — | — | ✓ |
+| Asignar o revocar `moderator` | — | — | — | — | su municipio | ✓ |
+| Asignar o revocar `municipal_admin` de un municipio | — | — | — | — | — | ✓ |
+| Crear otro administrador provincial | — | — | — | — | — | Solo por script de operación |
+| Ver auditoría | — | — | — | — | su municipio | ✓ |
+
+Implementación en SQL:
+- helpers `private.user_has_role`, `is_staff(municipio)`, `is_admin(municipio)`, `is_provincial_admin()` e `is_any_staff()`;
+- `user_roles` no tiene políticas de escritura; solo cambia por `assign_role` y `revoke_role`, con rate limit y auditoría.
+
+### 10.3 La base de datos como barrera (ADR-018)
+
+- **Llamadas directas.** La anon key es pública, y cualquier usuario puede llamar tablas y RPC sin pasar por Next.js. Por eso:
+  - ninguna tabla crítica admite escritura directa;
+  - cada RPC valida identidad, rol, alcance y entradas;
+  - el captcha vive en Supabase Auth.
+- **Permisos por defecto:**
+  - `EXECUTE` se revoca de `PUBLIC` con la forma global de `ALTER DEFAULT PRIVILEGES`, y cada función recibe su grant explícito;
+  - las políticas usan `(select auth.uid())`;
+  - las comprobaciones que tocan columnas ocultas se hacen en helpers `SECURITY DEFINER` (`private.can_read_request`).
+- **`SUPABASE_SERVICE_ROLE_KEY`:**
+  - solo en el servidor, en `lib/supabase/admin.ts` con `import 'server-only'`;
+  - la usan solo el worker y el cron, nunca un request de usuario.
+- **Pruebas de ataque directo:** llaman las RPC con JWT de cada rol, saltando Next.js (§14.1).
+
+### 10.4 Superficie expuesta
+
+| Rol | Puede ejecutar |
+|---|---|
+| `anon` | `map_features`, `map_aggregates`, `search_all`, `track_engagement` + lectura de tablas públicas por RLS |
+| `authenticated` | Lo anterior + las RPC de ciudadano, comercio y personal (cada una verifica el rol real) + `kpi_summary` y `weekly_report_begin` (solo administradores) |
+| `service_role` | `worker_claim_jobs`, `worker_finish_job`, `worker_attachment_processed`, `worker_attachment_published`, `worker_run_fanout_alert`, `worker_queue_health`, `weekly_report_finish` |
+
+La lista completa por función está en DATABASE.md §6.
+
+### 10.5 Fotos y archivos
+
+```text
+1. Cliente  → POST /api/v1/uploads/sign                  (sesión válida)
+              Next genera la ruta incoming/{uid}/{uuid}.{jpg|png|webp} y una URL de subida firmada
+2. Cliente  → PUT a Storage (bucket privado report-evidence)
+              Política de Storage: solo en incoming/{auth.uid()}/ y máximo 20 subidas por hora
+3. Cliente  → POST /api/v1/attachments → register_attachment(entidad, id, ruta)
+              Valida: ruta exacta del usuario, objeto existente, MIME (JPEG/PNG/WebP) y tamaño (≤ 5 MB),
+              propiedad de la entidad, máximo 3 fotos por reporte o consulta y 10 por negocio, lugar o ruta,
+              30 registros por hora → attachments 'pending' + job image_process
+4. Worker   → verifica magic bytes, limita a 4096 px por lado y 40 MP, quita EXIF, re-codifica a WebP,
+              guarda processed/{attachment_id}.webp → worker_attachment_processed → 'processed'
+              (o 'rejected'); siempre encola el borrado del original
+5. Personal → review_content('attachment', …): processed → approved / rejected
+              Las fotos de negocios, lugares y rutas aprobadas → job publish_media → copia a
+              public-media → worker_attachment_published. La evidencia de tránsito y consultas
+              nunca se publica: queda privada, con URL firmada para el autor y el personal
+```
+
+- El nombre final lo genera el servidor. El nombre que envía el cliente nunca llega a una ruta.
+- **Limpieza de subidas abandonadas.** La retención diaria borra dos casos:
+  - adjuntos `pending` con más de 24 h;
+  - objetos en `incoming/` que nadie registró en 24 h.
+- **Descargas privadas:** `createSignedUrl` de 5 minutos, tras verificar el permiso.
+
+### 10.6 Límites de uso (rate limits)
+
+Ventana fija por usuario y acción. Las reglas están en `private.rate_limit_rules`; los contadores, en `private.rate_limit_hits`. Los intentos rechazados también cuentan (principio 3).
+
+| Acción | Límite |
+|---|---|
+| `traffic_report_create` | 5 por hora |
+| `request_create` | 5 por hora |
+| `request_vote` | 30 por hora |
+| `business_submit` | 3 por día |
+| `business_update` (incluye horario y promociones) | 30 por hora |
+| `proposal_create` (lugares y rutas) | 5 por día |
+| `content_update` (`update_place`, `update_route`) | 30 por hora |
+| `attachment_register` | 30 por hora |
+| `staff_action` (moderación y gestión) | 300 por hora |
+| `role_change` | 30 por hora |
+| Subidas a Storage (política de Storage) | 20 por hora |
+
+**[Fase 2]:** límites más bajos para cuentas con reputación negativa, y Vercel Firewall.
+
+### 10.7 Cabeceras y red
+
+- **CSP estricta con nonce:**
+  - permite los dominios de Google Maps, Supabase y Sentry;
+  - sin `unsafe-inline` en scripts;
+  - `frame-ancestors 'none'`.
+- **Resto de cabeceras:**
+  - `X-Frame-Options: DENY`;
+  - HSTS;
+  - `X-Content-Type-Options: nosniff`;
+  - `Referrer-Policy: strict-origin-when-cross-origin`;
+  - `Permissions-Policy: geolocation=(self), camera=(self), microphone=(), payment=()`.
+- **CORS:** solo mismo origen, salvo `GET /api/v1/map/*`, que es público y sin credenciales.
+
+### 10.8 Secretos
+
+- **Variables de Vercel** por entorno, validadas al arrancar con Zod (`config/env.ts`):
+  - `.env.example` sin valores en el repo;
+  - secret scanning de GitHub activado.
+- **Secretos que Postgres necesita en claro:** el URL y el secreto del worker van en **Vault** (`worker_url`, `jobs_secret`), cargados por un script de despliegue.
+- **Clave de Google:** restringida por referrer y por API (§7.3).
+
+### 10.9 Auditoría
+
+- **Quién escribe:** `private.audit()`, llamado desde las RPC y triggers. La tabla es inmutable para todos; solo la retención borra.
+- **Qué se audita:**
+  - cambios de rol;
+  - moderación y cambios de estado;
+  - escalados;
+  - generación y regeneración del informe;
+  - bajas de cuenta.
+- **Qué guarda cada registro:**
+  - actor y su rol;
+  - acción, entidad y resultado (`success`, `denied`, `error`);
+  - municipio;
+  - `before`/`after` con los campos relevantes, nunca la fila completa.
+- **IPs.** Dos columnas, ninguna probatoria:
+  - `ip_observed`: la IP con la que Supabase vio la llamada;
+  - `ip_declared`: la que envía Next.js, solo informativa.
+- **Lectura:** el administrador ve su alcance.
+
+### 10.10 Privacidad (Ley 172-13, a validar con asesoría legal)
+
+| Principio | Aplicación |
+|---|---|
+| Consentimiento | Permiso de ubicación pedido en contexto, al tocar "Reportar aquí", con explicación. Términos y privacidad al registrarse. Registro solo para mayores de edad (casilla) |
+| Minimización | Solo la ubicación puntual de una acción, nunca trayectorias. Teléfono no obligatorio |
+| Anonimización | El mapa público nunca muestra autores. Las fotos van sin EXIF. Los KPIs son agregados |
+| Retención (`pg_cron` diario, 04:30 UTC) | Autor de reportes de tránsito → `NULL` a los 12 meses · auditoría: 2 años · notificaciones leídas: 180 días · contadores de rate limit: 2 días · jobs `done`/`dead`: 14 días · subidas abandonadas: 24 h |
+| Baja de cuenta | Borrar el usuario de `auth.users` (§10.11) |
+| Descargar mis datos | **[Fase 2]** |
+
+### 10.11 Baja de cuenta
+
+El trigger `profiles_before_delete`:
+1. **Bloquea** la baja (`transfer_ownership_first`) si el usuario es el único `owner` de un negocio que no está rechazado ni archivado.
+2. Encola el borrado de sus evidencias privadas en Storage y las marca como `rejected`.
+3. Audita `account.delete`.
+
+Después, las FK borran en cascada perfil, roles, membresías, preferencias, suscripciones y notificaciones. Reportes, consultas, historial y auditoría quedan con el autor en `NULL`, así las estadísticas no se rompen.
+
+---
+
+## 11. Tiempo real, trabajos asíncronos y tareas programadas
+
+### 11.1 Tiempo real (ADR-012)
+
+| Necesidad | Mecanismo |
+|---|---|
+| Alertas de tránsito en vivo en el mapa | **Realtime Broadcast** en el canal público `traffic:{province_id}`. El trigger `traffic_reports_broadcast` emite `{id, type, severity, lat, lng, status}`, sin autor ni fotos, cuando un reporte pasa a `active`, `verified`, `resolved`, `expired` o `rejected`. Un fallo del broadcast nunca revierte el reporte. Si el canal cae, el mapa vuelve a pedir `map_features` cada 60 s |
+| Bandeja del panel municipal | **Sondeo cada 30 s**. No se usa Postgres Changes: evita una publicación de tablas con datos personales y la complejidad de RLS en Realtime |
+| Estado de mi consulta | Notificación in-app + push |
+| Alertas a vecinos | Notificación in-app + push (§9.5) |
+
+Nada más usa tiempo real.
+
+### 11.2 Cola de trabajos (ADR-016)
+
+- **Tabla:** `private.jobs` con `kind`, `payload`, `dedupe_key`, `run_at`, `attempts`, `max_attempts`, `status` y `locked_until`.
+- **Productores:** insertan con `private.enqueue()` dentro de su transacción. `dedupe_key` es único mientras el job está activo.
+- **Consumidor:** `POST /api/v1/internal/jobs/run` (protegido con `JOBS_SECRET`).
+  - Lo despierta `pg_cron` cada minuto por `pg_net`.
+  - Toma lotes con `worker_claim_jobs` (`FOR UPDATE SKIP LOCKED`, recuperando locks vencidos).
+  - Cierra cada job con `worker_finish_job`: `done`, o reintento con espera de 30 s × 2^(intentos − 1), o `dead` al agotar los intentos.
+
+| `kind` | Productor | Qué hace el worker |
+|---|---|---|
+| `push` | `private.notify()` | Envía Web Push |
+| `notify_moderators` | Creación de reportes de tránsito, consultas, negocios, promociones y propuestas | Avisa al personal del municipio |
+| `image_process` | `register_attachment` | Procesa la foto (§10.5) |
+| `publish_media` | Aprobación de una foto pública | Copia a `public-media` |
+| `fanout_alert` | Trigger `traffic_reports_alert` | Llama `worker_run_fanout_alert` y después envía los push |
+| `delete_storage_object` | Procesamiento, retención, baja de cuenta | Borra el objeto de Storage |
+| `email` | — (reservado) | **[Fase 2]**: canal email de notificaciones |
+| `pdf_weekly` | — (reservado) | **[Fase 2]**: mover la generación del PDF a la cola si crece |
+
+**Salud:** `worker_queue_health()` devuelve los pendientes, el más antiguo, los fallidos y los `dead`. `/api/v1/health` falla si el pendiente más antiguo tiene más de 10 minutos.
+
+### 11.3 Tareas programadas
+
+| Tarea | Frecuencia | Dónde |
+|---|---|---|
+| Despertar al worker | Cada minuto | `pg_cron` → `private.wake_worker()` → `pg_net` |
+| Marcar tránsito vencido | Cada 15 minutos | `pg_cron` → `private.expire_traffic_reports()` |
+| Archivar consultas resueltas (30 días) | Diaria, 04:15 UTC | `pg_cron` → `private.archive_resolved_requests()` |
+| Retención y limpieza (§10.10) | Diaria, 04:30 UTC | `pg_cron` → `private.apply_retention()` |
+| Informe semanal | Diaria, 10:00 UTC (genera solo si falta) | Vercel Cron → `/api/v1/cron/weekly-report`. Respaldo: GitHub Actions `schedule` |
+| Copia de seguridad | Diaria | GitHub Action con `pg_dump` (§13.5) |
+
+---
+
+## 12. API
+
+### 12.1 Convenciones
+
+- **Rutas:** `/api/v1`, JSON. Las capas de mapa se devuelven en GeoJSON.
+- **Errores:** los de protocolo, autenticación o servidor responden `{ error: { code, message } }`. Los rechazos de negocio responden según §8.3 con `{ status: 'rejected', reason }`.
+- **Idempotencia:** los `POST` que crean reportes, consultas o negocios aceptan la cabecera `Idempotency-Key`.
+- **Listados:** paginación por cursor.
+- **Compatibilidad:** en `/v1` solo se hacen cambios aditivos. Un cambio incompatible crea `/v2` en paralelo, que convive hasta que la versión mínima de la PWA (cabecera `X-App-Version`) lo permita.
+- **Caché, tres clases que nunca se mezclan en un endpoint:**
+
+| Clase | Ejemplos | Caché |
+|---|---|---|
+| Catálogos públicos estables | Capas estáticas, categorías, fichas públicas | `use cache` + `revalidateTag`; CDN larga |
+| Capas públicas volátiles | `map/features`, `map/aggregates` | `public, s-maxage=30`; se ejecutan como `anon` e ignoran cookies |
+| Datos de usuario o de rol | `me/*`, panel | `private, no-store` |
+
+### 12.2 Endpoints HTTP
+
+Los consumen la PWA, la cola offline y los cron.
+
+| Endpoint | Rol | Implementación |
+|---|---|---|
+| `GET /api/v1/map/features?bbox&layers` | anon | RPC `map_features` |
+| `GET /api/v1/map/aggregates` | anon | RPC `map_aggregates` |
+| `GET /api/v1/map/static-layers` | anon | Tablas por RLS: `municipalities.geom_simplified` + rutas publicadas simplificadas |
+| `GET /api/v1/search?q=` | anon | RPC `search_all` |
+| `GET /api/v1/businesses`, `/tourism`, `/routes` y sus fichas `/:slug` | anon | Tablas por RLS (también como Server Components SSR) |
+| `POST /api/v1/engagement` | anon | RPC `track_engagement` |
+| `POST /api/v1/reports` | citizen | RPC `create_traffic_report` (idempotente, cola offline) |
+| `POST /api/v1/requests` | citizen | RPC `create_citizen_request` (idempotente) |
+| `POST /api/v1/requests/:id/vote` | citizen | RPC `toggle_request_vote` |
+| `POST /api/v1/businesses` | citizen | RPC `submit_business` (idempotente) |
+| `POST /api/v1/proposals/places` | citizen | RPC `propose_place` |
+| `POST /api/v1/proposals/routes` | citizen | RPC `propose_route` (GeoJSON; el GPX se convierte en el cliente) |
+| `POST /api/v1/uploads/sign` | citizen | Storage: URL de subida firmada en `incoming/{uid}/` |
+| `POST /api/v1/attachments` | citizen | RPC `register_attachment` |
+| `GET /api/v1/me/activity` | citizen | RPC `my_activity` |
+| `GET /api/v1/me/notifications`, `PATCH …/:id` (leída) | citizen | Tabla `notifications` por RLS (solo `read_at` es editable) |
+| `GET`, `PUT /api/v1/me/notification-preferences` | citizen | Tabla `notification_preferences` por RLS |
+| `POST`, `DELETE /api/v1/push/subscriptions` | citizen | Tabla `push_subscriptions` por RLS |
+| `POST /api/v1/internal/jobs/run` | `JOBS_SECRET` | `worker_claim_jobs`, `worker_finish_job`, `worker_attachment_processed`, `worker_attachment_published`, `worker_run_fanout_alert` (con `service_role`) |
+| `GET /api/v1/cron/weekly-report` | `CRON_SECRET` | `weekly_report_begin`, `kpi_summary`, `weekly_report_finish` (con `service_role`) |
+| `GET /api/v1/health` | público | Ping a la base + `worker_queue_health` (sin detalles al público) |
+| Autocomplete de direcciones | — | Directo del cliente a Google con clave restringida; no pasa por nuestro servidor |
+
+### 12.3 Operaciones de los paneles (Server Actions)
+
+No son endpoints públicos. Si algún día se necesitan desde fuera, se agrega un Route Handler sobre la misma RPC.
+
+| Operación | RPC |
+|---|---|
+| Moderar un reporte de tránsito | `moderate_traffic_report` |
+| Escalar tránsito a incidencia | `escalate_traffic_report` |
+| Cambiar estado de una consulta | `change_request_status` |
+| Asignar responsable | `assign_request` |
+| Publicar o despublicar una consulta | `set_request_public` |
+| Revisar negocio, lugar, ruta, promoción o foto | `review_content` |
+| Editar negocio / horario / promoción | `update_business` / `set_business_hours` / `create_promotion` |
+| Editar lugar o ruta | `update_place` / `update_route` |
+| Alta de lugar o ruta por el personal | `propose_place` / `propose_route` (se publican directamente) |
+| Asignar o revocar roles | `assign_role` / `revoke_role` |
+| KPIs del panel | `kpi_summary` |
+| Regenerar el informe (provincial) | `weekly_report_begin(periodo, true)` + generación del PDF |
+
+**Cobertura:** las 34 funciones de `public` quedan asignadas a un endpoint o a una Server Action. Ninguna queda sin consumidor.
+
+---
+
+## 13. Operación
+
+### 13.1 Entornos
+
+| Entorno | Next.js | Supabase | Google | Datos |
+|---|---|---|---|---|
+| Desarrollo | `next dev` | Supabase CLI local | Proyecto dev, clave para localhost | `seed.sql` + datos abiertos |
+| CI | `next start` en el runner | Supabase CLI local con las migraciones del PR | Adaptador `MAP_PROVIDER=mock` | Semilla de pruebas |
+| Preview | Vercel Preview por PR | MVP: proyecto `staging` compartido · Fase 2: Supabase Branching | Clave dev con referrer `*.vercel.app` | Semilla de demo |
+| Producción | Vercel Production con dominio propio | Proyecto `production` | Proyecto prod | Reales |
+
+- **Auth en previews:** se agrega `https://*-<equipo>.vercel.app/**` a las Redirect URLs del proyecto `staging`.
+
+### 13.2 Cuentas y planes
+
+| Fase | Supabase | Vercel |
+|---|---|---|
+| Reto y demo | Organización Free de la organización: `staging` + `production` | Hobby en una cuenta creada con **email de la organización**; despliega la Action |
+| Producción municipal | La organización pasa a Pro (cada proyecto paga su cómputo) | Team Pro de la organización; el proyecto se transfiere |
+
+Ninguna cuenta (Google Cloud, Supabase, Vercel, Sentry, SMTP, dominio) puede ser personal de un integrante.
+
+### 13.3 CI/CD (ADR-019)
+
+```text
+feat/* → Pull Request
+  ├─ lint + formato + reglas de fronteras de módulos
+  ├─ typecheck + tipos de la base regenerados sin diferencias
+  ├─ pruebas de base de datos (supabase/tests: PGlite, sin Docker)
+  ├─ unitarias (Vitest)
+  ├─ build
+  ├─ E2E (Playwright) contra next start + Supabase local con las migraciones del PR
+  └─ Vercel Preview
+
+merge a main (squash) → Action "release" (entorno production con aprobación manual):
+  1. supabase db push           (migraciones compatibles con el código anterior)
+  2. vercel deploy --prod       (el código sale SOLO después de migrar)
+  3. prueba de humo contra /api/v1/health
+El auto-deploy de producción de Vercel desde main está desactivado; los previews siguen automáticos.
+```
+
+- **Flujo de trabajo:** trunk-based. `main` protegida; ramas cortas `feat/`, `fix/`, `chore/`; Conventional Commits; etiquetas `v0.x` hasta producción.
+
+### 13.4 Migraciones
+
+- Solo hacia adelante.
+- Siempre compatibles con el código anterior: expandir → migrar datos → contraer.
+- Una responsabilidad por archivo.
+- Toda tabla nueva nace con RLS, grants explícitos y su fila en la matriz de DATABASE.md §7.
+- Toda función nueva lleva `search_path` fijo y `grant execute` explícito.
+- Nunca se hacen cambios manuales en el dashboard de producción.
+
+### 13.5 Copias de seguridad y recuperación
+
+- **Plan Free:** no tiene backups. Desde el primer dato real, `pg_dump` diario por GitHub Action a almacenamiento de la organización, por el pooler de Supabase en modo sesión (§20).
+- **Plan Pro:** se suman los backups diarios de Supabase.
+- **Restauración:** se prueba una vez por trimestre.
+- **Rollback:** Instant Rollback de Vercel. Para cambios de esquema riesgosos, un script de reversa documentado.
+
+### 13.6 Observabilidad
+
+| Necesidad | Herramienta |
+|---|---|
+| Errores (cliente, servidor, cron) | Sentry, con PII eliminada |
+| Logs | Vercel Logs (JSON con `request_id`) |
+| Base de datos | Supabase: rendimiento de consultas y advisors de seguridad y rendimiento (revisión semanal) |
+| Cola | `worker_queue_health`, alerta de Sentry cuando un job pasa a `dead`, `/api/v1/health` |
+| Informe semanal | `report_runs` + alerta de Sentry si falla |
+| Google | Consola de Google Cloud: métricas por SKU, cuotas y presupuesto |
+| Uptime | Monitor externo gratuito sobre `/api/v1/health`. También detecta la pausa de Supabase Free antes de la demo |
+| Rendimiento real | Vercel Speed Insights |
+
+### 13.7 Costos (consultados el 23/09/2026; verificar antes de presupuestar, §20)
+
+| Servicio | Modelo | Impacto |
+|---|---|---|
+| Google Maps Platform | Desde marzo de 2025, cuota gratuita mensual por SKU (Dynamic Maps: 10 000 cargas) | Dentro de la cuota si no se recarga el mapa y se usan field masks |
+| Supabase | Free: 500 MB, pausa tras 7 días sin actividad, sin backups. Pro: desde US$25/mes por organización + cómputo por proyecto | Free para demo; Pro para producción |
+| Vercel | Hobby: gratis, uso no comercial, cron diario. Pro: US$20 por miembro al mes | Hobby para demo; Team Pro para producción |
+| Email, Web Push | Niveles gratuitos / sin costo | — |
+| Sentry | Gratuito para 1 usuario | — |
+
+**Orden de magnitud en Fase 2:** unos US$55–75 al mes (Supabase Pro + cómputo de `staging` + Vercel Pro), más Google según el uso. El costo real es el mantenimiento humano.
+
+**Controles:**
+- cuotas diarias en Google y alertas de presupuesto;
+- spend cap de Supabase;
+- alertas de uso de Vercel;
+- fotos comprimidas en el cliente.
+
+### 13.8 Demo del reto
+
+- Deployment etiquetado y congelado.
+- Actividad en Supabase la semana previa (evitar la pausa).
+- Semilla de datos reales de la provincia.
+- Video de respaldo.
+- Guion de 25 minutos que muestre las 6 funcionalidades, la alerta en vivo y la generación del PDF.
+
+---
+
+## 14. Calidad: pruebas y rendimiento
+
+### 14.1 Pruebas de base de datos ✅
+
+```bash
+cd supabase/tests && npm install && npm test
+```
+
+- **Motor:** PGlite (PostgreSQL 18.3 + PostGIS 3.6.2 en WebAssembly), sin Docker.
+- **Stubs de Supabase** (`supabase-stubs.sql`): `auth.uid()` desde los claims del JWT, `storage.objects`, `realtime.send`, Vault y los roles `anon`, `authenticated` y `service_role`.
+- **Resultado:** **107 pruebas en 13 secciones (A–M), todas pasan.**
+
+| Qué cubren |
+|---|
+| Grants y superficie expuesta (qué ejecuta cada rol, sin funciones abiertas a `PUBLIC`) |
+| RLS por rol y columnas ocultas |
+| Ataques directos a las RPC con entradas inválidas y con roles sin permiso |
+| Transiciones de estado, compare-and-set y bloqueo optimista |
+| Idempotencia y rate limit con rechazos |
+| PostGIS: pertenencia, fuera de área, rutas, viewport |
+| Negocios, horarios, promociones, fotos, propuestas y edición |
+| Alertas por municipio y broadcast |
+| KPIs: snapshot igual a `kpi_summary` |
+| Cola, retención, expiración y baja de cuenta |
+
+**No verificable fuera de Supabase:** §20.
+
+### 14.2 Pruebas de la aplicación ⏳
+
+| Nivel | Herramienta | Qué cubre |
+|---|---|---|
+| Unitarias | Vitest | Esquemas Zod, periodos y zona horaria, rejilla de bbox, mapeo de `reason` a HTTP, datos del PDF |
+| E2E | Playwright | Registro e inicio de sesión; reporte con foto y geolocalización simulada dentro y fuera de la provincia; consulta hasta resuelta; voto; alta y aprobación de negocio; propuesta de ruta; panel y PDF; modo offline con cola; axe en las pantallas principales |
+| PDF | Vitest | Se genera y tiene las secciones esperadas |
+| Manual | Dispositivos reales | Android de gama media, iPhone con la PWA instalada, tablet; prueba con 5 vecinos |
+
+En E2E, Google usa el adaptador `mock`, y los canales push y email usan modo `mock`.
+
+### 14.3 Prototipo de diseño
+
+- **Qué es:** `project/Main.dc.html`, navegable sin instalación. Un smoke test automatizado de 39 comprobaciones pasa.
+- **Qué no representa del producto final** (limitaciones intencionales):
+  - datos en memoria y sin login;
+  - mapa de Esri;
+  - "Generar PDF" simulado;
+  - sin línea de tiempo de estados para los reportes de tránsito;
+  - sin flujos de consultas `inquiry` ni de propuestas de lugares y rutas.
+
+### 14.4 Objetivos de rendimiento
+
+| Métrica | Móvil de gama media (4G) | Escritorio |
+|---|---|---|
+| LCP (páginas públicas) | < 2.5 s | < 1.5 s |
+| INP | < 200 ms | < 100 ms |
+| CLS | < 0.1 | < 0.1 |
+| Mapa con primeras features | < 4 s | < 2.5 s |
+| JS inicial propio (gzip, sin Google) | < 200 KB | < 200 KB |
+| `map_features` p95 en servidor | < 300 ms | — |
+
+**Técnicas:**
+- import dinámico del mapa, Recharts y el PDF;
+- Server Components para todo lo no interactivo;
+- `next/image` y fotos en WebP;
+- payload mínimo por viewport y geometrías simplificadas;
+- regiones de Vercel y Supabase cercanas entre sí.
+
+Antes de producción se revisa `EXPLAIN (ANALYZE, BUFFERS)` de `map_features`, `search_all` y `kpi_summary` con volumen realista.
+
+---
+
+## 15. Estructura del repositorio
+
+✅ = existe hoy · ⏳ = se crea al implementar
+
+```text
+sr-conecta/
+├─ README.md  ARCHITECTURE.md  DATABASE.md                       ✅
+├─ project/                     prototipo de diseño               ✅
+├─ supabase/
+│  ├─ migrations/               16 migraciones                    ✅
+│  ├─ seed.sql                  semilla de desarrollo             ✅
+│  ├─ ops/                      scripts de operación              ✅
+│  └─ tests/                    107 pruebas (PGlite)              ✅
+├─ src/                                                           ⏳
+│  ├─ app/
+│  │  ├─ (public)/  (app)/mapa/  (app)/cuenta/  (business)/negocio/  (admin)/admin/
+│  │  ├─ api/v1/                Route Handlers (§12.2)
+│  │  ├─ auth/                  callback, reset
+│  │  └─ manifest.ts  sw.ts
+│  ├─ modules/                  map · businesses · tourism · routes · traffic · citizen-reports
+│  │                            notifications · jobs · media · admin · analytics · reports
+│  │                            (cada uno: components/ server/ schemas.ts queries.ts types.ts index.ts)
+│  ├─ components/ui/            shadcn/ui
+│  ├─ lib/supabase/             server · client · anon · admin (server-only)
+│  ├─ hooks/                    useGeolocation · useOnlineStatus · useOfflineQueue
+│  ├─ types/                    supabase gen types
+│  ├─ config/env.ts
+│  └─ proxy.ts
+├─ data/                        importación de datos abiertos (GDAL)          ⏳
+├─ tests/e2e/                   Playwright                                     ⏳
+├─ docs/
+│  ├─ decisions/                un archivo por ADR                             ⏳
+│  └─ manual-administrativo.md  manual del panel municipal (entregable)        ⏳
+├─ DEPLOYMENT.md                manual de despliegue (entregable)              ⏳
+├─ SECURITY.md  CONTRIBUTING.md  API.md                                        ⏳
+├─ LICENSE                      MIT o Apache-2.0                               ⏳
+└─ .env.example                                                                ⏳
+```
+
+**Reglas de módulos:**
+- Un módulo solo importa de otro a través de su `index.ts`. Se verifica con reglas de lint.
+- `map` no conoce reglas de negocio: los demás módulos le entregan capas.
+- `jobs` no conoce reglas de negocio: cada módulo registra sus handlers por `kind`.
+- `queries.ts` es la única frontera con la base; no hay capa "repositorio" adicional.
+
+---
+
+## 16. Alcance, plan y fases
+
+### 16.1 Alcance del MVP
+
+| # | Alcance | Bases | ¿Recortable? |
+|---|---|---|---|
+| 1 | Mapa con capas, clustering, filtros, búsqueda propia, alertas de tránsito en vivo, propuestas ciudadanas | F1 | No |
+| 2 | Negocios: alta con verificación, categorías, fotos, horario, contacto, ficha, panel básico, promociones | F2 | Las promociones sí |
+| 3 | Rutas: consulta con dificultad, duración y servicios; trazado por el personal y por ciudadanos | F3 | La propuesta ciudadana puede degradarse a "solo personal" |
+| 4 | Tránsito: los cinco tipos de las bases y más, foto, moderación, vencimiento, tiempo real, escalado | F4 | No |
+| 5 | Consultas: ciclo de estados con historial, votación, seguimiento y notificación | F5 | No |
+| 6 | PDF semanal automático + regeneración | F6 | No |
+| 7 | Panel municipal: KPIs, bandejas, validaciones, roles, auditoría, informes | Entregable | No |
+| 8 | Notificaciones in-app + alertas por municipio | Requisito general | No |
+| 9 | Web Push | Requisito general | Sí (queda in-app) |
+| 10 | PWA instalable, offline shell y cola de reportes | "Móvil o web progresiva" | La cola no; la instalación sí |
+| 11 | Roles y seguridad | — | No |
+| 12 | Repositorio público, documentación técnica, manual de despliegue, manual administrativo | Entregable | No |
+
+**Fuera del MVP:**
+- Routes API y vector tiles;
+- mapas offline e inglés;
+- descargar mis datos;
+- 2FA obligatorio;
+- confirmaciones comunitarias ("ya no está");
+- panel Sistema y suspensión de usuarios;
+- email de notificaciones;
+- analítica avanzada y app nativa.
+
+**Fuera del proyecto: misiones y recompensas.** Por decisión del proyecto no existen ni se reintroducen. Los comercios tienen solo promociones informativas.
+
+### 16.2 Regla de recorte
+
+Si falta tiempo, se recortan primero los ítems marcados como recortables. Nunca se recortan:
+- la base de datos y la seguridad;
+- las notificaciones in-app;
+- el PDF semanal;
+- las 6 funcionalidades.
+
+Postergar los cimientos es exactamente el cambio brusco que esta arquitectura evita.
+
+### 16.3 Plan por semanas
+
+| Semana | Entrega | Cubre |
+|---|---|---|
+| 1 (24–30 sep) | **Cimientos:** cuentas de la organización, SMTP propio, proyecto Supabase con las 16 migraciones aplicadas y verificadas (§20), Vault, `pg_cron`, esqueleto Next.js con auth y roles, worker de la cola, CI con release "migrar → desplegar". Importación de datos abiertos | Base de todo |
+| 2 (1–7 oct) | Mapa (capas, zoom, búsqueda, Broadcast) y reportes de tránsito con fotos, moderación y escalado | F1, F4 |
+| 3 (8–14 oct) | Consultas con estados, votos y seguimiento; panel municipal (bandejas, validaciones, roles); notificaciones in-app y alertas | F5, panel |
+| 4 (15–21 oct) | Negocios (alta, horario, fotos, promociones), turismo, rutas y propuestas; KPIs y PDF | F2, F3, F6 |
+| 5 (22–27 oct) | PWA, push, cola offline, prueba con vecinos, manuales, repositorio público, guion y ensayo de la demo | UX, sostenibilidad, documentación |
+
+### 16.4 Fases siguientes
+
+| Capacidad | MVP | Fase 2: producción municipal | Fase 3: escala regional |
+|---|---|---|---|
+| Mapa | Google, viewport, clustering, `map_aggregates` | Vector tiles si hacen falta | Multi-provincia; evaluar MapLibre |
+| Búsqueda | FTS + trigramas + Autocomplete | Cercanía y popularidad | Motor dedicado si hace falta |
+| Tránsito | Reportes, moderación, vencimiento, Broadcast, alertas | Confirmaciones comunitarias ("ya no está") | Datos oficiales (INTRANT/COE) si existen |
+| Consultas | Ciclo completo, votos, historial | SLA, asignación automática por categoría | Integración con sistemas municipales |
+| Negocios y turismo | Alta verificada, fotos, horario, promociones | Inglés, GPX, elevación | Paquetes regionales |
+| Notificaciones | In-app, push, alertas por municipio | Canal email, resúmenes | Canal nativo si hay app |
+| Panel | Bandejas, validaciones, roles, auditoría, informes | Sistema (cola, catálogos, flags), suspensión de usuarios | — |
+| Seguridad | RLS, RPC, rate limits, captcha, auditoría | 2FA admin (`aal2`), Vercel Firewall | Pentest externo |
+| Datos | `province_id` desde hoy | Descargar mis datos | Nuevas provincias sin migración de datos; particionado de `audit_logs` |
+| Cola | `private.jobs` + `pg_cron` | Más tipos de job | `pgmq` o Inngest con el mismo contrato |
+| Infraestructura | Hobby + Free | Vercel Team Pro, Supabase Pro + Branching | Más cómputo, réplicas de lectura |
+
+---
+
+## 17. Riesgos
+
+| Riesgo | Prob. | Impacto | Mitigación | Plan B |
+|---|---|---|---|---|
+| Llamadas directas a la API saltando Next.js | Alta | Alto | RPC autosuficientes, sin escritura directa, pruebas de ataque directo | Revocar la RPC afectada y corregir por migración |
+| Costos de Google fuera de control | Media | Alto | Cuotas, alertas, field masks, sin llamadas por eventos del mapa | MapLibre + OSM vía adaptador |
+| Supabase Free pausado antes de la demo | Media | Alto | Actividad regular, monitor de uptime | Video de respaldo |
+| Emails de OTP no entregados | Media | Alto | SMTP propio con SPF, DKIM y DMARC antes de abrir el registro | Google OAuth |
+| Pérdida de datos (Free no tiene backups) | Media | Alto | `pg_dump` diario desde el primer dato real | Restaurar el último dump |
+| Código desplegado antes que su migración | Media | Alto | Action: migrar → desplegar; migraciones compatibles | Instant Rollback |
+| Spam o reportes falsos | Alta | Medio | Rate limits, captcha, moderación, reputación | Moderación previa para todos |
+| GPS impreciso en montaña | Alta | Medio | Pin ajustable; validación del moderador | — |
+| Cobertura pobre de Google en zonas rurales | Alta | Medio | Reportes ciudadanos como fuente principal | TrafficLayer apagada |
+| Limitaciones de la PWA en iOS | Alta | Medio | Guía de instalación; in-app siempre | App nativa en Fase 3 si se justifica |
+| Cola detenida | Media | Medio | `/health`, `worker_queue_health`, alerta en `dead` | Disparo manual del worker |
+| Algo que funciona en PGlite no funciona igual en Supabase real (§20) | Media | Medio | Aplicar las migraciones en un proyecto real en la semana 1 | Ajustar por migración |
+| Mantenimiento tras el reto | Alta | Alto | Documentación, catálogos sin deploy, cuentas transferibles, costos bajos | Contrato de soporte |
+| Deuda técnica por la prisa del reto | Alta | Medio | Alcance claro, pruebas en lo crítico | Sprint de estabilización antes de la Fase 2 |
+| Licencias incompatibles | Baja | Medio | `license-checker` en CI | Reemplazar la dependencia |
+
+---
+
+## 18. Decisiones de arquitectura (ADR)
+
+Cada ADR tendrá su archivo en `docs/decisions/`. Todas están **Aceptadas**, salvo las indicadas.
+
+| ADR | Decisión | Alternativas descartadas | Consecuencia principal |
+|---|---|---|---|
+| 001 | React | Vue, Svelte, Flutter Web | Ecosistema de mapas y más desarrolladores disponibles para quien herede el proyecto |
+| 002 | Next.js 16 App Router; Route Handlers para la PWA, Server Actions para los paneles; `proxy.ts` solo para sesión | Vite SPA + API aparte; Remix; Astro | Disciplina de fronteras `server-only` |
+| 003 | TypeScript `strict`, tipos generados desde la base, Zod en fronteras | JavaScript | Tipos regenerados en CI |
+| 004 | Google Maps como mapa base, detrás de un adaptador; Places solo Autocomplete; navegación por enlace | Leaflet/MapLibre + OSM | Datos 100 % propios; plan B MapLibre |
+| 005 | Supabase como plataforma de datos; sin Edge Functions en el MVP | Firebase; Neon + Auth.js + S3; NestJS | Postgres real, portable y autoalojable |
+| 006 | PostgreSQL como única base de datos | Firestore, Mongo, Redis | Una sola copia de la verdad |
+| 007 | PostGIS con SRID 4326 y cast a `geography` | Turf en JS; Google para distancias | Consultas espaciales indexadas y gratuitas |
+| 008 | Monolito modular | Microservicios; backend separado | Un despliegue; fronteras verificadas por lint |
+| 009 | PWA con Serwist | React Native, Capacitor | Sin tiendas; push en iOS solo con la PWA instalada |
+| 010 | Misiones — **Retirada** (24/09/2026) | — | Fuera del alcance del proyecto; no se reintroducen |
+| 011 | Recompensas — **Retirada** (24/09/2026) | — | Los comercios tienen solo promociones informativas |
+| 012 | **Realtime solo para alertas de tránsito públicas (Broadcast por provincia).** El panel usa sondeo de 30 s. *Revisada en v2.0: ya no incluye la bandeja del panel* | Realtime para todas las capas; Postgres Changes en el panel | Sin publicación de tablas con datos personales |
+| 013 | Notificaciones: `notifications` + Web Push VAPID por la cola; email en Fase 2 | FCM, OneSignal, envío inline | Ningún evento de trigger o cron queda sin entregar |
+| 014 | PDF con `@react-pdf/renderer` desde snapshots inmutables, con chequeo diario | Puppeteer, pdf-lib | Sin navegador headless; versionado |
+| 015 | Vercel + Supabase, con cuentas de la organización | VPS + Coolify, Netlify, Cloudflare | Cero servidores que operar |
+| 016 | Cola de trabajos en PostgreSQL (`private.jobs`, outbox) con `pg_cron` + `pg_net` | Envío inline, Inngest, QStash, `pgmq` | Evento y efecto atómicos; consumidor reemplazable |
+| 017 | Evolución sin rupturas (`province_id`, estados como texto, catálogos, PK particionables, snapshots, `translations`, API aditiva, adaptadores) | YAGNI estricto | Fases 2 y 3 aditivas |
+| 018 | La base de datos es la barrera de seguridad | Todo con `service_role` desde Next.js | RPC autosuficientes y pruebas de ataque directo |
+| 019 | Producción: la Action migra y luego despliega; E2E contra Supabase local | Migrar desde el build de Vercel; base compartida | Nunca hay código nuevo sobre un esquema viejo |
+| 020 | Sin `super_admin`; gobernanza por `municipal_admin` provincial y scripts de operación | `super_admin` con 2FA | Nadie amplía su propio poder desde la aplicación |
+
+---
+
+## 19. No hacer
+
+| No hacer | Hacer en su lugar |
+|---|---|
+| Usar Google Places como base de negocios | Tabla `businesses` propia; guardar solo `google_place_id` |
+| Llamar a Google en cada movimiento del mapa | PostGIS por viewport; Google solo por intención del usuario |
+| Confiar en que Next.js valida | Validación autoritativa dentro de cada RPC |
+| Usar `service_role` en requests de usuario | JWT del usuario; `service_role` solo en el worker y el cron |
+| `RAISE EXCEPTION` para rechazos de negocio | Devolver `{status:'rejected'}` y hacer commit |
+| `enum` de Postgres para estados | `text` + `CHECK` y tablas de transiciones |
+| `UNIQUE` con `NULL` significativo | `UNIQUE NULLS NOT DISTINCT` |
+| `ALTER DEFAULT PRIVILEGES … IN SCHEMA` para revocar | La forma global, sin `IN SCHEMA` |
+| Leer columnas ocultas dentro de una política | Helper `SECURITY DEFINER` |
+| Revocar `EXECUTE` a los helpers de RLS | Esquema no expuesto + `GRANT EXECUTE` al rol |
+| Mezclar datos públicos y privados en un endpoint cacheado | Endpoints separados por clase de caché |
+| Enviar push inline "después del commit" | Cola `private.jobs` |
+| Publicar Postgres Changes de tablas con datos personales | Broadcast con datos públicos; sondeo en el panel |
+| Buckets públicos para evidencias; fotos con EXIF | Bucket privado + URL firmada; re-codificar sin EXIF |
+| Auto-deploy de producción con la migración aparte | Action: migrar → desplegar |
+| SMTP por defecto de Supabase con usuarios reales | SMTP propio con dominio verificado |
+| Cambios de esquema desde el dashboard | Migraciones versionadas |
+| Cuentas personales de integrantes | Cuentas de la organización |
+| Rastreo GPS continuo | Ubicación puntual por acción |
+| Firebase, Redux, microservicios o Kubernetes | Supabase, estado local, monolito modular |
+| Reintroducir misiones o recompensas | Promociones informativas |
+
+---
+
+## 20. Pendiente de verificar
+
+Lo que ninguna prueba local puede confirmar. Se resuelve en la semana 1, al crear el proyecto Supabase real.
+
+| # | Qué verificar | Dónde |
+|---|---|---|
+| 1 | Las 16 migraciones se aplican en un proyecto Supabase recién creado | Supabase |
+| 2 | `pg_cron`, `pg_net` y Vault se habilitan, y `cron.schedule` registra las 4 tareas (en las pruebas se omiten) | Supabase |
+| 3 | La firma de `realtime.send(payload, event, topic, private)` y la suscripción del cliente a un canal Broadcast público | Documentación de Supabase Realtime |
+| 4 | Las claves de `storage.objects.metadata` (`mimetype`, `size`) que usa `register_attachment` | Supabase Storage |
+| 5 | `storage.foldername()` y los límites de los buckets en el servicio real | Supabase Storage |
+| 6 | Que la Data API exponga solo `public`, y los grants por defecto a tablas nuevas (la migración 200 los fija explícitamente) | Supabase |
+| 7 | El método recomendado de validación de sesión en `@supabase/ssr` (`getUser` o `getClaims`) | Documentación de Supabase |
+| 8 | La integración nativa de Turnstile en Supabase Auth | Documentación de Supabase |
+| 9 | Los límites del SMTP por defecto de Supabase | Documentación de Supabase |
+| 10 | Conexión directa solo por IPv6 frente a los runners de GitHub (usar el pooler) | Supabase |
+| 11 | Disponibilidad y precio de Supabase Branching | Supabase |
+| 12 | `proxy.ts` y el runtime Node en Next.js 16 | Documentación de Next.js |
+| 13 | Límites de Vercel Hobby (cron, uso comercial, commits de colaboradores en repos privados) | Vercel |
+| 14 | Precios y cuotas de Google Maps por SKU | Google |
+| 15 | Límite de usuarios del plan gratuito de Sentry | Sentry |
+| 16 | `ST_CoverageSimplify` en la versión de PostGIS del proyecto | Supabase |
+| 17 | Rendimiento con los polígonos oficiales de los municipios (los de desarrollo son rectángulos) | Datos abiertos |
+| 18 | Hacer **público** el repositorio antes de la entrega (hoy es privado) | GitHub |
+
+**Fuentes consultadas:**
+- bases del reto: https://conectasr.com;
+- precios de Google Maps: https://developers.google.com/maps/billing-and-pricing/overview;
+- políticas de Places: https://developers.google.com/maps/documentation/places/web-service/policies;
+- Supabase: https://supabase.com/pricing;
+- Vercel: https://vercel.com/pricing y https://vercel.com/docs/cron-jobs/usage-and-pricing.
+
+---
+
+### Versiones
+
+| Versión | Fecha | Cambio |
+|---|---|---|
+| 1.0–1.6 | 23–24/09/2026 | Diseño inicial, revisiones, alineación con las bases y definición de la base de datos (historial en Git) |
+| **2.0** | 24/09/2026 | Documento reorganizado de principio a fin. Una decisión por tema, sin secciones retiradas. Alineado con el SQL verificado: fotos, alertas por municipio, edición de lugares y rutas, métricas de uso, Realtime solo para tránsito, sondeo del panel, catálogo completo de API |
