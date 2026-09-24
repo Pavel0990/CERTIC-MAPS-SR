@@ -18,7 +18,11 @@ file:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6',
 layers:'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5'
 };
 const TY={negocio:{c:'#2F6FEB',label:'Negocios',i:I.store},turismo:{c:'#16A34A',label:'Turismo',i:I.mountain},ruta:{c:'#0E9F9A',label:'Rutas',i:I.route},mision:{c:'#D99A00',label:'Misiones',i:I.target},reporte:{c:'#E5484D',label:'Reportes',i:I.alert}};
-const ST=[{t:'Recibido',c:'#4B5563',bg:'#F1F2F4'},{t:'En revisión',c:'#92400E',bg:'#FEF3C7'},{t:'En proceso',c:'#1D4ED8',bg:'#DBEAFE'},{t:'Resuelto',c:'#15803D',bg:'#DCFCE7'}];
+// Ciclo de estados alineado con ARCHITECTURE.md §21.1: pending → under_review → approved → in_progress → resolved (→ archived, solo panel).
+// rejected es terminal y solo se alcanza desde pending/under_review/approved.
+const ST=[{k:'pending',t:'Recibido',c:'#4B5563',bg:'#F1F2F4'},{k:'under_review',t:'En revisión',c:'#92400E',bg:'#FEF3C7'},{k:'approved',t:'Aprobado',c:'#6D28D9',bg:'#EDE9FE'},{k:'in_progress',t:'En proceso',c:'#1D4ED8',bg:'#DBEAFE'},{k:'resolved',t:'Resuelto',c:'#15803D',bg:'#DCFCE7'}];
+const ST_APPROVED=2,ST_DONE=4,ST_LAST_REJECTABLE=2;
+const REJ={k:'rejected',t:'Rechazado',c:'#B42318',bg:'#FEE4E2'};
 const U={lat:19.4738,lng:-71.3402};
 const MUNI={'Sabaneta':{lat:19.4752,lng:-71.3412,full:'San Ignacio de Sabaneta'},'Monción':{lat:19.4167,lng:-71.1680,full:'Monción'},'Los Almácigos':{lat:19.4110,lng:-71.4415,full:'Villa Los Almácigos'}};
 const PLACES=[
@@ -35,36 +39,49 @@ const PLACES=[
 const GN=[['Colmado',[]],['Farmacia',[]],['Ferretería',[]],['Panadería',['restaurante']],['Salón',[]],['Repostería',['restaurante']],['Taller',[]],['Cafetería',['cafe']],['Agroveterinaria',[]],['Heladería',['restaurante']]];
 const GS=['El Cruce','San José','La Esquina','Los Hermanos','Doña Ana','El Progreso','Central','La Fe','Mi Pueblo','La Loma','Don Pedro','El Maizal'];
 let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
-const GEN=[];[['Sabaneta',22],['Monción',14],['Los Almácigos',9]].forEach(([m,n])=>{const c=MUNI[m];for(let i=0;i<n;i++){const g=GN[Math.floor(rnd()*GN.length)];GEN.push({id:'g'+GEN.length,gen:true,type:'negocio',tags:g[1],name:g[0]+' '+GS[Math.floor(rnd()*GS.length)],cat:g[0],lat:c.lat+(rnd()-.5)*.016,lng:c.lng+(rnd()-.5)*.018,rating:Math.round((4+rnd()*.8)*10)/10,reviews:10+Math.floor(rnd()*140),open:rnd()>.2,until:'cierra 8:00 p. m.',muni:m,desc:'Comercio local registrado en SR Conecta.'})}});
+const GEN=[];[['Sabaneta',22],['Monción',14],['Los Almácigos',9]].forEach(([m,n])=>{const c=MUNI[m];for(let i=0;i<n;i++){const g=GN[Math.floor(rnd()*GN.length)];GEN.push({id:'g'+GEN.length,gen:true,type:'negocio',tags:g[1],name:g[0]+' '+GS[Math.floor(rnd()*GS.length)],cat:g[0],lat:c.lat+(rnd()-.5)*.016,lng:c.lng+(rnd()-.5)*.018,rating:Math.round((4+rnd()*.8)*10)/10,reviews:10+Math.floor(rnd()*140),open:rnd()>.2,until:'cierra 8:00 p. m.',muni:m,desc:'Comercio de ejemplo · datos de demostración (ubicación y nombre generados).'})}});
 const ROUTES=[
 {id:'rcasabe',type:'ruta',tags:[],name:'Ruta del Casabe',cat:'Ruta cultural · 3 paradas',lat:19.4250,lng:-71.1745,muni:'Monción',pts:['presa','casabe','cafe']},
 {id:'rinaje',type:'ruta',tags:[],name:'Sendero del Inaje',cat:'Senderismo · 2 paradas',lat:19.4668,lng:-71.3500,muni:'Sabaneta',pts:['parque','inaje']}
 ];
 const MIS=[
 {id:'m07',num:'07',name:'Descubre Monción',desc:'Visita 3 lugares del municipio y conoce su historia: el agua, el casabe y el café.',diff:2,reward:'10% OFF',rewardLong:'10% de descuento en Café Monción',provider:'Café Monción',expires:'31 oct 2026',cond:'Un uso por persona · consumo mínimo RD$300',lat:19.4210,lng:-71.1690,muni:'Monción',steps:['presa','casabe','cafe'],methods:['GPS','QR','GPS']},
-{id:'m03',num:'03',name:'Cuida tu calle',desc:'Envía tu primer reporte ciudadano y ayuda a tu ayuntamiento a mejorar el territorio.',diff:1,reward:'5% OFF',rewardLong:'5% de descuento en Panadería San José',provider:'Panadería San José',expires:'30 nov 2026',cond:'Válido de lunes a viernes',lat:19.4792,lng:-71.3448,muni:'Sabaneta',steps:['report'],methods:['App']},
+{id:'m03',num:'03',name:'Cuida tu calle',desc:'Envía tu primer reporte ciudadano. La misión se completa cuando el ayuntamiento lo aprueba, no al enviarlo.',diff:1,reward:'5% OFF',rewardLong:'5% de descuento en Panadería San José',provider:'Panadería San José',expires:'30 nov 2026',cond:'Válido de lunes a viernes',lat:19.4792,lng:-71.3448,muni:'Sabaneta',steps:['report'],methods:['App']},
 {id:'m09',num:'09',name:'Sabores de Sabaneta',desc:'Del parque al río pasando por la mejor cocina criolla del pueblo.',diff:3,reward:'15% OFF',rewardLong:'15% de descuento en Restaurante El Puente',provider:'Restaurante El Puente',expires:'15 nov 2026',cond:'Mesa de hasta 4 personas',lat:19.4700,lng:-71.3520,muni:'Sabaneta',steps:['parque','puente','inaje'],methods:['GPS','QR','GPS']},
 {id:'m12',num:'12',name:'Travesía de los tres municipios',desc:'Recorre Sabaneta, Villa Los Almácigos y Monción en un mismo viaje.',diff:4,reward:'Noche gratis',rewardLong:'Una noche en Hotel Sabaneta Plaza',provider:'Hotel Sabaneta Plaza',expires:'31 dic 2026',cond:'Sujeto a disponibilidad · domingo a jueves',lat:19.4120,lng:-71.4300,muni:'Los Almácigos',steps:['parque','mirador','presa'],methods:['GPS','GPS','QR']}
 ];
 const DL=['','Fácil','Media','Difícil','Especial'];
 const R0=[
-{id:'r1',num:1038,kind:'Bache',title:'Bache profundo',addr:'Calle Duarte esq. Restauración',lat:19.4744,lng:-71.3428,status:2,mine:true,muni:'Sabaneta',date:'18 sep',hist:['18 sep · 9:12 a. m.','18 sep · 2:40 p. m.','20 sep · 8:05 a. m.',null]},
-{id:'r2',num:1039,kind:'Alumbrado',title:'Poste sin luz',addr:'Av. Hermanas Mirabal',lat:19.4786,lng:-71.3366,status:0,mine:false,muni:'Sabaneta',date:'23 sep',hist:['23 sep · 7:48 p. m.',null,null,null]},
-{id:'r3',num:1031,kind:'Basura',title:'Vertedero improvisado',addr:'Salida hacia Mao',lat:19.4190,lng:-71.1600,status:3,mine:true,muni:'Monción',date:'12 sep',hist:['12 sep · 10:02 a. m.','12 sep · 4:15 p. m.','13 sep · 9:30 a. m.','15 sep · 1:20 p. m.']},
-{id:'r4',num:1040,kind:'Semáforo',title:'Semáforo intermitente',addr:'Entrada Carretera Sabaneta–Dajabón',lat:19.4712,lng:-71.3355,status:1,mine:false,muni:'Sabaneta',date:'24 sep',hist:['24 sep · 8:10 a. m.','24 sep · 9:02 a. m.',null,null]},
-{id:'r5',num:1036,kind:'Calle cerrada',title:'Derrumbe en camino vecinal',addr:'Camino a Los Cafetales',lat:19.4148,lng:-71.4460,status:1,mine:false,muni:'Los Almácigos',date:'21 sep',hist:['21 sep · 6:30 a. m.','21 sep · 11:10 a. m.',null,null]}
+{id:'r1',num:1038,kind:'Bache',title:'Bache profundo',addr:'Calle Duarte esq. Restauración',lat:19.4744,lng:-71.3428,status:3,mine:true,muni:'Sabaneta',date:'18 sep',hist:['18 sep · 9:12 a. m.','18 sep · 2:40 p. m.','19 sep · 8:30 a. m.','20 sep · 8:05 a. m.',null]},
+{id:'r2',num:1039,kind:'Alumbrado',title:'Poste sin luz',addr:'Av. Hermanas Mirabal',lat:19.4786,lng:-71.3366,status:0,mine:false,muni:'Sabaneta',date:'23 sep',hist:['23 sep · 7:48 p. m.',null,null,null,null]},
+{id:'r3',num:1031,kind:'Basura',title:'Vertedero improvisado',addr:'Salida hacia Mao',lat:19.4190,lng:-71.1600,status:4,mine:true,muni:'Monción',date:'12 sep',hist:['12 sep · 10:02 a. m.','12 sep · 4:15 p. m.','12 sep · 5:00 p. m.','13 sep · 9:30 a. m.','15 sep · 1:20 p. m.']},
+{id:'r4',num:1040,kind:'Semáforo',title:'Semáforo intermitente',addr:'Entrada Carretera Sabaneta–Dajabón',lat:19.4712,lng:-71.3355,status:1,mine:false,muni:'Sabaneta',date:'24 sep',hist:['24 sep · 8:10 a. m.','24 sep · 9:02 a. m.',null,null,null]},
+{id:'r5',num:1036,kind:'Calle cerrada',title:'Derrumbe en camino vecinal',addr:'Camino a Los Cafetales',lat:19.4148,lng:-71.4460,status:1,mine:false,muni:'Los Almácigos',date:'21 sep',hist:['21 sep · 6:30 a. m.','21 sep · 11:10 a. m.',null,null,null]}
 ];
+// Código de cupón con el formato de ARCHITECTURE.md §20.3: 10 caracteres Crockford Base32 (~50 bits), sin 0/O ni 1/I/L ambiguos.
+// En el producto lo genera la RPC claim_reward en el servidor; aquí solo se imita el formato.
+const CROCK='0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+function code(){const b=new Uint8Array(10);crypto.getRandomValues(b);let s='';for(let i=0;i<10;i++){s+=CROCK[b[i]&31];if(i===4)s+='-';}return s;}
 const RW0=[
-{id:'rwA',title:'2x1 en casabe',provider:'Casabería Doña Mercedes',from:'Misión 02 · Primeros pasos',code:'SR-02-7HQX',used:false,expires:'15 oct 2026',cond:'Presenta el código en caja',place:'casabe'},
-{id:'rwB',title:'5% OFF',provider:'Restaurante El Puente',from:'Misión 01 · Bienvenida',code:'SR-01-K2LM',used:true,expires:'—',cond:'Canjeado el 2 sep',place:'puente'}
+{id:'rwA',title:'2x1 en casabe',provider:'Casabería Doña Mercedes',from:'Misión 02 · Primeros pasos',code:'7HQXK-2M9DT',used:false,expires:'15 oct 2026',cond:'Presenta el código en caja',place:'casabe'},
+{id:'rwB',title:'5% OFF',provider:'Restaurante El Puente',from:'Misión 01 · Bienvenida',code:'K2LMP-8WQ4R',used:true,expires:'—',cond:'Canjeado el 2 sep',place:'puente'}
 ];
-const RTYPES=['Bache','Accidente','Calle cerrada','Semáforo','Basura','Alumbrado','Infraestructura','Otro'];
+// Tránsito (temporal, expira) y servicios municipales (seguimiento hasta resolverse) son flujos distintos (ARCHITECTURE.md §21).
+const RTYPES_T=['Accidente','Calle cerrada','Semáforo','Vía inundada'];
+const RTYPES_M=['Bache','Basura','Alumbrado','Infraestructura','Otro'];
+const RTYPES=[...RTYPES_T,...RTYPES_M];
 const PEND0=[
 {id:'p1',kind:'Negocio',title:'Colmado El Cruce',sub:'Solicitud de registro · Monción'},
 {id:'p2',kind:'Ruta',title:'Sendero Los Cafetales',sub:'Propuesta de ruta · Villa Los Almácigos'},
 {id:'p3',kind:'Recompensa',title:'La Lomita Café · 15% OFF',sub:'Nueva recompensa para Misión 12'}
 ];
-const MSTATS=[{k:'Sabaneta',users:126,reports:21,missions:30,biz:22,res:15},{k:'Monción',users:78,reports:11,missions:19,biz:13,res:9},{k:'Los Almácigos',users:39,reports:6,missions:8,biz:6,res:5}];
+// Única fuente de verdad de los KPIs de demostración. Panel, actividad y PDF derivan de aquí; nada se escribe a mano en la vista.
+// Semana 39: users, reports, res, missions. Acumulado histórico: totReports, totRes. biz: negocios registrados (stock).
+const MSTATS=[{k:'Sabaneta',users:126,reports:21,missions:30,biz:22,res:15,totReports:67,totRes:40},{k:'Monción',users:78,reports:11,missions:19,biz:13,res:9,totReports:39,totRes:23},{k:'Los Almácigos',users:39,reports:6,missions:8,biz:6,res:5,totReports:22,totRes:13}];
+// Completadas en la semana por misión; suman lo mismo que MSTATS.missions (57).
+const MIS_WEEK={m07:26,m03:17,m09:11,m12:3};
+// Actividad de hoy (valores fijos de demostración; antes era un contador aleatorio).
+const TODAY={users:34,missions:5,biz:8};
 function wpx(lat,lng,z){const s=256*Math.pow(2,z),r=lat*Math.PI/180;return{x:(lng+180)/360*s,y:(1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*s};}
 function tl(cx,cy,z,w,h,tpl){const o=[];const n=Math.pow(2,z);const x0=Math.floor((cx-w/2)/256),x1=Math.floor((cx+w/2-1)/256),y0=Math.floor((cy-h/2)/256),y1=Math.floor((cy+h/2-1)/256);for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){if(y<0||y>=n)continue;o.push({src:tpl.replace('{z}',z).replace('{x}',((x%n)+n)%n).replace('{y}',y),l:Math.round(x*256-cx+w/2),t:Math.round(y*256-cy+h/2)});}return o;}
 function sat(lat,lng,w,h,z){z=z||17;const p=wpx(lat,lng,z);return tl(p.x,p.y,z,w,h,SAT);}
@@ -74,5 +91,5 @@ const fmin=m=>m<60?Math.max(1,Math.round(m))+' min':Math.floor(m/60)+' h '+Math.
 const norm=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 function staticFit(pts,w,h,pad,maxZ,tpl){let z=maxZ;for(;z>8;z--){const ps=pts.map(p=>wpx(p.lat,p.lng,z));const xs=ps.map(p=>p.x),ys=ps.map(p=>p.y);if(Math.max(...xs)-Math.min(...xs)<=w-2*pad&&Math.max(...ys)-Math.min(...ys)<=h-2*pad)break;}const ps=pts.map(p=>wpx(p.lat,p.lng,z));const xs=ps.map(p=>p.x),ys=ps.map(p=>p.y);const cx=(Math.max(...xs)+Math.min(...xs))/2,cy=(Math.max(...ys)+Math.min(...ys))/2;return{tiles:tl(cx,cy,z,w,h,tpl),marks:ps.map(p=>({l:Math.round(p.x-cx+w/2),t:Math.round(p.y-cy+h/2)}))};}
 function qr(code){let h=7;for(const c of code)h=(h*31+c.charCodeAt(0))>>>0;let x=h||1;const r=()=>(x=(x*1103515245+12345)>>>0)/4294967296;const cells=[];const f=(i,y,a,b)=>{const dx=i-a,dy=y-b;if(dx<0||dx>6||dy<0||dy>6)return null;return dx===0||dx===6||dy===0||dy===6||(dx>=2&&dx<=4&&dy>=2&&dy<=4);};for(let y=0;y<21;y++)for(let i=0;i<21;i++){let v=f(i,y,0,0);if(v===null)v=f(i,y,14,0);if(v===null)v=f(i,y,0,14);if(v===null){const near=(i<8&&y<8)||(i>12&&y<8)||(i<8&&y>12);v=near?false:r()<.5;}cells.push({c:v?'#111418':'#fff'});}return cells;}
-window.SR={TILES,SAT,I,TY,ST,U,MUNI,PLACES,GEN,ROUTES,MIS,DL,R0,RW0,RTYPES,PEND0,MSTATS,wpx,tl,sat,km,fkm,fmin,norm,staticFit,qr};
+window.SR={TILES,SAT,I,TY,ST,ST_APPROVED,ST_DONE,ST_LAST_REJECTABLE,REJ,U,MUNI,PLACES,GEN,ROUTES,MIS,DL,R0,RW0,RTYPES,RTYPES_T,RTYPES_M,PEND0,MSTATS,MIS_WEEK,TODAY,wpx,tl,sat,km,fkm,fmin,norm,staticFit,qr,code};
 })();

@@ -1,6 +1,6 @@
 # SR Conecta — Arquitectura Técnica Definitiva
 
-> Documento de arquitectura para el repositorio. Versión 1.1 · 24 de septiembre de 2026 (v1.0: 23/09/2026)
+> Documento de arquitectura para el repositorio. Versión 1.2 · 24 de septiembre de 2026 (v1.0 y v1.1: 23–24/09/2026)
 > Alcance: desde el MVP del reto TechEmprende SR Conecta 2026 hasta producción municipal y escala regional.
 > Fuentes oficiales y precios consultados el **23/09/2026** (ver §31 y Anexo E). Todo precio debe re-verificarse antes de presupuestar.
 > **v1.1** corrige contradicciones internas de seguridad, datos e infraestructura detectadas en revisión y añade decisiones de **evolución sin rupturas** (§5.1) para que las Fases 2 y 3 se construyan agregando piezas, no reescribiendo. Registro completo en el Anexo F.
@@ -170,6 +170,10 @@ Estilo: **monolito modular** (§12, ADR-008). Un despliegue, un repositorio, una
 - **Diseño:** mobile-first, bottom sheet para detalles en móvil, panel lateral en escritorio. shadcn/ui copia componentes al repo (sin dependencia en runtime), Tailwind para tokens.
 - **Accesibilidad:** todo lo que está en el mapa debe tener equivalente en lista (requisito práctico y de accesibilidad).
 - **i18n:** español como único idioma en MVP; textos centralizados para añadir inglés (turistas) en Fase 2.
+- **Estados obligatorios por pantalla:** toda vista que carga datos implementa `LOADING` (esqueleto, no spinner a pantalla completa), `EMPTY` (explica por qué y qué hacer), `ERROR` (mensaje claro + reintentar, sin detalles internos), `SUCCESS`, `DISABLED` (con motivo, p. ej. sin conexión), `UNAUTHORIZED` (invita a iniciar sesión o explica que falta el rol) y `NOT FOUND` (`not-found.tsx` por route group). Se revisa en PR con una checklist.
+- **Formularios:** botón de envío desactivado durante el envío (sin doble submit, reforzado por `idempotency_key`), errores por campo asociados con `aria-describedby`, foco al primer error.
+- **Responsive:** mobile-first con cortes en 640 / 768 / 1024 / 1280 px. Móvil: mapa a pantalla completa, barra inferior y bottom sheets. Tablet: panel lateral colapsable. Escritorio: panel lateral fijo y, en el panel admin, tablas con paginación por cursor. Objetivos táctiles de al menos 44×44 px. La lógica de negocio es la misma en todos los tamaños; solo cambia la presentación.
+- **Accesibilidad (WCAG 2.1 AA):** controles interactivos como `<button>`/`<a>` reales (no `div` con `onClick`), foco visible, `prefers-reduced-motion` respetado también en las animaciones del mapa, contraste AA verificado en CI con axe (Playwright).
 
 ## 8. Next.js Architecture
 
@@ -445,7 +449,7 @@ erDiagram
     user_roles {
         bigint id PK
         uuid user_id FK "ON DELETE CASCADE"
-        text role "CHECK: citizen|entrepreneur|moderator|municipal_admin|super_admin"
+        text role "CHECK: citizen|entrepreneur|moderator|municipal_admin (sin super_admin)"
         uuid province_id FK
         uuid municipality_id FK "alcance, null = toda la provincia"
         uuid granted_by FK "ON DELETE SET NULL"
@@ -479,7 +483,7 @@ erDiagram
         jsonb opening_hours
         text phone
         text whatsapp
-        text status "CHECK: draft|pending|verified|suspended"
+        text status "CHECK: draft|pending|under_review|approved|rejected|suspended|archived"
         tsvector search_vector
     }
     business_members {
@@ -543,7 +547,8 @@ erDiagram
         text category
         text description
         geometry geom "Point 4326, opcional"
-        text status "CHECK: received|under_review|assigned|in_progress|resolved|archived|rejected"
+        text kind "CHECK: incident|inquiry (incidencia municipal o consulta)"
+        text status "CHECK: pending|under_review|approved|rejected|in_progress|resolved|archived"
         bool is_public
         text idempotency_key "UNIQUE (requester_id, idempotency_key)"
     }
@@ -561,7 +566,7 @@ erDiagram
         uuid province_id FK
         uuid municipality_id FK "nullable = toda la provincia"
         text title
-        text level "CHECK: easy|medium|hard"
+        text level "CHECK: easy|medium|hard|special"
         text verification "CHECK: gps|gps_qr|gps_qr_evidence"
         timestamptz starts_at
         timestamptz ends_at
@@ -575,7 +580,7 @@ erDiagram
         uuid mission_id FK
         smallint position
         text kind "CHECK: location|virtual"
-        text virtual_rule "si kind = virtual, p. ej. traffic_report_verified"
+        text virtual_rule "si kind = virtual, p. ej. traffic_report_verified o citizen_request_approved"
         uuid business_id FK "nullable"
         uuid tourism_place_id FK "nullable"
         uuid eco_route_id FK "nullable"
@@ -607,7 +612,7 @@ erDiagram
         uuid business_id FK
         uuid mission_id FK "nullable: null = disponible para cualquier misión del nivel"
         text title
-        text min_level "CHECK: easy|medium|hard"
+        text min_level "CHECK: easy|medium|hard|special"
         int total_stock
         int remaining_stock "CHECK >= 0"
         int per_user_limit "cuenta canjes del usuario en esta recompensa, entre misiones distintas"
@@ -737,28 +742,31 @@ Tablas añadidas a la lista original y por qué son necesarias: `user_roles` (re
 
 **Captcha:** Turnstile con la integración nativa de Supabase Auth en registro y login sospechoso. Se valida en el servidor de Auth, así que no se puede saltar llamando la API directamente.
 
-**Roles y permisos:**
+**Roles y permisos (mínimo privilegio, sin `super_admin`):** cinco roles: `visitor` (sin sesión), `citizen`, `entrepreneur`, `moderator` y `municipal_admin`. No existe un rol "dios" en la aplicación. La gobernanza provincial la ejerce un `municipal_admin` con **alcance provincial** (`municipality_id NULL`). Las operaciones de plataforma que no pertenecen a ningún municipio (crear el primer administrador provincial, rotar secretos, cambios de esquema) no se hacen desde la interfaz: son **scripts de operación versionados en el repo**, ejecutados por la organización con `service_role` y registrados en `audit_logs` (ADR-020).
 
-| Capacidad | visitor | citizen | entrepreneur | moderator | municipal_admin | super_admin |
+| Capacidad | visitor | citizen | entrepreneur | moderator | municipal_admin (municipio) | municipal_admin (provincia) |
 |---|---|---|---|---|---|---|
-| Ver mapa, turismo, negocios verificados | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Crear reportes de tránsito y consultas | — | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Ver estado de sus propias consultas | — | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Participar en misiones / reclamar recompensas | — | ✓ | ✓ | ✓* | ✓* | — |
-| Gestionar su negocio, promociones y stock de recompensas | — | — | ✓ (solo los suyos) | — | ✓ | ✓ |
-| Canjear cupones en su negocio | — | — | ✓ (solo los suyos) | — | — | ✓ |
-| Moderar reportes, fotos, negocios | — | — | — | ✓ (su alcance) | ✓ (su alcance) | ✓ |
-| Gestionar consultas (asignar, cambiar estado) | — | — | — | ✓ (su alcance) | ✓ (su alcance) | ✓ |
-| Crear misiones, ver KPIs, generar PDF | — | — | — | — | ✓ (su alcance) | ✓ |
-| Asignar rol `moderator` | — | — | — | — | ✓ (solo en su alcance) | ✓ |
-| Asignar cualquier otro rol | — | — | — | — | — | ✓ |
-| Ver auditoría | — | — | — | — | ✓ (su alcance) | ✓ (completa) |
+| Ver mapa, turismo, negocios aprobados | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Crear reportes de tránsito, incidencias y consultas | — | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Ver estado de sus propios reportes y consultas | — | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Participar en misiones / reclamar recompensas | — | ✓ | ✓ | ✓* | ✓* | ✓* |
+| Gestionar su negocio, promociones y stock de recompensas | — | — | ✓ (solo los suyos) | — | — | — |
+| Canjear cupones en su negocio | — | — | ✓ (solo los suyos) | — | — | — |
+| Aprobar, suspender o archivar negocios | — | — | — | ✓ (su municipio) | ✓ (su municipio) | ✓ |
+| Moderar reportes, fotos, rutas y recompensas | — | — | — | ✓ (su municipio) | ✓ (su municipio) | ✓ |
+| Gestionar consultas (asignar, cambiar estado) | — | — | — | ✓ (su municipio) | ✓ (su municipio) | ✓ |
+| Crear misiones, ver KPIs, generar PDF | — | — | — | — | ✓ (su municipio) | ✓ |
+| Asignar rol `moderator` | — | — | — | — | ✓ (su municipio) | ✓ |
+| Asignar `municipal_admin` de municipio | — | — | — | — | — | ✓ |
+| Asignar `municipal_admin` provincial | — | — | — | — | — | — (script de operación auditado) |
+| Catálogos, feature flags, cola de jobs | — | — | — | — | — | ✓ |
+| Ver auditoría | — | — | — | — | ✓ (su municipio) | ✓ (provincia) |
 
-"Su alcance" = los municipios de sus filas en `user_roles` (`municipality_id NULL` = toda la provincia).
+"Su municipio" = los municipios de sus filas en `user_roles`. Un administrador provincial no puede auto-asignarse más poder: la única vía para crear otro administrador provincial es el script de operación, que exige una revisión en PR.
 
-\* Moderadores y administradores municipales pueden participar como ciudadanos, pero la RPC `claim_reward` rechaza recompensas de misiones de su propio alcance y de misiones o recompensas que ellos crearon o aprobaron (`missions.created_by`, aprobación registrada en `moderation_actions`).
+\* El personal municipal puede participar como ciudadano, pero la RPC `claim_reward` rechaza recompensas de misiones de su propio alcance y de misiones o recompensas que haya creado o aprobado (`missions.created_by`, aprobación registrada en `moderation_actions`). Un comercio no puede editar el stock de recompensas del negocio de otro, y un administrador tampoco edita el stock de un comercio: solo aprueba, pausa o rechaza.
 
-**Implementación:** tabla `user_roles` sin políticas de escritura para usuarios; asignación solo por RPC `assign_role()` que verifica que el actor sea `super_admin` (o `municipal_admin` asignando `moderator` dentro de su alcance) y escribe auditoría. Función `private.has_role(role, municipality_id)` usada por RLS (con `GRANT EXECUTE` a `authenticated`, §14). Opcional: Custom Access Token Hook de Supabase para incluir roles en el JWT (evita consultas repetidas); si se usa, asumir que un cambio de rol tarda hasta la expiración del token.
+**Implementación:** tabla `user_roles` sin políticas de escritura para usuarios; asignación solo por RPC `assign_role()`, que aplica la tabla anterior y escribe auditoría. Función `private.has_role(role, municipality_id)` usada por RLS (con `GRANT EXECUTE` a `authenticated`, §14). Opcional: Custom Access Token Hook de Supabase para incluir roles en el JWT (evita consultas repetidas); si se usa, asumir que un cambio de rol tarda hasta la expiración del token.
 
 `entrepreneur` no es un rol que el usuario se da: se obtiene cuando un moderador aprueba la solicitud de alta de negocio.
 
@@ -771,14 +779,15 @@ Tablas añadidas a la lista original y por qué son necesarias: `user_roles` (re
 | `SUPABASE_SERVICE_ROLE_KEY` | Solo en variables de entorno de servidor (sin prefijo `NEXT_PUBLIC_`). Usada **únicamente** por el worker de la cola (procesamiento de imágenes, envío de push y email, PDF) y por el cron. Nunca en un request iniciado por un usuario. Módulo `lib/supabase/admin.ts` con `import 'server-only'` para que el build falle si se importa en cliente |
 | Requests de usuario | Siempre con el cliente Supabase autenticado con el JWT del usuario, para que RLS aplique incluso desde el servidor |
 | Funciones `SECURITY DEFINER` | `search_path = ''` y nombres calificados; validan `auth.uid()` y rol dentro de la función. RPC invocables: en `public`, con `GRANT EXECUTE` solo al rol que corresponde (`authenticated`, o `anon` si son públicas). Helpers de RLS: en `private` (no expuesto) **con** `GRANT USAGE`/`EXECUTE` a `authenticated`/`anon`, porque las políticas se evalúan con el rol del usuario. Funciones de sistema (retención, worker): en `private` con `REVOKE EXECUTE FROM anon, authenticated` (§14) |
-| Uploads | URL de subida firmada generada por el servidor tras validar sesión y cuota. El archivo llega a una ruta `incoming/` del bucket privado y se registra en `attachments` como `pending`. Un job `image_process` (worker con `service_role`) verifica los magic bytes, rechaza lo que no sea `image/jpeg`/`png`/`webp` o supere 5 MB, **quita EXIF** (contiene GPS y datos del dispositivo), genera WebP en tamaños estándar y mueve el resultado a su ruta final. Solo tras aprobación de moderación se copia a `public-media`. Uploads `pending` con más de 24 h se borran por `pg_cron` |
+| Uploads | URL de subida firmada generada por el servidor tras validar sesión y cuota. El archivo llega a una ruta `incoming/` del bucket privado y se registra en `attachments` como `pending`. Un job `image_process` (worker con `service_role`) verifica los magic bytes, rechaza lo que no sea `image/jpeg`/`png`/`webp` o supere 5 MB, **quita EXIF** (contiene GPS y datos del dispositivo), limita dimensiones (máx. 4096 px por lado y 40 MP, para evitar bombas de descompresión), **re-codifica** la imagen (descarta metadatos y cualquier contenido extra incrustado, como archivos políglotas), genera WebP en tamaños estándar y mueve el resultado a su ruta final. El nombre final lo genera el servidor (`{uuid}.webp`): el nombre que envía el cliente nunca se usa en rutas (sin path traversal ni nombres maliciosos). No se confía en el MIME ni en la extensión que declara el navegador. Solo tras aprobación de moderación se copia a `public-media`. Uploads `pending` con más de 24 h se borran por `pg_cron` |
 | Descargas | Buckets privados + `createSignedUrl` de corta duración (p. ej. 5 min) tras verificar permiso; PDFs solo para roles admin |
 | Rate limiting | Tabla `private.rate_limits` (ventana deslizante por `user_id` + acción; límites configurables en tabla) consultada dentro de cada RPC sensible (p. ej. máx. 5 reportes/hora, 20 check-ins/hora, 10 reclamos/día, 10 intentos de canje fallidos/hora por dependiente). **Los intentos rechazados también cuentan**: como las RPC devuelven los rechazos en lugar de lanzar excepción (§12), el incremento del contador hace commit. Sin proveedor adicional en MVP. Vercel Firewall como capa extra en Fase 2 |
 | Anti-abuso | Captcha (Turnstile) vía integración nativa de Supabase Auth en registro. Los reportes de cuentas nuevas o con baja reputación entran como `pending` (moderación) en vez de depender de un captcha que se podría saltar. Reputación simple por usuario: los reportes rechazados reducen los límites |
 | Escalamiento de privilegios | Usuario no puede escribir `user_roles` ni columnas sensibles de `profiles`; `UPDATE` de perfil limitado por `GRANT` de columnas |
-| Panel admin | Verificación de rol en layout de servidor **y** en cada acción; RLS como red final; 2FA (TOTP de Supabase Auth) obligatorio para `municipal_admin` y `super_admin` en Fase 2 |
+| Panel admin | Verificación de rol en layout de servidor **y** en cada acción; RLS como red final; 2FA (TOTP de Supabase Auth) obligatorio para `municipal_admin` en Fase 2 (desde el MVP para el alcance provincial) |
 | Auditoría | Toda acción administrativa y de recompensas → `audit_logs` (§33) |
-| Cabeceras | CSP estricta con nonce (dominios de Google Maps, Supabase y Sentry permitidos; sin `unsafe-inline` en scripts), `X-Frame-Options: DENY`, HSTS (Vercel). Es la mitigación principal de XSS, ya que las cookies de sesión son legibles por JS |
+| Cabeceras | CSP estricta con nonce (dominios de Google Maps, Supabase y Sentry permitidos; sin `unsafe-inline` en scripts; `frame-ancestors 'none'`), `X-Frame-Options: DENY`, HSTS (Vercel), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: geolocation=(self), camera=(self), microphone=(), payment=()`. CORS: las Route Handlers no envían `Access-Control-Allow-Origin` (solo mismo origen), salvo `/api/v1/map/features` pública (`GET`, sin credenciales). Es la mitigación principal de XSS, ya que las cookies de sesión son legibles por JS |
+| Auth: abuso y enumeración | Límites de Supabase Auth configurados (registro, OTP, magic link, recuperación de contraseña, verificación) + captcha en registro y recuperación. Respuestas genéricas en recuperación y login ("si el correo existe, te enviamos un enlace") para no permitir enumerar usuarios. Redirecciones post-login solo a rutas internas (lista blanca; sin open redirect) |
 | Secretos | Vercel Environment Variables por entorno; `.env.example` sin valores; GitHub secret scanning activado. Secretos que la base necesita en claro (secretos de QR, pepper de cupones, secreto del worker): **Supabase Vault**, nunca en columnas normales |
 | Claves Google | Restringidas por referrer y por API (§10.4) |
 
@@ -796,6 +805,14 @@ Tablas añadidas a la lista original y por qué son necesarias: `user_roles` (re
 | **Cola de reintento**: el reporte se envía al volver la conexión (Background Sync donde exista; reintento al abrir la app en iOS) | Reclamar/canjear recompensa | Operación transaccional con inventario |
 | Ver cupones ya emitidos (código y QR guardados localmente; si se pierden, se recuperan online desde "Mis cupones", §20.3) | Panel admin | No aporta valor offline y amplía superficie de riesgo |
 
+**Tres modos explícitos, siempre visibles para el usuario** (indicador en la barra superior; nunca se simula una experiencia offline que no existe):
+
+| Modo | Cuándo | Qué funciona | Qué se bloquea |
+|---|---|---|---|
+| **ONLINE** | Red y API responden | Todo | — |
+| **DEGRADED** | Hay red pero falla un servicio (Google Maps, API propia lenta o con error 5xx, Storage) | Lista de lugares en lugar de mapa si Google falla; lectura desde caché con aviso "datos de hace X min"; borradores y cola | Acciones que dependen del servicio caído, con mensaje concreto |
+| **OFFLINE** | Sin red | Lo de la tabla anterior: shell, contenido visto, borradores, cola de reportes, cupones guardados | Check-ins, reclamos, canjes, búsqueda, panel admin (botones desactivados con explicación) |
+
 - Cada item de la cola lleva `idempotency_key` generado en cliente para evitar duplicados al reintentar. El servidor lo persiste en la fila creada (`UNIQUE (user_id, idempotency_key)`, §14).
 - Si al reintentar la sesión expiró, el item queda en la cola con estado "requiere iniciar sesión" y se reenvía tras el login; nunca se descarta en silencio.
 - **Actualizaciones:** estrategia "nueva versión disponible → recargar", sin `skipWaiting` silencioso durante un formulario.
@@ -809,17 +826,22 @@ Tablas añadidas a la lista original y por qué son necesarias: `user_roles` (re
 
 Dos clases de paso, distinguidas por `mission_steps.kind`:
 - **`location`**: punto + `radius_m` (≥ 50 m) y, opcionalmente, un negocio, lugar o ruta. Se cumple con check-in presencial (§19.3).
-- **`virtual`**: sin geometría; `virtual_rule` indica el evento que lo cumple (p. ej. `traffic_report_verified`). Un trigger sobre la entidad origen inserta el check-in con `method = 'virtual'` y `claimed_geom = NULL`, y luego evalúa si la misión quedó completa con la misma función que usa `mission_checkin`.
+- **`virtual`**: sin geometría; `virtual_rule` indica el evento que lo cumple (p. ej. `traffic_report_verified` o `citizen_request_approved`). Un trigger sobre la entidad origen inserta el check-in con `method = 'virtual'` y `claimed_geom = NULL`, y luego evalúa si la misión quedó completa con la misma función que usa `mission_checkin`.
 
 Tipos soportados con el mismo modelo: visitar un lugar (1 paso), visitar varios (n pasos), completar ruta (pasos en inicio, punto medio y fin), visitar comercios (pasos en negocios), reportar incidencia válida (paso virtual), combinaciones.
 
 ### 19.2 Verificación por nivel
 
-| Nivel | Método | Justificación |
+Cuatro niveles, ordenados `easy < medium < hard < special` (el mismo orden rige `min_level` en §20.2):
+
+| Nivel | Método mínimo | Justificación |
 |---|---|---|
-| Fácil | GPS dentro del radio | Bajo valor de recompensa; fraude tolerable |
-| Media | GPS + QR del lugar | El QR prueba presencia física; el GPS evita compartir fotos del QR |
-| Difícil / premium | GPS + QR dinámico mostrado por el comercio o foto moderada | Alto valor → verificación humana o del comercio |
+| Fácil (`easy`) | GPS dentro del radio | Bajo valor de recompensa; fraude tolerable |
+| Media (`medium`) | GPS + QR del lugar | El QR prueba presencia física; el GPS evita compartir fotos del QR |
+| Difícil (`hard`) | GPS + QR dinámico mostrado por el comercio | Alto valor; el QR rota y no se puede reutilizar |
+| Especial (`special`) | GPS + QR dinámico + evidencia moderada, o validación presencial del comercio | Recompensas de proveedor de alto valor (p. ej. una noche de hotel): verificación humana obligatoria y cupo bajo |
+
+La RPC que publica una misión rechaza combinaciones inconsistentes (p. ej. `special` con `verification = 'gps'`): el nivel exige un método mínimo, y ese método lo decide el servidor, no el formulario.
 
 ### 19.3 Flujo de check-in
 
@@ -889,23 +911,37 @@ Job horario de `pg_cron` (obligatorio, §13) marca `issued` vencidos como `expir
 
 ## 21. Citizen Reports Architecture
 
-Dos flujos distintos que comparten adjuntos, moderación y auditoría:
+Dos flujos distintos que comparten adjuntos, moderación y auditoría. En la interfaz, el ciudadano elige el tipo en un solo formulario ("Reportar"), agrupado en **Tránsito** y **Servicios municipales**; el servidor enruta cada tipo a su flujo:
 
-### 21.1 Consultas ciudadanas (`citizen_requests`)
+| Flujo | Tipos | Tabla | Naturaleza |
+|---|---|---|---|
+| Tránsito | accidente, calle cerrada, semáforo, vía inundada… | `traffic_reports` | Temporal: expira solo; visible en el mapa mientras está activo |
+| Servicios municipales | bache, basura, alumbrado, infraestructura, otro (`kind = incident`) y consultas o quejas sin incidencia física (`kind = inquiry`) | `citizen_requests` | Requiere gestión municipal hasta resolverse |
 
-Solicitudes, quejas y consultas dirigidas al municipio. Ubicación opcional; **municipio obligatorio**: si hay punto, lo calcula el trigger (§11.1), y si no hay, el ciudadano lo elige en el formulario. Así ninguna consulta queda fuera del alcance de un moderador.
+### 21.1 Incidencias y consultas municipales (`citizen_requests`)
+
+Ubicación opcional (obligatoria para `incident`); **municipio obligatorio**: si hay punto, lo calcula el trigger (§11.1), y si no hay, el ciudadano lo elige en el formulario. Así ninguna consulta queda fuera del alcance de un moderador.
 
 ```text
-received → under_review → assigned → in_progress → resolved → archived
-      ↘            ↘                                    
-       rejected ← (desde received / under_review / assigned)
+pending → under_review → approved → in_progress → resolved → archived
+   │            │            │
+   └────────────┴────────────┴──→ rejected   (con motivo visible para el ciudadano)
 ```
 
-- Transiciones válidas definidas en una tabla/función `request_transition_allowed(from, to, role)`; RPC `change_request_status(id, to, note)` valida, actualiza, inserta en `request_status_history`, audita y notifica al ciudadano. Trigger impide `UPDATE` directo de `status`.
-- `resolved` exige nota; `rejected` exige motivo visible para el ciudadano.
+| Desde | Hacia | Quién | Requisito |
+|---|---|---|---|
+| `pending` | `under_review` | moderator / municipal_admin del municipio | — |
+| `under_review` | `approved` | ídem | Validada como legítima; se puede asignar (`assigned_to`) |
+| `approved` | `in_progress` | ídem o el asignado | `assigned_to` definido |
+| `in_progress` | `resolved` | ídem o el asignado | Nota de resolución obligatoria |
+| `resolved` | `archived` | municipal_admin | — (automático a los 30 días por `pg_cron`) |
+| `pending` / `under_review` / `approved` | `rejected` | moderator / municipal_admin | Motivo obligatorio y visible |
+
+- Las transiciones válidas viven en la tabla `request_transitions (from_status, to_status, min_role)`. La RPC `change_request_status(id, to, note)` solo permite **un paso por llamada** según esa tabla, actualiza, inserta en `request_status_history`, audita y encola la notificación al ciudadano. Un trigger impide el `UPDATE` directo de `status`. **Ningún ciudadano puede mover su propio reporte**, y nadie puede saltar de `pending` a `resolved`.
 - Asignación: `assigned_to` debe tener rol `moderator`/`municipal_admin` en el municipio de la consulta.
+- Las misiones que premian reportar se cumplen al llegar a `approved`, nunca al enviar (§19.1).
 - `is_public`: la consulta solo aparece en el mapa público si un moderador la aprueba (y sin datos personales).
-- Tiempo de resolución = `resolved.created_at - received.created_at` desde el historial.
+- Tiempo de resolución = `resolved.created_at - pending.created_at` desde el historial.
 
 ### 21.2 Reportes de tránsito (`traffic_reports`)
 
@@ -931,8 +967,8 @@ received → under_review → assigned → in_progress → resolved → archived
 
 ## 23. Business Architecture
 
-- **Alta:** usuario solicita → formulario (nombre, categoría, contacto, WhatsApp, horario, fotos, ubicación por pin) → opcional "vincular con Google" (Autocomplete, se guarda solo `google_place_id`) → `status = pending` → moderador verifica (llamada/visita) → `verified` y el solicitante recibe rol `entrepreneur` + fila en `business_members`.
-- **Negocio registrado vs Google Place:** solo los negocios **registrados y verificados** aparecen en la capa "Negocios", participan en misiones y ofrecen recompensas. Un Google Place sin registro puede aparecer solo como resultado de búsqueda de dirección, nunca como negocio de SR Conecta.
+- **Alta:** usuario solicita → formulario (nombre, categoría, contacto, WhatsApp, horario, fotos, ubicación por pin) → opcional "vincular con Google" (Autocomplete, se guarda solo `google_place_id`) → `status = pending` → `under_review` (el moderador verifica por llamada o visita) → `approved` (el solicitante recibe el rol `entrepreneur` y una fila en `business_members`) o `rejected` con motivo. Después: `suspended` (reversible) o `archived` (cierre). Solo `approved` aparece en el mapa, participa en misiones y ofrece recompensas.
+- **Negocio registrado vs Google Place:** solo los negocios **registrados y aprobados** aparecen en la capa "Negocios", participan en misiones y ofrecen recompensas. Un Google Place sin registro puede aparecer solo como resultado de búsqueda de dirección, nunca como negocio de SR Conecta.
 - **Panel del negocio:** editar perfil, fotos, horario, promociones (texto con vigencia), recompensas (stock y reglas), escáner de cupones, estadísticas propias (vistas, canjes).
 - **Suspensión:** moderador puede suspender; las recompensas activas pasan a `paused` y los cupones emitidos se respetan o revocan según política documentada.
 
@@ -949,10 +985,10 @@ Ruta `/admin`, Server Components, filtros en URL (`?desde&hasta&municipio&catego
 | Turismo / Rutas | CRUD, carga de GPX/GeoJSON, previsualización |
 | Misiones / Recompensas | CRUD de misiones, aprobación de recompensas de comercios, inventario, canjes |
 | Validaciones | Cola unificada de moderación (fotos, reportes, check-ins `pending_review`) |
-| Usuarios | Búsqueda, roles (solo super_admin), suspensión |
+| Usuarios | Búsqueda, roles según la tabla de §16, suspensión |
 | Auditoría | Consulta de `audit_logs` con filtros |
 | PDF | Historial de `report_runs`, descarga (signed URL), regenerar |
-| Sistema (super_admin) | Estado de la cola `private.jobs` (pendientes, fallidos, `dead` con botón de reintento), feature flags por municipio, catálogos (`traffic_report_types`, categorías, límites de rate limit) |
+| Sistema (municipal_admin provincial) | Estado de la cola `private.jobs` (pendientes, fallidos, `dead` con botón de reintento), feature flags por municipio, catálogos (`traffic_report_types`, categorías, límites de rate limit) |
 
 Los KPIs se calculan con **funciones SQL de agregación** con filtros como parámetros; vistas materializadas solo si una consulta supera ~500 ms (Fase 2).
 
@@ -1126,7 +1162,7 @@ Marco: Ley 172-13 de protección de datos personales de República Dominicana (v
 - IP, en dos columnas y **ninguna probatoria**:
   - `ip_observed`: la IP con la que Supabase vio la llamada (leída de `request.headers` en PostgREST). Si la llamada vino de Next.js será una IP de Vercel; si fue directa, la del cliente.
   - `ip_declared`: la IP del usuario que Next.js pasa como parámetro. Un cliente que llama la RPC directamente puede inventarla, por eso se guarda aparte y se trata como dato informativo.
-- Lectura: `super_admin` todo; `municipal_admin` su municipio.
+- Lectura: `municipal_admin` provincial, toda la provincia; `municipal_admin` de municipio, su municipio.
 
 ## 34. Observability Architecture
 
@@ -1288,11 +1324,11 @@ Resumen por tabla (el detalle de columnas está en el ERD §15; `DATABASE.md` te
 | user_roles | Roles con alcance territorial | PK `id`; UNIQUE NULLS NOT DISTINCT (user_id, role, province_id, municipality_id) | Solo lectura propia; escritura por RPC |
 | municipalities | Límites territoriales | GIST(geom), province_id | Lectura pública |
 | business_categories | Catálogo | slug UNIQUE | Lectura pública |
-| businesses | Negocios registrados | GIST(geom), GIST((geom::geography)), GIN(search_vector), GIN trgm(name), (status, category_id) | Público solo `verified`; miembros editan el suyo |
+| businesses | Negocios registrados | GIST(geom), GIST((geom::geography)), GIN(search_vector), GIN trgm(name), (status, category_id) | Público solo `approved`; miembros editan el suyo |
 | business_members | Relación usuario–negocio | PK | Miembros y admins |
 | tourism_places | Atractivos | GIST, GIN | Público `published` |
 | eco_routes | Senderos | GIST(geom), GIST(start_point) | Público `published` |
-| traffic_report_types | Catálogo de tipos con TTL y gravedad por defecto | PK code | Lectura pública; escritura super_admin |
+| traffic_report_types | Catálogo de tipos con TTL y gravedad por defecto | PK code | Lectura pública; escritura municipal_admin provincial |
 | traffic_reports | Incidencias viales | GIST, (status, expires_at), municipality_id, UNIQUE (reporter_id, idempotency_key) | Público activos sin autor; autor ve los suyos; sin INSERT/UPDATE directo (solo RPC) |
 | citizen_requests | Consultas | GIST, (status, municipality_id), requester_id, UNIQUE (requester_id, idempotency_key) | Autor, asignados, moderadores del municipio; público si `is_public`; sin INSERT/UPDATE directo |
 | request_status_history | Historial | (request_id, created_at) | Igual que la consulta |
@@ -1310,7 +1346,7 @@ Resumen por tabla (el detalle de columnas está en el ERD §15; `DATABASE.md` te
 | report_runs | Ejecuciones del PDF | UNIQUE (province_id, period_start, version) | Admins |
 | weekly_kpi_snapshots | KPIs congelados por ejecución | UNIQUE NULLS NOT DISTINCT (report_run_id, municipality_id) | Admins |
 | jobs (`private`) | Cola asíncrona | (status, run_at) parcial WHERE status='pending'; UNIQUE parcial (dedupe_key) WHERE status IN ('pending','running') | Sin acceso por API; solo el worker (`service_role`) y funciones de sistema |
-| feature_flags | Activación por territorio | PK (key, province_id), municipality_id | Lectura pública de flags no sensibles; escritura super_admin |
+| feature_flags | Activación por territorio | PK (key, province_id), municipality_id | Lectura pública de flags no sensibles; escritura municipal_admin provincial |
 
 Nota sobre `attachments` polimórfica: no tiene FK real a la entidad; se acepta por simplicidad y se valida con trigger (`entity_type` en lista cerrada, entidad existe). Alternativa si crece: tablas de adjuntos por entidad.
 
@@ -1574,6 +1610,14 @@ sequenceDiagram
 - **Contras:** el deploy de producción deja de ser "automático al hacer merge": requiere que la Action termine.
 - **Riesgos:** fallo entre la migración y el deploy → las migraciones compatibles hacia atrás mantienen funcionando el código anterior.
 
+### ADR-020 Sin rol `super_admin`
+- **Contexto:** el diseño v1.1 tenía un `super_admin` con todos los permisos. Un rol así es el objetivo más valioso para un atacante y, en la práctica, acaba asignado "por comodidad".
+- **Decisión:** cinco roles (`visitor`, `citizen`, `entrepreneur`, `moderator`, `municipal_admin`). La gobernanza provincial es un `municipal_admin` con alcance provincial. Las operaciones de plataforma (crear el primer administrador provincial, rotar secretos) son scripts versionados, revisados en PR, ejecutados con `service_role` y auditados. Nadie puede ampliar su propio poder desde la aplicación.
+- **Alternativas:** `super_admin` con 2FA (descartada: sigue siendo un punto único de compromiso con acceso a todo desde la web).
+- **Pros:** mínimo privilegio, menor superficie de ataque, trazabilidad de los cambios de poder.
+- **Contras:** crear otro administrador provincial requiere un PR y a alguien con acceso de operación.
+- **Riesgos:** quedarse sin administradores provinciales → el script de operación está documentado en `DEPLOYMENT.md` y se prueba en `staging`.
+
 ## 42. Risk Matrix
 
 | Riesgo | Prob. | Impacto | Mitigación | Plan alternativo |
@@ -1626,7 +1670,7 @@ Objetivo: cubrir las **6 funcionalidades obligatorias** del reto con calidad dem
 | 9a | Notificaciones **in-app** (centro de notificaciones) | ☐ | **No** (requisito explícito de §0) |
 | 9b | Web Push + email por la cola | ☐ | Push sí puede degradarse; el email de OTP no |
 | 10 | PWA instalable, offline shell y cola de reportes | ☐ | La cola offline sí; instalable no |
-| 11 | Roles: visitor, citizen, entrepreneur, moderator, municipal_admin, super_admin | — | No (seguridad) |
+| 11 | Roles: visitor, citizen, entrepreneur, moderator, municipal_admin (municipio o provincia) | — | No (seguridad) |
 | 12 | Repositorio con documentación mínima, ADRs, CI | — | No (transferencia) |
 | 13 | Cimientos de §5.1 (`province_id`, cola de jobs, estados `text`, PK particionables) | — | **No**: su costo sube cada semana que se postergan |
 
@@ -1908,3 +1952,18 @@ Correcciones de contradicciones detectadas en la revisión de v1.0 y dónde qued
 | 33 | Sentry "gratis para equipos" | Plan gratuito de 1 usuario (verificar) | §3, §31 |
 
 Mejoras de evolución añadidas: §5.1, principios 11–12, ADR-016 a ADR-019, tablas `provinces`, `traffic_report_types`, `jobs` y `feature_flags`, módulos `jobs` y `media`, nuevas filas en la matriz de riesgos y en el Anexo B.
+
+### v1.2 (24/09/2026): alineación con el prompt de auditoría y con el prototipo
+
+| Cambio | Motivo | Dónde |
+|---|---|---|
+| Eliminado `super_admin`; gobernanza por `municipal_admin` provincial + scripts de operación | Mínimo privilegio | §16, ADR-020 |
+| Estados de consultas/incidencias: `pending → under_review → approved → in_progress → resolved → archived`, `rejected` con motivo; tabla de transiciones; un paso por llamada | Estados exigidos por el prompt; nadie salta a `resolved` | §15, §21.1 |
+| `citizen_requests.kind` = `incident` o `inquiry`; formulario único agrupado en Tránsito / Servicios municipales | El prototipo mezclaba tránsito y servicios municipales | §21 |
+| Estados de negocio: `draft, pending, under_review, approved, rejected, suspended, archived` | Estados exigidos por el prompt | §15, §23, §39 |
+| Cuatro niveles de misión (`special` añadido) con método mínimo por nivel | El prototipo y el producto usan 4 niveles | §15, §19.2 |
+| Misión de "reportar" se cumple al aprobarse el reporte | Evita premiar reportes basura | §19.1, §21.1 |
+| Cabeceras (`nosniff`, `Referrer-Policy`, `Permissions-Policy`, `frame-ancestors`), CORS, límites y anti-enumeración en Auth, sin open redirect | Hardening exigido por el prompt | §17 |
+| Subidas: límite de dimensiones, re-codificación, nombre generado por el servidor | Archivos maliciosos y path traversal | §17 |
+| Modos ONLINE / DEGRADED / OFFLINE | No declarar un offline que no existe | §18 |
+| Estados obligatorios por pantalla, formularios, responsive y accesibilidad | UX y WCAG exigidos por el prompt | §7 |

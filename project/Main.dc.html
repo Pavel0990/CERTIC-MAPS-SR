@@ -25,6 +25,12 @@ a:hover{color:#1D4ED8;text-decoration:underline}
 @keyframes srDraw{to{stroke-dashoffset:0}}
 @keyframes srSpin{to{transform:rotate(360deg)}}
 @keyframes srRight{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+/* Foco visible para teclado (WCAG 2.4.7); !important porque varios elementos traen outline:none inline */
+button:focus-visible,[role=button]:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid #2F6FEB!important;outline-offset:2px}
+/* Movimiento reducido (WCAG 2.3.3) */
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+/* Atribución obligatoria de los mapas base (términos de Esri y de OpenStreetMap/OSRM) */
+.sr-attr{position:absolute;right:6px;bottom:6px;z-index:5;font-size:10px;line-height:1.3;color:#3F4650;background:rgba(255,255,255,.82);padding:2px 6px;border-radius:6px;pointer-events:none;white-space:nowrap}
 </style>
 </helmet>
 <div style="min-height:100vh;background:#ECEEF1;font-family:Inter,system-ui,sans-serif;color:#111418;font-feature-settings:'cv11','ss01'">
@@ -34,7 +40,7 @@ a:hover{color:#1D4ED8;text-decoration:underline}
     <div style="width:34px;height:34px;border-radius:11px;background:#111418;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M2.5 18.5 9 9l4 5.5 3-3.5 5.5 7.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="16.5" cy="5.5" r="2.2" fill="#F2B01E"></circle></svg></div>
     <div style="display:flex;flex-direction:column;line-height:1.15">
       <span style="font-weight:800;font-size:15px;letter-spacing:.04em">SR CONECTA</span>
-      <span style="font-size:12px;color:#5B616B;letter-spacing:.02em">El territorio está vivo.</span>
+      <span style="font-size:12px;color:#5B616B;letter-spacing:.02em">El territorio está vivo. · <span style="color:#92400E;font-weight:600">Prototipo con datos de demostración</span></span>
     </div>
   </div>
   <div style="display:flex;gap:4px;padding:4px;background:#DDE0E5;border-radius:14px">
@@ -70,6 +76,7 @@ a:hover{color:#1D4ED8;text-decoration:underline}
 
     <sc-if value="{{ showMap }}">
     <div onPointerDown="{{ mDown }}" onPointerMove="{{ pMove }}" onPointerUp="{{ pUp }}" onPointerLeave="{{ pUp }}" onDoubleClick="{{ mDbl }}" style="position:absolute;inset:0;overflow:hidden;background:#F2EFE9;touch-action:none;cursor:grab">
+      <div class="sr-attr" style="bottom:auto;top:166px">{{ mAttr }}</div>
       <sc-for list="{{ mTiles }}" as="t"><img src="{{ t.src }}" alt="" draggable="false" style="position:absolute;left:{{ t.l }}px;top:{{ t.t }}px;width:256px;height:256px;pointer-events:none"></sc-for>
       <sc-if value="{{ routeLine.show }}">
         <svg width="390" height="844" style="position:absolute;left:0;top:0;pointer-events:none">
@@ -100,6 +107,7 @@ a:hover{color:#1D4ED8;text-decoration:underline}
 
     <sc-if value="{{ isAct }}">
     <div style="position:absolute;inset:0;overflow:hidden;background:#F2EFE9">
+      <div class="sr-attr" style="bottom:auto;top:52px">Powered by Esri</div>
       <div style="position:absolute;left:0;top:0;width:488px;height:1055px;transform:scale(.8);transform-origin:0 0">
         <sc-for list="{{ act.tiles }}" as="t"><img src="{{ t.src }}" alt="" draggable="false" style="position:absolute;left:{{ t.l }}px;top:{{ t.t }}px;width:256px;height:256px"></sc-for>
         <sc-for list="{{ act.dots }}" as="d"><div style="position:absolute;left:{{ d.l }}px;top:{{ d.t }}px;width:12px;height:12px;border-radius:50%;background:{{ d.c }};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.25)"></div></sc-for>
@@ -114,7 +122,7 @@ a:hover{color:#1D4ED8;text-decoration:underline}
       <div style="position:absolute;top:54px;left:14px;right:14px;background:#fff;border-radius:24px;padding:16px 18px;box-shadow:0 1px 2px rgba(17,20,24,.06),0 10px 30px rgba(17,20,24,.10);animation:srUp .3s">
         <div style="display:flex;align-items:center;justify-content:space-between">
           <div style="font-size:24px;font-weight:750;letter-spacing:-.02em">Actividad</div>
-          <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.08em;color:#15803D"><span style="width:8px;height:8px;border-radius:50%;background:#16A34A;box-shadow:0 0 0 4px rgba(22,163,74,.18)"></span>EN VIVO</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.08em;color:#15803D"><span style="width:8px;height:8px;border-radius:50%;background:#16A34A;box-shadow:0 0 0 4px rgba(22,163,74,.18)"></span>HOY</div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px">
           <sc-for list="{{ act.stats }}" as="k"><div><div style="font-size:26px;font-weight:750;letter-spacing:-.03em;font-variant-numeric:tabular-nums">{{ k.v }}</div><div style="font-size:12px;color:#5B616B;line-height:1.25">{{ k.l }}</div></div></sc-for>
@@ -501,8 +509,13 @@ a:hover{color:#1D4ED8;text-decoration:underline}
       <sc-if value="{{ rp.s1 }}">
         <div style="font-size:26px;font-weight:750;letter-spacing:-.02em">Reportar</div>
         <div style="font-size:15px;color:#5B616B;margin-top:4px;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#2F6FEB"></span>Calle Duarte, Sabaneta · GPS ±6 m</div>
-        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:16px">
-          <sc-for list="{{ rp.types }}" as="ty"><button onClick="{{ ty.onClick }}" style="height:78px;border-radius:18px;border:0;background:#F6F7F9;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:600;color:#111418;padding:0 4px" style-hover="background:#FDECEC"><span style="width:10px;height:10px;border-radius:50%;background:#E5484D"></span>{{ ty.t }}</button></sc-for>
+        <div style="font-size:12px;font-weight:700;letter-spacing:.1em;color:#5B616B;margin-top:16px">TRÁNSITO · TEMPORAL, EXPIRA SOLO</div>
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px">
+          <sc-for list="{{ rp.typesT }}" as="ty"><button onClick="{{ ty.onClick }}" style="height:78px;border-radius:18px;border:0;background:#F6F7F9;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:600;color:#111418;padding:0 4px" style-hover="background:#FDECEC"><span style="width:10px;height:10px;border-radius:50%;background:#E5484D"></span>{{ ty.t }}</button></sc-for>
+        </div>
+        <div style="font-size:12px;font-weight:700;letter-spacing:.1em;color:#5B616B;margin-top:14px">SERVICIOS MUNICIPALES · SEGUIMIENTO HASTA RESOLVER</div>
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px">
+          <sc-for list="{{ rp.typesM }}" as="ty"><button onClick="{{ ty.onClick }}" style="height:78px;border-radius:18px;border:0;background:#F6F7F9;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:600;color:#111418;padding:0 4px" style-hover="background:#EEF2FF"><span style="width:10px;height:10px;border-radius:50%;background:#6D28D9"></span>{{ ty.t }}</button></sc-for>
         </div>
         <div onClick="{{ toggleOffline }}" role="switch" style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;padding:14px 16px;background:#F6F7F9;border-radius:18px;cursor:pointer">
           <div><div style="font-size:15px;font-weight:600">Simular sin conexión</div><div style="font-size:13px;color:#5B616B">Demostración del modo offline</div></div>
@@ -612,7 +625,7 @@ a:hover{color:#1D4ED8;text-decoration:underline}
 
     <sc-if value="{{ aIsRes }}">
       <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
-        <div><div style="font-size:34px;font-weight:750;letter-spacing:-.03em">Territorio hoy</div><div style="font-size:15px;color:#5B616B;margin-top:2px">Semana 39 · 21–27 sep 2026 · actualizado en tiempo real</div></div>
+        <div><div style="font-size:34px;font-weight:750;letter-spacing:-.03em">Territorio hoy</div><div style="font-size:15px;color:#5B616B;margin-top:2px">Semana 39 · 21–27 sep 2026 · datos de demostración</div></div>
         <div style="display:flex;gap:4px;padding:4px;background:#DDE0E5;border-radius:14px;flex-wrap:nowrap">
           <sc-for list="{{ aMunis }}" as="mu"><button onClick="{{ mu.onClick }}" style="border:0;cursor:pointer;height:36px;white-space:nowrap;padding:0 14px;border-radius:10px;font-size:14px;font-weight:600;background:{{ mu.bg }};color:{{ mu.fg }};box-shadow:{{ mu.sh }}">{{ mu.label }}</button></sc-for>
         </div>
@@ -622,6 +635,7 @@ a:hover{color:#1D4ED8;text-decoration:underline}
       </div>
       <div style="display:flex;gap:16px;margin-top:16px;flex-wrap:wrap">
         <div ref="{{ aRef }}" onPointerDown="{{ aDown }}" onPointerMove="{{ pMove }}" onPointerUp="{{ pUp }}" onPointerLeave="{{ pUp }}" onDoubleClick="{{ aZoomIn }}" style="flex:1 1 560px;min-width:0;position:relative;height:600px;border-radius:24px;overflow:hidden;background:#F2EFE9;touch-action:none;cursor:grab;box-shadow:0 1px 2px rgba(17,20,24,.05),0 8px 24px rgba(17,20,24,.06);user-select:none">
+          <div class="sr-attr">Powered by Esri</div>
           <sc-for list="{{ aTiles }}" as="t"><img src="{{ t.src }}" alt="" draggable="false" style="position:absolute;left:{{ t.l }}px;top:{{ t.t }}px;width:256px;height:256px;pointer-events:none"></sc-for>
           <sc-for list="{{ aHeat }}" as="hh"><div style="position:absolute;left:{{ hh.l }}px;top:{{ hh.t }}px;width:{{ hh.s }}px;height:{{ hh.s }}px;border-radius:50%;background:radial-gradient(circle,rgba(47,111,235,.34),rgba(47,111,235,.12) 45%,rgba(47,111,235,0) 70%);pointer-events:none"></div></sc-for>
           <sc-for list="{{ aClusters }}" as="c"><div onClick="{{ c.onClick }}" role="button" style="position:absolute;left:{{ c.l }}px;top:{{ c.t }}px;width:40px;height:40px;border-radius:50%;background:#fff;box-shadow:0 0 0 5px rgba(47,111,235,.2),0 4px 12px rgba(17,20,24,.2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#1D4ED8;cursor:pointer">{{ c.n }}</div></sc-for>
@@ -652,12 +666,12 @@ a:hover{color:#1D4ED8;text-decoration:underline}
           </sc-if>
         </div>
         <div style="flex:0 1 380px;min-width:300px;background:#fff;border-radius:24px;display:flex;flex-direction:column;max-height:600px;box-shadow:0 1px 2px rgba(17,20,24,.05)">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:20px 20px 12px"><div style="font-size:19px;font-weight:700">Reportes ciudadanos</div><div style="font-size:14px;color:#5B616B">{{ aOpenCount }} abiertos</div></div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:20px 20px 12px"><div style="font-size:19px;font-weight:700">Reportes ciudadanos</div><div style="font-size:14px;color:#5B616B">{{ aOpenCount }}</div></div>
           <div style="flex:1;overflow-y:auto;padding:0 10px 10px">
             <sc-for list="{{ aQueue }}" as="r">
               <div onClick="{{ r.onClick }}" role="button" style="padding:12px 10px;border-radius:16px;cursor:pointer;background:{{ r.bg }};display:flex;flex-direction:column;gap:8px" style-hover="background:#F6F7F9">
                 <div style="display:flex;gap:10px;align-items:flex-start"><span style="width:10px;height:10px;border-radius:50%;background:#E5484D;margin-top:6px;flex:none"></span><div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">{{ r.title }}</div><div style="font-size:13px;color:#5B616B">#SR-{{ r.num }} · {{ r.kind }} · {{ r.muni }} · {{ r.date }}</div></div><span style="background:{{ r.stBg }};color:{{ r.stC }};font-size:12px;font-weight:700;padding:5px 9px;border-radius:9px;white-space:nowrap">{{ r.st }}</span></div>
-                <sc-if value="{{ r.canAdv }}"><div style="display:flex;justify-content:space-between;align-items:center;padding-left:20px"><span style="font-size:12px;color:#5B616B">{{ r.mineTag }}</span><button onClick="{{ r.onAdv }}" style="height:32px;padding:0 12px;border-radius:10px;border:1.5px solid #DCE3F3;background:#fff;color:#1D4ED8;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:#F3F6FE">{{ r.next }}</button></div></sc-if>
+                <sc-if value="{{ r.canAdv }}"><div style="display:flex;justify-content:space-between;align-items:center;padding-left:20px"><span style="font-size:12px;color:#5B616B">{{ r.mineTag }}</span><div style="display:flex;gap:6px"><sc-if value="{{ r.canRej }}"><button onClick="{{ r.onRej }}" style="height:32px;padding:0 12px;border-radius:10px;border:1.5px solid #F4D0CD;background:#fff;color:#B42318;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:#FEF3F2">Rechazar</button></sc-if><button onClick="{{ r.onAdv }}" style="height:32px;padding:0 12px;border-radius:10px;border:1.5px solid #DCE3F3;background:#fff;color:#1D4ED8;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:#F3F6FE">{{ r.next }}</button></div></div></sc-if>
               </div>
             </sc-for>
           </div>
@@ -700,7 +714,7 @@ a:hover{color:#1D4ED8;text-decoration:underline}
             <div style="font-size:14px;color:#5B616B">{{ m.provider }} · {{ m.muni }}</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;margin-top:16px">
               <div><div style="font-size:12px;color:#5B616B">Recompensa</div><div style="font-size:20px;font-weight:750">{{ m.reward }}</div></div>
-              <div><div style="font-size:12px;color:#5B616B">Completadas</div><div style="font-size:20px;font-weight:750;font-variant-numeric:tabular-nums">{{ m.completions }}</div></div>
+              <div><div style="font-size:12px;color:#5B616B">Completadas · semana</div><div style="font-size:20px;font-weight:750;font-variant-numeric:tabular-nums">{{ m.completions }}</div></div>
               <div><label style="font-size:12px;color:#5B616B">Cantidad disponible</label><input type="number" min="0" value="{{ m.left }}" onChange="{{ m.onLeft }}" aria-label="Cantidad disponible" style="display:block;width:100%;margin-top:4px;height:40px;border-radius:12px;border:1.5px solid #E6E8EB;padding:0 12px;font-size:16px;font-weight:700;outline:none"></div>
               <div><div style="font-size:12px;color:#5B616B">Expira</div><div style="font-size:16px;font-weight:600;margin-top:10px">{{ m.expires }}</div></div>
             </div>
@@ -713,9 +727,9 @@ a:hover{color:#1D4ED8;text-decoration:underline}
 
     <sc-if value="{{ aIsSem }}">
       <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;max-width:880px">
-        <div><div style="font-size:34px;font-weight:750;letter-spacing:-.03em">Reporte semanal</div><div style="font-size:15px;color:#5B616B;margin-top:2px">Se genera automáticamente cada lunes a las 7:00 a. m.</div></div>
+        <div><div style="font-size:34px;font-weight:750;letter-spacing:-.03em">Reporte semanal</div><div style="font-size:15px;color:#5B616B;margin-top:2px">Se genera automáticamente cada lunes a las 6:00 a. m. con la semana anterior. Aquí: regeneración manual de la semana en curso.</div></div>
         <div style="display:flex;align-items:center;gap:10px">
-          <sc-if value="{{ pdfReady }}"><span style="white-space:nowrap;font-size:14px;font-weight:600;color:#15803D;display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg>SR-Conecta-Semana-39.pdf listo</span></sc-if>
+          <sc-if value="{{ pdfReady }}"><span style="white-space:nowrap;font-size:14px;font-weight:600;color:#15803D;display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg>SR-Conecta-Semana-39-parcial.pdf listo (demostración)</span></sc-if>
           <button onClick="{{ genPdf }}" style="white-space:nowrap;flex:none;height:46px;padding:0 18px;border-radius:14px;border:0;background:#111418;color:#fff;font-size:15px;font-weight:650;cursor:pointer;display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6"></path></svg>{{ pdfLabel }}</button>
         </div>
       </div>
@@ -725,7 +739,7 @@ a:hover{color:#1D4ED8;text-decoration:underline}
           <span style="font-size:12px;font-weight:700;letter-spacing:.14em;color:#5B616B">INFORME DE INTELIGENCIA TERRITORIAL</span>
         </div>
         <div style="font-size:48px;font-weight:800;letter-spacing:-.04em;margin-top:28px;line-height:1">Semana 39</div>
-        <div style="font-size:16px;color:#5B616B;margin-top:8px">21–27 de septiembre de 2026 · Provincia Santiago Rodríguez</div>
+        <div style="font-size:16px;color:#5B616B;margin-top:8px">21–27 de septiembre de 2026 · parcial al 24 sep · Provincia Santiago Rodríguez</div>
         <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px 20px;margin-top:32px">
           <sc-for list="{{ docKpis }}" as="k"><div style="border-top:1px solid #E6E8EB;padding-top:12px"><div style="font-size:34px;font-weight:750;letter-spacing:-.04em;font-variant-numeric:tabular-nums">{{ k.v }}</div><div style="font-size:13px;color:#5B616B;margin-top:2px;line-height:1.35">{{ k.l }}</div><div style="font-size:12px;font-weight:700;color:{{ k.dc }};margin-top:4px">{{ k.d }}</div></div></sc-for>
         </div>
@@ -748,6 +762,7 @@ a:hover{color:#1D4ED8;text-decoration:underline}
         </div>
         <div style="font-size:12px;font-weight:700;letter-spacing:.12em;color:#5B616B;margin-top:40px">MAPA DE ACTIVIDAD</div>
         <div style="position:relative;height:250px;border-radius:14px;overflow:hidden;margin-top:12px;background:#F2EFE9">
+          <div class="sr-attr">Powered by Esri</div>
           <sc-for list="{{ docMap.tiles }}" as="t"><img src="{{ t.src }}" alt="" draggable="false" style="position:absolute;left:{{ t.l }}px;top:{{ t.t }}px;width:256px;height:256px;filter:grayscale(.6)"></sc-for>
           <sc-for list="{{ docMap.marks }}" as="mk"><div style="position:absolute;left:{{ mk.l }}px;top:{{ mk.t }}px;width:{{ mk.s }}px;height:{{ mk.s }}px;border-radius:50%;background:radial-gradient(circle,rgba(47,111,235,.45),rgba(47,111,235,.12) 50%,rgba(47,111,235,0) 70%)"></div></sc-for>
           <sc-for list="{{ docMap.labels }}" as="lb"><div style="position:absolute;left:{{ lb.l }}px;top:{{ lb.t }}px;background:#fff;border-radius:8px;padding:4px 8px;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.12);white-space:nowrap">{{ lb.t2 }}</div></sc-for>
@@ -776,19 +791,27 @@ class Component extends DCLogic {
     boot();
     this.onResize = () => this.setState({ vh: window.innerHeight, vw: window.innerWidth });
     window.addEventListener('resize', this.onResize); this.onResize();
-    this.tick = setInterval(() => { if (!this.state.ready) return; this.setState(s => ({ live: { ...s.live, users: Math.max(29, Math.min(41, s.live.users + (Math.random() < .5 ? -1 : 1))) } })); }, 3000);
+    // Teclado: los div role="button" se activan con Enter/Espacio como un <button> real (WCAG 2.1.1).
+    this.onKey = e => { const t = e.target; if ((e.key === 'Enter' || e.key === ' ') && t && t.getAttribute && t.getAttribute('role') === 'button') { e.preventDefault(); t.click(); } };
+    document.addEventListener('keydown', this.onKey);
     if (this.props.startView === 'Panel municipal') this.setState({ view: 'admin' });
   }
-  componentWillUnmount() { window.removeEventListener('resize', this.onResize); clearInterval(this.tick); clearTimeout(this._bt); this._ro && this._ro.disconnect(); }
+  componentWillUnmount() { window.removeEventListener('resize', this.onResize); document.removeEventListener('keydown', this.onKey); this._mo && this._mo.disconnect(); clearTimeout(this._bt); this._ro && this._ro.disconnect(); }
+  reduced() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+  stOf(r) { const S = window.SR; return r.rejected ? S.REJ : S.ST[r.status]; }
+  isOpen(r) { return !r.rejected && r.status < window.SR.ST_DONE; }
   init() {
     const S = window.SR; const u = S.wpx(S.U.lat, S.U.lng, 14); const a = S.wpx(19.442, -71.305, 11);
     this.setState({ ready: true, m: { z: 14, cx: u.x, cy: u.y + 120 }, am: { z: 11, cx: a.x, cy: a.y }, sel: null, expanded: false, search: false, q: '', chip: null,
       layers: { negocio: true, turismo: true, ruta: true, mision: true, reporte: true }, route: null, mode: 'auto',
-      reports: S.R0.map(r => ({ ...r, hist: [...r.hist] })), done: { m07: ['presa'], m03: [], m09: ['parque'], m12: ['parque'] }, completed: [],
+      reports: S.R0.map(r => ({ ...r, hist: [...r.hist], wasDone: r.status === S.ST_DONE })), done: { m07: ['presa'], m03: [], m09: ['parque'], m12: ['parque'] }, completed: [],
       saved: { presa: true, inaje: true, cafe: true }, rewards: S.RW0.map(r => ({ ...r })), mission: null, verifying: null, celebrate: null, rep: null, offline: false, pending: null,
-      status: null, reward: null, toast: null, live: { users: 34, reports: 12, missions: 5, biz: 8 }, inbox: [], feed: [],
+      status: null, reward: null, toast: null, inbox: [], feed: [],
       aTab: 'resumen', aMuni: 'Todos', aEst: 'Todos', aLayers: { reporte: true, negocio: true, turismo: true, ruta: true, mision: true, actividad: true }, aSel: null, aw: 900, ah: 560,
       pend: S.PEND0.slice(), pdf: null, left: { m07: 12, m03: 40, m09: 6, m12: 3 } });
+    // tabindex para que los div role="button" (generados por plantillas) sean alcanzables con Tab.
+    this._mo = new MutationObserver(() => document.querySelectorAll('[role="button"]:not([tabindex])').forEach(el => el.setAttribute('tabindex', '0')));
+    this._mo.observe(document.body, { childList: true, subtree: true });
   }
   chipDefs() { return [
     { k: 'cafe', label: 'Café', f: i => (i.tags || []).includes('cafe') },
@@ -803,7 +826,7 @@ class Component extends DCLogic {
   hm() { const d = new Date(); const h = d.getHours(); return (h % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0') + (h < 12 ? ' a. m.' : ' p. m.'); }
   toast(t) { this.setState({ toast: t }); clearTimeout(this._tt); this._tt = setTimeout(() => this.setState({ toast: null }), 3600); }
   anim(key, to, ms = 480) {
-    cancelAnimationFrame(this._raf[key]); const from = { ...this.state[key] };
+    cancelAnimationFrame(this._raf[key]); if (this.reduced()) { this.setState({ [key]: to }); return; } const from = { ...this.state[key] };
     if (from.z !== to.z) { const f = Math.pow(2, to.z - from.z); from.cx *= f; from.cy *= f; }
     const t0 = performance.now();
     const step = now => { let k = Math.min(1, (now - t0) / ms); k = 1 - Math.pow(1 - k, 3); this.setState({ [key]: { z: to.z, cx: from.cx + (to.cx - from.cx) * k, cy: from.cy + (to.cy - from.cy) * k } }); if (k < 1) this._raf[key] = requestAnimationFrame(step); };
@@ -842,10 +865,14 @@ class Component extends DCLogic {
     const tab = ['inicio', 'mapa'].includes(this.state.tab) ? this.state.tab : 'mapa';
     this.setState({ ...this.R(), tab, route: { key, ids, stops: stops.map(p => ({ lat: p.lat, lng: p.lng, name: p.name, id: p.id })), coords: stops.map(p => [p.lat, p.lng]), dist: null, dur: null, nav: false } });
     this.fit(stops.map(p => [p.lat, p.lng]), 320, 190);
-    const done = (c, d, t) => { if (!this.state.route || this.state.route.key !== key) return; this.setState(s => ({ route: { ...s.route, coords: c, dist: d, dur: t } })); this.fit(c, 320, 190); };
+    const done = (c, d, t, approx) => { if (!this.state.route || this.state.route.key !== key) return; this.setState(s => ({ route: { ...s.route, coords: c, dist: d, dur: t, approx } })); this.fit(c, 320, 190); };
     const q = stops.map(p => p.lng.toFixed(5) + ',' + p.lat.toFixed(5)).join(';');
-    fetch('https://router.project-osrm.org/route/v1/driving/' + q + '?overview=full&geometries=geojson').then(r => r.json()).then(j => { const r = j.routes && j.routes[0]; if (!r) throw 0; done(r.geometry.coordinates.map(c => [c[1], c[0]]), r.distance / 1000, r.duration / 60); })
-      .catch(() => { let d = 0; for (let i = 1; i < stops.length; i++) d += S.km(stops[i - 1], stops[i]); d *= 1.3; done(stops.map(p => [p.lat, p.lng]), d, d / 40 * 60); });
+    // Servidor DEMO público de OSRM: solo para el prototipo (su política no permite producción). En el producto: deep link de Google Maps (ARCHITECTURE.md §10.2).
+    const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 6000);
+    fetch('https://router.project-osrm.org/route/v1/driving/' + q + '?overview=full&geometries=geojson', { signal: ctl.signal }).then(r => { if (!r.ok) throw new Error('OSRM ' + r.status); return r.json(); }).then(j => { const r = j.routes && j.routes[0]; if (!r) throw new Error('OSRM sin ruta'); done(r.geometry.coordinates.map(c => [c[1], c[0]]), r.distance / 1000, r.duration / 60, false); })
+      // Sin servicio: estimación en línea recta ×1,3 a 40 km/h, marcada como aproximada en la UI.
+      .catch(() => { let d = 0; for (let i = 1; i < stops.length; i++) d += S.km(stops[i - 1], stops[i]); d *= 1.3; done(stops.map(p => [p.lat, p.lng]), d, d / 40 * 60, true); })
+      .finally(() => clearTimeout(to));
   }
   arrive = () => {
     const r = this.state.route; if (!r) return; const S = window.SR; const hits = [];
@@ -857,7 +884,7 @@ class Component extends DCLogic {
   };
   markStep(mid, pid) { this.setState(s => ({ done: { ...s.done, [mid]: Array.from(new Set([...(s.done[mid] || []), pid])) } }), () => { const M = window.SR.MIS.find(x => x.id === mid); if (M.steps.every(st => this.state.done[mid].includes(st)) && !this.state.completed.includes(mid)) this.complete(mid); }); }
   complete(mid) {
-    const S = window.SR; const M = S.MIS.find(x => x.id === mid); const code = 'SR-' + M.num + '-' + Math.random().toString(36).slice(2, 6).toUpperCase(); const place = S.PLACES.find(p => p.name === M.provider);
+    const S = window.SR; const M = S.MIS.find(x => x.id === mid); const code = S.code(); const place = S.PLACES.find(p => p.name === M.provider);
     this.setState(s => s.completed.includes(mid) ? null : ({ completed: [...s.completed, mid], celebrate: mid, verifying: null,
       rewards: [{ id: 'rw' + mid, title: M.reward, provider: M.provider, from: 'Misión ' + M.num, code, used: false, expires: M.expires, cond: M.cond, place: place && place.id }, ...s.rewards],
       left: { ...s.left, [mid]: Math.max(0, s.left[mid] - 1) }, feed: [{ t: 'Completaste la Misión ' + M.num, s: M.name + ' · ahora', c: '#D99A00' }, ...s.feed] }));
@@ -866,15 +893,24 @@ class Component extends DCLogic {
   openReport = () => this.setState({ ...this.R(), rep: { step: 1, type: null, photo: false, desc: '' } });
   addReport(rep) {
     const s = this.state; const U = window.SR.U; const num = 1041 + s.reports.filter(r => r.isNew).length; const id = 'r' + num;
-    const r = { id, num, kind: rep.type, title: rep.type + ' en Calle Duarte', addr: 'Calle Duarte, Sabaneta', lat: U.lat + .0007, lng: U.lng - .0009, status: 0, mine: true, muni: 'Sabaneta', date: 'Hoy', hist: ['Hoy · ' + this.hm(), null, null, null], isNew: true };
-    this.setState(x => ({ reports: [r, ...x.reports], feed: [{ t: 'Enviaste un reporte: ' + rep.type, s: 'Calle Duarte · ahora', c: '#E5484D' }, ...x.feed] }));
-    setTimeout(() => this.markStep('m03', 'report'), 1600); return { id, num };
+    const r = { id, num, kind: rep.type, title: rep.type + ' en Calle Duarte', addr: 'Calle Duarte, Sabaneta', lat: U.lat + .0007, lng: U.lng - .0009, status: 0, mine: true, muni: 'Sabaneta', date: 'Hoy', hist: ['Hoy · ' + this.hm(), null, null, null, null], isNew: true };
+    // La misión 03 NO se cumple al enviar (incentivaría reportes basura): se cumple cuando el panel lo aprueba (ver advance).
+    this.setState(x => ({ reports: [r, ...x.reports], feed: [{ t: 'Enviaste un reporte: ' + rep.type, s: 'Calle Duarte · pendiente de validación', c: '#E5484D' }, ...x.feed] }));
+    return { id, num };
   }
   reconnect = () => { const p = this.state.pending; this.setState({ offline: false, pending: null }); const r = this.addReport(p); this.setState({ rep: { ...p, step: 'done', id: r.id, num: r.num } }); this.toast('Conexión restablecida · reporte sincronizado'); };
   advance(id) {
-    const S = window.SR; const r = this.state.reports.find(x => x.id === id); if (!r || r.status >= 3) return; const ns = r.status + 1; const now = 'Hoy · ' + this.hm();
+    // Solo avanza un paso por acción: nadie puede saltar directamente a "Resuelto".
+    const S = window.SR; const r = this.state.reports.find(x => x.id === id); if (!r || !this.isOpen(r)) return; const ns = r.status + 1; const now = 'Hoy · ' + this.hm();
     this.setState(s => ({ reports: s.reports.map(x => x.id === id ? { ...x, status: ns, hist: x.hist.map((h, i) => i === ns ? now : h) } : x), inbox: r.mine ? [...s.inbox, 'Tu reporte «' + r.title + '» pasó a ' + S.ST[ns].t] : s.inbox }));
     this.toast('#SR-' + r.num + ' → ' + S.ST[ns].t + (r.mine ? ' · ciudadana notificada' : ''));
+    if (ns === S.ST_APPROVED && r.mine && r.isNew) this.markStep('m03', 'report');
+  }
+  reject(id) {
+    const S = window.SR; const r = this.state.reports.find(x => x.id === id); if (!r || r.rejected || r.status > S.ST_LAST_REJECTABLE) return;
+    const why = 'No corresponde a una incidencia verificable';
+    this.setState(s => ({ reports: s.reports.map(x => x.id === id ? { ...x, rejected: true, rejAt: 'Hoy · ' + this.hm(), rejWhy: why } : x), inbox: r.mine ? [...s.inbox, 'Tu reporte «' + r.title + '» fue rechazado: ' + why] : s.inbox }));
+    this.toast('#SR-' + r.num + ' → Rechazado · motivo visible para la ciudadana');
   }
   setView(v) { const ib = this.state.inbox || []; this.setState({ view: v, ...(v === 'app' && ib.length ? { inbox: [] } : {}) }); if (v === 'app' && ib.length) setTimeout(() => this.toast(ib[ib.length - 1]), 350); }
   aRef = el => { if (el === this._aEl) return; this._ro && this._ro.disconnect(); this._aEl = el; if (!el) return; this._ro = new ResizeObserver(([e]) => { const r = e.contentRect; if (Math.abs(r.width - this.state.aw) > 1 || Math.abs(r.height - this.state.ah) > 1) this.setState({ aw: Math.round(r.width), ah: Math.round(r.height) }); }); this._ro.observe(el); };
@@ -905,7 +941,8 @@ class Component extends DCLogic {
       const ML = { auto: 'Auto', moto: 'Moto', pie: 'A pie' };
       const o = r.stops[0], dd = r.stops[r.stops.length - 1]; const wp = r.stops.slice(1, -1).map(x => x.lat + ',' + x.lng).join('|');
       const eta = t == null ? '—' : (() => { const d = new Date(Date.now() + t * 60000); const h = d.getHours(); return (h % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0') + (h < 12 ? ' a. m.' : ' p. m.'); })();
-      rt = { show: true, origin: o.name, dest: dd.name, hasVia: r.ids.length > 2, via: 'Vía ' + r.stops.slice(1, -1).map(x => x.name).join(', '), dist: r.dist == null ? '—' : S.fkm(r.dist), time: t == null ? '—' : S.fmin(t), modeLabel: ML[s.mode], nav: r.nav, notNav: !r.nav, eta,
+      const ap = r.approx ? '≈ ' : '';
+      rt = { show: true, origin: o.name, dest: dd.name, hasVia: r.ids.length > 2, via: 'Vía ' + r.stops.slice(1, -1).map(x => x.name).join(', '), dist: r.dist == null ? '—' : ap + S.fkm(r.dist), time: t == null ? '—' : ap + S.fmin(t), modeLabel: ML[s.mode], nav: r.nav, notNav: !r.nav, eta,
         modes: Object.keys(ML).map(k => ({ label: ML[k], onClick: () => this.setState({ mode: k }), bg: s.mode === k ? '#fff' : 'transparent', fg: s.mode === k ? '#111418' : '#5B616B', sh: s.mode === k ? '0 1px 3px rgba(17,20,24,.14)' : 'none' })),
         onStart: () => this.setState(x => ({ route: { ...x.route, nav: true } })),
         gmaps: 'https://www.google.com/maps/dir/?api=1&origin=' + o.lat + ',' + o.lng + '&destination=' + dd.lat + ',' + dd.lng + (wp ? '&waypoints=' + encodeURIComponent(wp) : '') + '&travelmode=' + (s.mode === 'pie' ? 'walking' : 'driving') };
@@ -934,7 +971,7 @@ class Component extends DCLogic {
       } else if (it.type === 'mision') {
         const dn = (s.done[it.id] || []).length; card = { isMision: true, num: it.num, title: it.title, prog: dn + '/' + it.steps.length, pct: Math.round(dn / it.steps.length * 100), reward: it.reward, left: s.left[it.id], onOpen: () => this.openMission(it.id) };
       } else if (it.type === 'reporte') {
-        const st = S.ST[it.status]; card = { isReporte: true, kind: it.kind.toUpperCase(), title: it.title, addr: it.addr, dist: dist(it), st: st.t, stC: st.c, stBg: st.bg, num: it.num, date: it.date, cta: it.mine ? 'Ver estado' : 'Apoyar este reporte', onOpen: it.mine ? () => this.setState({ status: it.id }) : () => this.toast('Gracias · sumaste tu apoyo a #SR-' + it.num) };
+        const st = this.stOf(it); card = { isReporte: true, kind: it.kind.toUpperCase(), title: it.title, addr: it.addr, dist: dist(it), st: st.t, stC: st.c, stBg: st.bg, num: it.num, date: it.date, cta: it.mine ? 'Ver estado' : 'Apoyar este reporte', onOpen: it.mine ? () => this.setState({ status: it.id }) : () => this.toast('Gracias · sumaste tu apoyo a #SR-' + it.num) };
       }
     }
     let det = { show: false, mis: { show: false } };
@@ -960,7 +997,7 @@ class Component extends DCLogic {
     const levels = [['★', 'Fácil', '5%'], ['★★', 'Media', '10%'], ['★★★', 'Difícil', '15%'], ['★★★★', 'Especial', 'Proveedor']].map(([a, b, c]) => ({ s: a, l: b, v: c }));
     let ms = { show: false };
     if (s.mission) { const M = S.MIS.find(x => x.id === s.mission); const da = s.done[M.id] || [];
-      const steps = M.steps.map((pid, i) => { const isR = pid === 'report'; const p = isR ? { name: 'Envía un reporte ciudadano', cat: 'Cualquier incidencia' } : this.item(pid); const dn = da.includes(pid); const ver = s.verifying === M.id + ':' + pid;
+      const steps = M.steps.map((pid, i) => { const isR = pid === 'report'; const p = isR ? { name: 'Envía un reporte ciudadano', cat: 'Se cumple cuando el ayuntamiento lo aprueba' } : this.item(pid); const dn = da.includes(pid); const ver = s.verifying === M.id + ':' + pid;
         return { n: String(i + 1).padStart(2, '0'), tot: String(M.steps.length).padStart(2, '0'), name: p.name, sub: isR ? p.cat : p.cat + ' · ' + dist(p), method: M.methods[i], done: dn, ver, idle: !dn && !ver, verLabel: M.methods[i] === 'QR' ? 'Leyendo QR…' : 'Verificando…', goLabel: isR ? 'Reportar' : 'Ir', onGo: isR ? this.openReport : () => this.routeTo([pid]), onVerify: isR ? this.openReport : () => this.verify(M.id, pid) }; });
       const pl = M.steps.filter(p => p !== 'report').map(p => this.item(p)); let mini = null;
       if (pl.length) { const f = S.staticFit(pl, 358, 170, 36, 15, TILE); mini = { tiles: f.tiles, marks: f.marks.map((q, i) => ({ l: q.l - 14, t: q.t - 14, n: i + 1, bg: da.includes(M.steps[i]) ? '#16A34A' : '#D99A00' })) }; }
@@ -968,11 +1005,11 @@ class Component extends DCLogic {
     }
     let act = {};
     if (tab === 'actividad') { const c = S.wpx(19.442, -71.305, 11); const W = 488, H = 1055, cy = c.y + 60; const pj = (lat, lng) => { const p = S.wpx(lat, lng, 11); return { x: p.x - c.x + W / 2, y: p.y - cy + H / 2 }; };
-      const lu = s.live.users / 34;
+      const TD = S.TODAY; const openTot = this.openTotal('Todos');
       act = { tiles: S.tl(c.x, cy, 11, W, H, TILE),
         dots: all.filter(i => !i.gen && ['reporte', 'mision', 'turismo', 'negocio'].includes(i.type)).map(i => { const p = pj(i.lat, i.lng); return { l: Math.round(p.x - 6), t: Math.round(p.y - 6), c: S.TY[i.type].c }; }),
-        munis: S.MSTATS.map(x => { const p = pj(S.MUNI[x.k].lat, S.MUNI[x.k].lng); const sz = Math.round(70 + x.users * .7), s2 = Math.round(sz * .6); return { x: Math.round(p.x), y: Math.round(p.y), s: sz, o: -sz / 2, s2, o2: -s2 / 2, name: x.k, users: Math.round(x.users / 243 * s.live.users * 1.0 + 0) }; }),
-        stats: [{ v: s.live.users, l: 'usuarios activos' }, { v: s.reports.filter(r => r.status < 3).length + 8, l: 'reportes abiertos' }, { v: s.live.missions + s.completed.length, l: 'misiones hoy' }, { v: s.live.biz, l: 'negocios activos' }],
+        munis: S.MSTATS.map(x => { const p = pj(S.MUNI[x.k].lat, S.MUNI[x.k].lng); const sz = Math.round(70 + x.users * .7), s2 = Math.round(sz * .6); return { x: Math.round(p.x), y: Math.round(p.y), s: sz, o: -sz / 2, s2, o2: -s2 / 2, name: x.k, users: Math.round(x.users / S.MSTATS.reduce((a, m) => a + m.users, 0) * TD.users) }; }),
+        stats: [{ v: TD.users, l: 'usuarios activos hoy' }, { v: openTot, l: 'reportes abiertos' }, { v: TD.missions + s.completed.length, l: 'misiones hoy' }, { v: TD.biz, l: 'negocios activos hoy' }],
         feed: [...s.feed, { t: 'Ana R. completó la Misión 07', s: 'Monción · hace 4 min', c: '#D99A00' }, { t: 'Nuevo reporte: semáforo intermitente', s: 'Entrada a Sabaneta · 650 m', c: '#E5484D' }, { t: 'Café Monción activó 10% de descuento', s: 'Negocio · hace 25 min', c: '#2F6FEB' }, { t: 'Presa de Monción es tendencia hoy', s: '86 visitas · Turismo', c: '#16A34A' }].slice(0, 4) };
     }
     const visited = new Set(); Object.values(s.done).forEach(a => a.forEach(p => p !== 'report' && visited.add(p)));
@@ -980,23 +1017,28 @@ class Component extends DCLogic {
     const pass = [{ v: String(4 + visited.size).padStart(2, '0'), l: 'lugares visitados', c: '#111418' }, { v: String(2 + s.completed.length).padStart(2, '0'), l: 'misiones completadas', c: '#111418' }, { v: String(s.rewards.length).padStart(2, '0'), l: 'recompensas', c: '#B7791F' }, { v: String(10 + myR.length).padStart(2, '0'), l: 'reportes', c: '#111418' }];
     const stamps = ['parque', 'presa', 'inaje', 'casabe', 'cafe', 'mirador', 'puente'].map(id => { const p = P(id); const v = visited.has(id); return { name: p.name.replace('Casabería ', '').replace('Restaurante ', ''), img: S.sat(p.lat, p.lng, 64, 64, 16), op: v ? 1 : .45, f: v ? 'none' : 'grayscale(1)', ring: v ? '#16A34A' : '#E1E3E7', onClick: () => this.select(id) }; });
     const rewardsList = s.rewards.map(r => ({ title: r.title, provider: r.provider + ' · ' + r.from, st: r.used ? 'Canjeada' : 'Disponible', stC: r.used ? '#6B7280' : '#15803D', bg: r.used ? '#F1F2F4' : '#FEF6E0', fg: r.used ? '#8A9099' : '#B7791F', onOpen: () => this.setState({ reward: r.id }) }));
-    const myReports = myR.map(r => ({ title: r.title, num: r.num, addr: r.addr, st: S.ST[r.status].t, stC: S.ST[r.status].c, stBg: S.ST[r.status].bg, onOpen: () => this.setState({ status: r.id }) }));
+    const myReports = myR.map(r => { const st = this.stOf(r); return { title: r.title, num: r.num, addr: r.addr, st: st.t, stC: st.c, stBg: st.bg, onOpen: () => this.setState({ status: r.id }) }; });
     const savedList = Object.keys(s.saved).filter(k => s.saved[k]).map(k => { const p = this.item(k); return { name: p.name, dist: dist(p), c: S.TY[p.type].c, onClick: () => this.select(k) }; });
     let srch = { show: false };
     if (s.search) { const q = S.norm(s.q.trim()); let res = all.filter(i => !i.gen || q);
       res = q ? res.filter(i => S.norm(i.name + ' ' + (i.cat || '') + ' ' + (i.kind || '') + ' ' + (i.muni || '')).includes(q)).slice(0, 12) : ['presa', 'm07', 'cafe', 'rcasabe', 'inaje', 'r1'].map(id => this.item(id));
       srch = { show: true, head: q ? 'RESULTADOS' : 'SUGERENCIAS', empty: q && !res.length, results: res.map(i => ({ name: i.name, sub: ({ negocio: 'Negocio', turismo: 'Turismo', ruta: 'Ruta', mision: 'Misión', reporte: 'Reporte' })[i.type] + ' · ' + (i.muni || '') + ' · ' + dist(i), c: S.TY[i.type].c, icon: S.TY[i.type].i, onClick: () => i.type === 'mision' ? this.openMission(i.id) : this.select(i.id) })) }; }
     let rp = { show: false };
-    if (s.rep) { const r = s.rep; const stp = r.step; const U = S.U; const mn = ['Recibido', 'En revisión', 'En proceso', 'Resuelto'];
+    if (s.rep) { const r = s.rep; const stp = r.step; const U = S.U; const mn = S.ST.map(x => x.t);
       rp = { show: true, s1: stp === 1, s2: stp === 2, sOff: stp === 'offline', sDone: stp === 'done', type: r.type, desc: r.desc, photo: r.photo, noPhoto: !r.photo, num: r.num,
-        types: S.RTYPES.map(t => ({ t, onClick: () => this.setState(x => ({ rep: { ...x.rep, step: 2, type: t } })) })),
+        typesT: S.RTYPES_T.map(t => ({ t, onClick: () => this.setState(x => ({ rep: { ...x.rep, step: 2, type: t } })) })),
+        typesM: S.RTYPES_M.map(t => ({ t, onClick: () => this.setState(x => ({ rep: { ...x.rep, step: 2, type: t } })) })),
         swBg: s.offline ? '#111418' : '#D6D9DE', swX: s.offline ? 23 : 3, loc: S.tl(S.wpx(U.lat, U.lng, 17).x, S.wpx(U.lat, U.lng, 17).y, 17, 354, 120, TILE), photoImg: S.sat(U.lat + .0004, U.lng - .0006, 100, 100, 18), photoBorder: r.photo ? '0' : '1.5px dashed #C9CDD3',
         onPhoto: () => this.setState(x => ({ rep: { ...x.rep, photo: true } })), back: () => this.setState(x => ({ rep: { ...x.rep, step: 1 } })), cta: s.offline ? 'Guardar sin conexión' : 'Enviar reporte',
         mini: mn.map((t, i) => ({ t, c: i === 0 ? '#2F6FEB' : '#D6D9DE', fg: i === 0 ? '#111418' : '#8A9099' })), onStatus: () => this.setState({ rep: null, status: r.id }) }; }
     let stv = { show: false };
     if (s.status) { const r = s.reports.find(x => x.id === s.status);
       stv = { show: true, num: r.num, kind: r.kind.toUpperCase(), title: r.title, addr: r.addr, muni: r.muni, img: S.sat(r.lat, r.lng, 358, 150, 18),
-        tl: S.ST.map((st, i) => { const reached = i <= r.status; return { t: st.t, when: r.hist[i] || (i === r.status + 1 ? 'Siguiente paso' : 'Pendiente'), reached, dot: reached ? (i === 3 ? '#16A34A' : '#2F6FEB') : '#fff', ring: reached ? (i === 3 ? '#16A34A' : '#2F6FEB') : '#D6D9DE', fg: reached ? '#111418' : '#8A9099', line: i < 3, lineC: i < r.status ? '#2F6FEB' : '#E6E8EB' }; }),
+        tl: (() => { const D = S.ST_DONE;
+          // Rechazado: se muestran los pasos alcanzados y el rechazo con su motivo como paso final.
+          if (r.rejected) { const seq = [...S.ST.slice(0, r.status + 1), S.REJ]; const last = seq.length - 1;
+            return seq.map((st, i) => ({ t: st.t, when: i === last ? r.rejAt + ' · ' + r.rejWhy : r.hist[i], reached: true, dot: i === last ? '#B42318' : '#2F6FEB', ring: i === last ? '#B42318' : '#2F6FEB', fg: '#111418', line: i < last, lineC: '#2F6FEB' })); }
+          return S.ST.map((st, i) => { const reached = i <= r.status; return { t: st.t, when: r.hist[i] || (i === r.status + 1 ? 'Siguiente paso' : 'Pendiente'), reached, dot: reached ? (i === D ? '#16A34A' : '#2F6FEB') : '#fff', ring: reached ? (i === D ? '#16A34A' : '#2F6FEB') : '#D6D9DE', fg: reached ? '#111418' : '#8A9099', line: i < D, lineC: i < r.status ? '#2F6FEB' : '#E6E8EB' }; }); })(),
         onMap: () => this.select(r.id) }; }
     let rwv = { show: false };
     if (s.reward) { const r = s.rewards.find(x => x.id === s.reward); if (r) rwv = { show: true, title: r.title, provider: r.provider, from: r.from.toUpperCase(), code: r.code, cond: r.cond, expires: r.expires, qr: S.qr(r.code), qrOp: r.used ? .3 : 1, canUse: !r.used, used: r.used,
@@ -1015,7 +1057,7 @@ class Component extends DCLogic {
       ['Actividad territorial', () => this.setTab('actividad')], ['Reporte semanal', () => { this.setView('admin'); this.setState({ aTab: 'semanal' }); }]
     ].map(([t, fn], i) => ({ n: String(i + 1).padStart(2, '0'), t, go: J(fn) }));
     const app = { showMap, isInicio: tab === 'inicio', isMapa: tab === 'mapa', isMis: tab === 'misiones', isAct: tab === 'actividad', isPerfil: tab === 'perfil',
-      mTiles: showMap ? S.tl(m.cx, m.cy, m.z, 390, 844, TILE) : [], mPins: mk.pins, mClusters: mk.cl, userPos: { x: Math.round(up.x), y: Math.round(up.y) }, selPin, routeLine, rt, chips, layerChips,
+      mTiles: showMap ? S.tl(m.cx, m.cy, m.z, 390, 844, TILE) : [], mAttr: s.route ? 'Powered by Esri · Rutas: OSRM demo, © OpenStreetMap' : 'Powered by Esri', mPins: mk.pins, mClusters: mk.cl, userPos: { x: Math.round(up.x), y: Math.round(up.y) }, selPin, routeLine, rt, chips, layerChips,
       mDown: e => this.down('m', e), pMove: this.pMove, pUp: this.pUp, mDbl: () => this.zoom('m', 1), zoomIn: () => this.zoom('m', 1), zoomOut: () => this.zoom('m', -1),
       locate: () => { this.fly('m', S.U.lat, S.U.lng, Math.max(15, m.z), tab === 'inicio' && !selIt ? 130 : 0); this.toast('Estás en Calle Duarte, Sabaneta'); },
       openSearch: () => this.setState({ search: true, q: '', sel: null }), closeSearch: () => this.setState({ search: false }), onQ: e => this.setState({ q: e.target.value }), q: s.q, qRef: this.qRef,
@@ -1026,19 +1068,31 @@ class Component extends DCLogic {
       toast: s.toast, toastApp: !!s.toast && s.view === 'app', toastAdmin: !!s.toast && s.view === 'admin', sigC: s.offline ? '#C9CDD3' : '#111418' };
     return { ...common, ...app, ...this.adminVals(TILE, all) };
   }
+  // Única función de KPIs: panel, actividad y PDF salen de aquí (misma fuente = mismos números).
+  // Base: SR.MSTATS (semana 39 y acumulado) + lo ocurrido en esta sesión de demo (reportes nuevos, resueltos, rechazados, misiones).
+  kpiScope(muni) {
+    const S = window.SR; const s = this.state; const all = muni === 'Todos';
+    const ms = all ? S.MSTATS : S.MSTATS.filter(x => x.k === muni); const sum = f => ms.reduce((a, x) => a + x[f], 0);
+    const inS = r => all || r.muni === muni;
+    const newR = s.reports.filter(r => r.isNew && inS(r)).length;
+    const dRes = s.reports.filter(r => inS(r) && !r.rejected && r.status === S.ST_DONE && !r.wasDone).length;
+    const rej = s.reports.filter(r => inS(r) && r.rejected).length;
+    const dMis = s.completed.filter(id => all || S.MIS.find(M => M.id === id).muni === muni).length;
+    const tRep = sum('totReports') + newR, tRes = sum('totRes') + dRes;
+    return { users: sum('users'), biz: sum('biz'), wRep: sum('reports') + newR, wRes: sum('res') + dRes, tRep, tRes, rej, open: tRep - tRes - rej, missions: sum('missions') + dMis, newR, dRes };
+  }
+  openTotal(muni) { return this.kpiScope(muni).open; }
   setAMuni(k) { this.setState({ aMuni: k, aSel: null }); if (k === 'Todos') this.fly('am', 19.442, -71.305, 11); else { const c = window.SR.MUNI[k]; this.fly('am', c.lat, c.lng, 14); } }
   adminVals(TILE, all) {
     const s = this.state; if (s.view !== 'admin') return {}; const S = window.SR;
     const seg = on => ({ bg: on ? '#fff' : 'transparent', fg: on ? '#111418' : '#5B616B', sh: on ? '0 1px 3px rgba(17,20,24,.14)' : 'none' });
     const aNav = [['resumen', 'Territorio hoy', S.I.map], ['misiones', 'Misiones y recompensas', S.I.target], ['semanal', 'Reporte semanal', S.I.file]].map(([k, l, i]) => { const on = s.aTab === k; return { label: l, icon: i, bg: on ? '#fff' : 'transparent', fw: on ? 650 : 500, sh: on ? '0 1px 3px rgba(17,20,24,.08)' : 'none', ic: on ? '#2F6FEB' : '#5B616B', onClick: () => this.setState({ aTab: k }) }; });
     const out = { aNav, aIsRes: s.aTab === 'resumen', aIsMis: s.aTab === 'misiones', aIsSem: s.aTab === 'semanal' };
-    const F = { 'Todos': 1, 'Sabaneta': .52, 'Monción': .31, 'Los Almácigos': .17 }[s.aMuni];
-    const newR = s.reports.filter(r => r.isNew).length; const res = s.reports.filter(r => r.status === 3).length - 1;
-    const rep = Math.round(128 * F) + newR, rs = Math.round(76 * F) + res;
-    out.kpis = [{ l: 'Reportes', v: rep, sub: '+14 esta semana', c: '#111418' }, { l: 'Resueltos', v: rs, sub: Math.round(rs / rep * 100) + '% del total', c: '#15803D' }, { l: 'Usuarios', v: Math.round(243 * F), sub: Math.max(1, Math.round(s.live.users * F)) + ' activos ahora', c: '#111418' }, { l: 'Negocios', v: Math.round(41 * F), sub: s.pend.length + ' solicitudes pendientes', c: '#111418' }];
+    const K = this.kpiScope(s.aMuni);
+    out.kpis = [{ l: 'Reportes (acumulado)', v: K.tRep, sub: '+' + K.wRep + ' esta semana · ' + K.open + ' abiertos', c: '#111418' }, { l: 'Resueltos', v: K.tRes, sub: Math.round(K.tRes / K.tRep * 100) + '% del total', c: '#15803D' }, { l: 'Usuarios activos', v: K.users, sub: 'en la semana 39', c: '#111418' }, { l: 'Negocios', v: K.biz, sub: s.pend.length + ' solicitudes pendientes', c: '#111418' }];
     out.aMunis = ['Todos', 'Sabaneta', 'Monción', 'Los Almácigos'].map(k => ({ label: k, onClick: () => this.setAMuni(k), ...seg(s.aMuni === k) }));
     const muniOk = i => s.aMuni === 'Todos' || i.muni === s.aMuni;
-    const estOk = i => i.type !== 'reporte' || s.aEst === 'Todos' || (s.aEst === 'Abiertos' ? i.status < 3 : i.status === 3);
+    const estOk = i => i.type !== 'reporte' || s.aEst === 'Todos' || (s.aEst === 'Abiertos' ? this.isOpen(i) : !this.isOpen(i));
     const list = all.filter(i => s.aLayers[i.type] && muniOk(i) && estOk(i));
     const w = s.aw, h = s.ah; const am = s.am;
     const mk = this.buildMarkers('am', w, h, list, s.aSel, id => this.setState({ aSel: id }));
@@ -1048,23 +1102,26 @@ class Component extends DCLogic {
     out.aHeat = s.aLayers.actividad ? S.MSTATS.filter(x => s.aMuni === 'Todos' || x.k === s.aMuni).map(x => { const p = pj(S.MUNI[x.k].lat, S.MUNI[x.k].lng); const r = (1400 + x.users * 22) / mpp; return { l: Math.round(p.x - r), t: Math.round(p.y - r), s: Math.round(2 * r) }; }) : [];
     const selA = s.aSel ? this.item(s.aSel) : null; out.aPin = { show: false }; out.aCard = { show: false };
     if (selA) { const p = pj(selA.lat, selA.lng); out.aPin = { show: true, l: Math.round(p.x - 20), t: Math.round(p.y - 50), bg: S.TY[selA.type].c, icon: S.TY[selA.type].i };
-      const isRep = selA.type === 'reporte'; const st = isRep ? S.ST[selA.status] : null;
-      out.aCard = { show: true, kind: (isRep ? 'REPORTE · ' + selA.kind : S.TY[selA.type].label).toUpperCase(), c: S.TY[selA.type].c === '#D99A00' ? '#8A5A00' : S.TY[selA.type].c, name: selA.name, sub: (isRep ? selA.addr : (selA.cat || '')) + ' · ' + (S.MUNI[selA.muni] || {}).full, isRep, st: st && st.t, stC: st && st.c, stBg: st && st.bg, canAdv: isRep && selA.status < 3, next: isRep && selA.status < 3 ? 'Pasar a ' + S.ST[selA.status + 1].t : '', onAdv: () => this.advance(selA.id), onClose: () => this.setState({ aSel: null }) }; }
+      const isRep = selA.type === 'reporte'; const st = isRep ? this.stOf(selA) : null; const adv = isRep && this.isOpen(selA);
+      out.aCard = { show: true, kind: (isRep ? 'REPORTE · ' + selA.kind : S.TY[selA.type].label).toUpperCase(), c: S.TY[selA.type].c === '#D99A00' ? '#8A5A00' : S.TY[selA.type].c, name: selA.name, sub: (isRep ? selA.addr : (selA.cat || '')) + ' · ' + (S.MUNI[selA.muni] || {}).full, isRep, st: st && st.t, stC: st && st.c, stBg: st && st.bg, canAdv: adv, next: adv ? 'Pasar a ' + S.ST[selA.status + 1].t : '', onAdv: () => this.advance(selA.id), onClose: () => this.setState({ aSel: null }) }; }
     const LY = [...Object.keys(S.TY).map(k => [k, S.TY[k].label, S.TY[k].c]), ['actividad', 'Actividad', '#7C8CF8']];
     out.aLayerChips = LY.map(([k, l, c]) => { const on = s.aLayers[k]; return { label: l, dot: on ? c : '#D6D9DE', bd: on ? '#E6E8EB' : '#F1F2F4', fg: on ? '#111418' : '#8A9099', onClick: () => this.setState(x => ({ aLayers: { ...x.aLayers, [k]: !x.aLayers[k] } })) }; });
     out.aEstChips = ['Todos', 'Abiertos', 'Resueltos'].map(k => ({ label: k, bg: s.aEst === k ? '#111418' : '#F1F2F4', fg: s.aEst === k ? '#fff' : '#111418', onClick: () => this.setState({ aEst: k }) }));
-    const q = s.reports.filter(r => muniOk(r) && estOk({ ...r, type: 'reporte' })).slice().sort((a, b) => (a.status === 3) - (b.status === 3) || a.status - b.status || b.num - a.num);
-    out.aOpenCount = s.reports.filter(r => muniOk(r) && r.status < 3).length;
-    out.aQueue = q.map(r => { const st = S.ST[r.status]; return { title: r.title, num: r.num, kind: r.kind, muni: r.muni, date: r.date, st: st.t, stC: st.c, stBg: st.bg, bg: s.aSel === r.id ? '#F3F6FE' : 'transparent', canAdv: r.status < 3, next: r.status < 3 ? 'Pasar a ' + S.ST[r.status + 1].t : '', mineTag: r.mine ? 'Ciudadana: María A. · recibe notificaciones' : 'Reportado por 3 vecinos', onAdv: e => { e.stopPropagation(); this.advance(r.id); }, onClick: () => { this.setState({ aSel: r.id, aTab: 'resumen' }); this.fly('am', r.lat, r.lng, 15); } }; });
-    out.aMuniStats = S.MSTATS.map(x => ({ name: S.MUNI[x.k].full, users: x.users, rows: [{ l: 'Reportes', v: x.reports, p: x.reports / 21 * 100, c: '#E5484D' }, { l: 'Resueltos', v: x.res, p: x.res / 21 * 100, c: '#16A34A' }, { l: 'Misiones completadas', v: x.missions, p: x.missions / 30 * 100, c: '#D99A00' }, { l: 'Negocios', v: x.biz, p: x.biz / 22 * 100, c: '#2F6FEB' }] }));
+    const q = s.reports.filter(r => muniOk(r) && estOk({ ...r, type: 'reporte' })).slice().sort((a, b) => this.isOpen(b) - this.isOpen(a) || a.status - b.status || b.num - a.num);
+    out.aOpenCount = K.open + ' abiertos · se muestran ' + q.length + ' recientes';
+    out.aQueue = q.map(r => { const st = this.stOf(r); const open = this.isOpen(r); return { title: r.title, num: r.num, kind: r.kind, muni: r.muni, date: r.date, st: st.t, stC: st.c, stBg: st.bg, bg: s.aSel === r.id ? '#F3F6FE' : 'transparent', canAdv: open, canRej: open && r.status <= S.ST_LAST_REJECTABLE, next: open ? 'Pasar a ' + S.ST[r.status + 1].t : '', mineTag: r.mine ? 'Ciudadana: María A. · recibe notificaciones' : 'Reportado por 3 vecinos', onAdv: e => { e.stopPropagation(); this.advance(r.id); }, onRej: e => { e.stopPropagation(); this.reject(r.id); }, onClick: () => { this.setState({ aSel: r.id, aTab: 'resumen' }); this.fly('am', r.lat, r.lng, 15); } }; });
+    const MK = S.MSTATS.map(x => ({ x, k: this.kpiScope(x.k) })); const mx = f => Math.max(...MK.map(o => o.k[f]), 1);
+    out.aMuniStats = MK.map(({ x, k }) => ({ name: S.MUNI[x.k].full, users: k.users, rows: [{ l: 'Reportes (semana)', v: k.wRep, p: k.wRep / mx('wRep') * 100, c: '#E5484D' }, { l: 'Resueltos (semana)', v: k.wRes, p: k.wRes / mx('wRep') * 100, c: '#16A34A' }, { l: 'Misiones completadas (semana)', v: k.missions, p: k.missions / mx('missions') * 100, c: '#D99A00' }, { l: 'Negocios', v: k.biz, p: k.biz / mx('biz') * 100, c: '#2F6FEB' }] }));
     out.aPend = s.pend.map(p => ({ ...p, kind: p.kind.toUpperCase(), onOk: () => { this.setState(x => ({ pend: x.pend.filter(y => y.id !== p.id) })); this.toast('Aprobado · ' + p.title + ' ya es visible en el mapa'); }, onNo: () => { this.setState(x => ({ pend: x.pend.filter(y => y.id !== p.id) })); this.toast('Rechazado · ' + p.title); } }));
     out.aPendCount = s.pend.length + ' por validar'; out.aPendEmpty = !s.pend.length;
-    out.aMis = S.MIS.map((M, i) => ({ num: M.num, name: M.name, provider: M.provider, muni: S.MUNI[M.muni].full, reward: M.reward, on: '★'.repeat(M.diff), off: '★'.repeat(4 - M.diff), diffLabel: S.DL[M.diff], completions: [57, 22, 14, 3][i] + (s.completed.includes(M.id) ? 1 : 0), left: s.left[M.id], expires: M.expires, cond: M.cond, methods: [...new Set(M.methods)].map(t => ({ t: 'Verificación ' + t })), onLeft: e => { const v = Math.max(0, parseInt(e.target.value || '0', 10)); this.setState(x => ({ left: { ...x.left, [M.id]: v } })); } }));
+    out.aMis = S.MIS.map((M, i) => ({ num: M.num, name: M.name, provider: M.provider, muni: S.MUNI[M.muni].full, reward: M.reward, on: '★'.repeat(M.diff), off: '★'.repeat(4 - M.diff), diffLabel: S.DL[M.diff], completions: S.MIS_WEEK[M.id] + (s.completed.includes(M.id) ? 1 : 0), left: s.left[M.id], expires: M.expires, cond: M.cond, methods: [...new Set(M.methods)].map(t => ({ t: 'Verificación ' + t })), onLeft: e => { const v = Math.max(0, parseInt(e.target.value || '0', 10)); this.setState(x => ({ left: { ...x.left, [M.id]: v } })); } }));
     out.pdfLabel = s.pdf === 'gen' ? 'Generando…' : s.pdf === 'ready' ? 'Regenerar PDF' : 'Generar PDF'; out.pdfReady = s.pdf === 'ready'; out.pdfOp = s.pdf === 'gen' ? .45 : 1;
-    out.genPdf = () => { if (this.state.pdf === 'gen') return; this.setState({ pdf: 'gen' }); setTimeout(() => { this.setState({ pdf: 'ready' }); this.toast('Informe generado · enviado a los 3 ayuntamientos'); }, 1600); };
-    out.docKpis = [{ v: '243', l: 'usuarios activos', d: '+12% vs. semana 38', dc: '#15803D' }, { v: String(38 + newR), l: 'reportes recibidos', d: '+4', dc: '#5B616B' }, { v: String(29 + Math.max(0, res)), l: 'reportes resueltos', d: '76% de resolución', dc: '#15803D' }, { v: '2,4 d', l: 'tiempo medio de resolución', d: '−0,6 días', dc: '#15803D' }, { v: '41', l: 'negocios registrados', d: '+3 nuevos', dc: '#15803D' }, { v: String(57 + s.completed.length), l: 'misiones completadas', d: '+18%', dc: '#15803D' }, { v: '31', l: 'recompensas utilizadas', d: '54% de canje', dc: '#5B616B' }, { v: '1.180', l: 'visitas turísticas', d: 'Presa de Monción lidera', dc: '#5B616B' }];
+    out.genPdf = () => { if (this.state.pdf === 'gen') return; this.setState({ pdf: 'gen' }); setTimeout(() => { this.setState({ pdf: 'ready' }); this.toast('Informe generado (demostración) · SR-Conecta-Semana-39-parcial.pdf'); }, 1600); };
+    // El PDF usa kpiScope('Todos'), la misma función que el panel: los números coinciden por construcción.
+    const KT = this.kpiScope('Todos'); const newR = KT.newR;
+    out.docKpis = [{ v: String(KT.users), l: 'usuarios activos', d: '+12% vs. semana 38', dc: '#15803D' }, { v: String(KT.wRep), l: 'reportes recibidos', d: '+4', dc: '#5B616B' }, { v: String(KT.wRes), l: 'reportes resueltos', d: Math.round(KT.wRes / KT.wRep * 100) + '% de resolución', dc: '#15803D' }, { v: '2,4 d', l: 'tiempo medio de resolución', d: '−0,6 días', dc: '#15803D' }, { v: String(KT.biz), l: 'negocios registrados', d: '+3 nuevos', dc: '#15803D' }, { v: String(KT.missions), l: 'misiones completadas', d: '+18%', dc: '#15803D' }, { v: '31', l: 'recompensas utilizadas', d: '54% de canje', dc: '#5B616B' }, { v: '1.180', l: 'visitas turísticas', d: 'Presa de Monción lidera', dc: '#5B616B' }];
     out.docBars = [['L', 6, 4], ['M', 4, 5], ['X', 7, 5], ['J', 5 + newR, 4], ['V', 8, 6], ['S', 5, 3], ['D', 3, 2]].map(([d, a, r]) => ({ d, a: Math.round(a / 9 * 140), r: Math.round(r / 9 * 140) }));
-    out.docMunis = S.MSTATS.map(x => ({ name: S.MUNI[x.k].full, users: x.users, reports: x.reports, missions: x.missions }));
+    out.docMunis = MK.map(({ x, k }) => ({ name: S.MUNI[x.k].full, users: k.users, reports: k.wRep, missions: k.missions }));
     const f = S.staticFit(S.MSTATS.map(x => S.MUNI[x.k]), 760, 250, 70, 12, TILE);
     out.docMap = { tiles: f.tiles, marks: f.marks.map((m, i) => { const sz = 90 + S.MSTATS[i].users; return { l: m.l - sz / 2, t: m.t - sz / 2, s: sz }; }), labels: f.marks.map((m, i) => ({ l: m.l - 40, t: m.t - 14, t2: S.MSTATS[i].k + ' · ' + S.MSTATS[i].users })) };
     out.aDown = e => this.down('am', e); out.aZoomIn = () => this.zoom('am', 1); out.aZoomOut = () => this.zoom('am', -1); out.aRef = this.aRef;
