@@ -479,6 +479,47 @@ const anonPromo = (await as(db, null, `select id from public.promotions where id
 await rpc(U.modMon, `public.review_content('business', $1, 'approved', 'suspended', 'Datos de contacto falsos')`, [biz.id]);
 const promoAfter = (await one(`select status from public.promotions where id = $1`, [promo.id])).status;
 ok('M17 suspender un negocio pausa sus promociones', anonPromo === 1 && promoAfter === 'paused', `${anonPromo} ${promoAfter}`);
+// ---------------------------------------------------------------------------------------------
+// N. Gamificación territorial y economía de recompensas (Misiones, Recompensas y Pasaporte)
+// ---------------------------------------------------------------------------------------------
+const mPoint = P.SAB;
+const mis = (await q(`
+  insert into public.missions (province_id, municipality_id, title, description, mission_type, difficulty, reward_points, geom)
+  values ($1, $2, 'Explorar Sabaneta', 'Visita la plaza central', 'VISIT_LOCATION', 'EASY', 25,
+          extensions.st_setsrid(extensions.st_makepoint($4, $3), 4326))
+  returning id`, [provinceId, muni.SAB, mPoint[0], mPoint[1]]))[0];
+
+// N1 Intento de completar desde lejos (>120m)
+const farComp = await rpc(U.ana, `public.verify_and_complete_mission($1, $2, $3)`, [mis.id, P.SANTO_DOMINGO[0], P.SANTO_DOMINGO[1]]);
+ok('N1 verificación GPS rechaza ubicación lejana (>120m)', farComp.status === 'rejected' && farComp.reason === 'out_of_range', JSON.stringify(farComp));
+
+// N2 Completación exitosa dentro del radio (<120m)
+const okComp = await rpc(U.ana, `public.verify_and_complete_mission($1, $2, $3)`, [mis.id, mPoint[0], mPoint[1]]);
+ok('N2 verificación GPS acepta ubicación dentro del radio', okComp.status === 'ok' && okComp.points_earned === 25, JSON.stringify(okComp));
+
+// N3 Prevención de doble completación
+const dupComp = await rpc(U.ana, `public.verify_and_complete_mission($1, $2, $3)`, [mis.id, mPoint[0], mPoint[1]]);
+ok('N3 previene doble completación de la misma misión', dupComp.status === 'rejected' && dupComp.reason === 'already_completed', JSON.stringify(dupComp));
+
+// N4 Recompensas con stock unitario
+const rew = (await q(`
+  insert into public.rewards (business_id, mission_id, title, description, reward_type, reward_value, difficulty_tier, stock, initial_stock)
+  values ($1, $2, '10% Descuento en Café', 'Válido en Sabaneta', 'DISCOUNT_PERCENTAGE', 10, 'EASY', 1, 1)
+  returning id`, [biz.id, mis.id]))[0];
+
+// N5 Canje atómico exitoso
+const okRed = await rpc(U.ana, `public.redeem_reward($1)`, [rew.id]);
+ok('N4 canje atómico genera voucher SR- y descuenta stock a 0', okRed.status === 'ok' && /^SR-[A-Z0-9]+$/.test(okRed.redemption_code) && okRed.remaining_stock === 0, JSON.stringify(okRed));
+
+// N6 Segundo intento de canje (otro usuario) con stock agotado
+const outRed = await rpc(U.beto, `public.redeem_reward($1)`, [rew.id]);
+ok('N5 segundo canje concurrente rechazado por stock agotado', outRed.status === 'rejected' && outRed.reason === 'out_of_stock', JSON.stringify(outRed));
+
+// N7 Pasaporte del Territorio computado
+const pass = await rpc(U.ana, `public.get_territorial_passport($1)`, [U.ana]);
+ok('N6 Pasaporte del Territorio refleja misiones, recompensas y medalla',
+   pass.stats.missions_completed >= 1 && pass.stats.rewards_unlocked >= 1 && pass.badges.includes('PIONERO_TERRITORIAL'),
+   JSON.stringify(pass));
 
 // Baja de cuenta
 await expectError('M18 no se puede dar de baja al único dueño de un negocio activo',
