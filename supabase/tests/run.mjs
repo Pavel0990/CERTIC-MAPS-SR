@@ -36,7 +36,7 @@ ok('A1 RLS activado en todas las tablas de public', noRls.length === 0, noRls.ma
 
 const anonExec = await q(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
                           where n.nspname = 'public' and has_function_privilege('anon', p.oid, 'execute') order by 1`);
-ok('A2 anon solo ejecuta map_features y search_all', anonExec.map(r => r.proname).join(',') === 'map_features,search_all',
+ok('A2 anon solo ejecuta map_aggregates, map_features, search_all y track_engagement', anonExec.map(r => r.proname).join(',') === 'map_aggregates,map_features,search_all,track_engagement',
    anonExec.map(r => r.proname).join(','));
 
 const anonWrite = await q(`select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
@@ -56,7 +56,7 @@ ok('A4 authenticated sin escritura directa en tablas críticas', authWrite.lengt
 const privExec = await q(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
                           where n.nspname = 'private' and has_function_privilege('authenticated', p.oid, 'execute') order by 1`);
 ok('A5 authenticated solo ejecuta los helpers de RLS en private',
-   privExec.map(r => r.proname).join(',') === 'can_read_request,f_unaccent,is_admin,is_any_staff,is_business_member,is_provincial_admin,is_service,is_staff,reject',
+   privExec.map(r => r.proname).join(',') === 'can_read_request,f_unaccent,is_admin,is_any_staff,is_business_member,is_provincial_admin,is_service,is_staff,reject,upload_quota_ok',
    privExec.map(r => r.proname).join(','));
 
 const definerNoPath = await q(`select n.nspname || '.' || p.proname f from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -356,6 +356,143 @@ await expectError('K2 no puede subir a la carpeta de otro usuario',
   /row-level security/);
 await expectError('K3 no puede escribir en el bucket público',
   () => as(db, U.ana, `insert into storage.objects (bucket_id, name) values ('public-media', 'x/y.webp')`), /row-level security/);
+
+// ---------------------------------------------------------------------------------------------
+// M. Fotos (F2), alertas sobre el mapa, edición de lugares y rutas (F3), agregados, salud y baja de cuenta
+// ---------------------------------------------------------------------------------------------
+const upload = (who, name, meta = { mimetype: 'image/jpeg', size: 120000 }) =>
+  as(db, who, `insert into storage.objects (bucket_id, name, metadata) values ('report-evidence', $1, $2::jsonb)`, [name, JSON.stringify(meta)]);
+const tc = await createTraffic(U.cris, P.MON, 'cris-traffic-0001', 'accidente');
+const p1 = `incoming/${U.cris}/foto-0001.jpg`;
+await upload(U.cris, p1);
+const a1 = await rpc(U.cris, `public.register_attachment('traffic_report', $1, $2)`, [tc.id, p1]);
+ok('M1 foto subida a su carpeta y registrada en su reporte (encolada para procesar)', a1.status === 'ok'
+   && (await one(`select count(*)::int n from private.jobs where kind = 'image_process' and payload->>'attachment_id' = $1`, [a1.id])).n === 1,
+   JSON.stringify(a1));
+await upload(U.beto, `incoming/${U.beto}/foto-0002.jpg`);
+const aForeign = await rpc(U.beto, `public.register_attachment('traffic_report', $1, $2)`, [tc.id, `incoming/${U.beto}/foto-0002.jpg`]);
+const aPath = await rpc(U.cris, `public.register_attachment('traffic_report', $1, $2)`, [tc.id, `incoming/${U.beto}/foto-0002.jpg`]);
+const aMissing = await rpc(U.cris, `public.register_attachment('traffic_report', $1, $2)`, [tc.id, `incoming/${U.cris}/no-existe.jpg`]);
+ok('M2 no se registra en reporte ajeno, con archivo de otro ni sin archivo subido',
+   aForeign.reason === 'forbidden' && aPath.reason === 'invalid_path' && aMissing.reason === 'upload_not_found',
+   [aForeign.reason, aPath.reason, aMissing.reason].join(','));
+await upload(U.cris, `incoming/${U.cris}/foto-0003.jpg`, { mimetype: 'application/pdf', size: 1000 });
+const aPdf = await rpc(U.cris, `public.register_attachment('traffic_report', $1, $2)`, [tc.id, `incoming/${U.cris}/foto-0003.jpg`]);
+ok('M3 tipo de archivo no permitido → invalid_file (no se confía en la extensión)', aPdf.reason === 'invalid_file');
+const regs = [];
+for (const n of ['0004', '0005', '0006']) {
+  await upload(U.cris, `incoming/${U.cris}/foto-${n}.jpg`);
+  regs.push(await rpc(U.cris, `public.register_attachment('traffic_report', $1, $2)`, [tc.id, `incoming/${U.cris}/foto-${n}.jpg`]));
+}
+ok('M4 máximo 3 fotos por reporte', regs[0].status === 'ok' && regs[1].status === 'ok' && regs[2].reason === 'too_many_photos',
+   regs.map(r => r.status + ':' + (r.reason ?? '')).join(','));
+await expectError('M5 el worker es el único que marca fotos procesadas',
+  () => rpc(U.cris, `public.worker_attachment_processed($1, true, 'x/y.webp', 1000, 800, 600)`, [a1.id]), /permission denied|forbidden/);
+const proc = await rpc('service', `public.worker_attachment_processed($1, true, $2, 90000, 1600, 1200)`, [a1.id, `processed/${a1.id}.webp`]);
+const a1row = await one(`select status, mime, path from public.attachments where id = $1`, [a1.id]);
+ok('M6 procesada: WebP limpio y borrado del original (con EXIF) encolado', proc.status === 'ok' && a1row.status === 'processed'
+   && a1row.mime === 'image/webp' && (await one(`select count(*)::int n from private.jobs where dedupe_key = $1`, ['del:' + p1])).n === 1);
+const evPub = await rpc(U.modMon, `public.review_content('attachment', $1, 'processed', 'approved')`, [a1.id]);
+ok('M7 la evidencia de un reporte nunca se publica', evPub.reason === 'not_publishable', JSON.stringify(evPub));
+
+const pBiz = `incoming/${U.cris}/foto-0007.jpg`;
+await upload(U.cris, pBiz);
+const aBiz = await rpc(U.cris, `public.register_attachment('business', $1, $2)`, [biz.id, pBiz]);
+await rpc('service', `public.worker_attachment_processed($1, true, $2, 80000, 1200, 900)`, [aBiz.id, `processed/${aBiz.id}.webp`]);
+const anonBefore = (await as(db, null, `select id from public.attachments where id = $1`, [aBiz.id])).rows.length;
+const apr = await rpc(U.modMon, `public.review_content('attachment', $1, 'processed', 'approved')`, [aBiz.id]);
+await rpc('service', `public.worker_attachment_published($1)`, [aBiz.id]);
+const anonAfter = (await as(db, null, `select bucket from public.attachments where id = $1`, [aBiz.id])).rows;
+ok('M8 foto de negocio: moderada, publicada en public-media y visible al público solo después',
+   aBiz.status === 'ok' && apr.status === 'ok' && anonBefore === 0 && anonAfter[0]?.bucket === 'public-media',
+   JSON.stringify({ aBiz, apr, anonBefore, anonAfter }));
+
+let uploaded = (await one(`select count(*)::int n from storage.objects where name like $1`, [`incoming/${U.cris}/%`])).n;
+for (let i = 100; uploaded < 20; i++, uploaded++) await upload(U.cris, `incoming/${U.cris}/lote-${i}.jpg`);
+await expectError('M9 cuota de Storage: la subida 21 de la hora se bloquea',
+  () => upload(U.cris, `incoming/${U.cris}/exceso.jpg`), /row-level security/);
+
+// Alertas sobre el mapa
+await db.query(`update public.profiles set home_municipality_id = $2 where id = $1`, [U.beto, muni.MON]);
+await db.query(`update public.profiles set home_municipality_id = $2 where id = $1`, [U.admMon, muni.MON]);
+await db.query(`insert into public.notification_preferences (user_id, topics) values ($1, array['request_status'])`, [U.admMon]);
+await rpc(U.modMon, `public.moderate_traffic_report($1, 'pending', 'active')`, [tc.id]);
+const alertJobs = async () => (await one(`select count(*)::int n from private.jobs where kind = 'fanout_alert' and payload->>'traffic_report_id' = $1`, [tc.id])).n;
+const jobs1 = await alertJobs();
+const sentTo = await rpc('service', `public.worker_run_fanout_alert($1)`, [tc.id]);
+const betoAlert = (await one(`select count(*)::int n from public.notifications where user_id = $1 and kind = 'traffic_nearby'`, [U.beto])).n;
+const admAlert = (await one(`select count(*)::int n from public.notifications where user_id = $1 and kind = 'traffic_nearby'`, [U.admMon])).n;
+const crisAlert = (await one(`select count(*)::int n from public.notifications where user_id = $1 and kind = 'traffic_nearby'`, [U.cris])).n;
+ok('M10 alerta sobre el mapa: vecinos del municipio avisados; autor y quien se dio de baja, no',
+   jobs1 === 1 && sentTo === 1 && betoAlert === 1 && admAlert === 0 && crisAlert === 0,
+   JSON.stringify({ jobs1, sentTo, betoAlert, admAlert, crisAlert }));
+await rpc(U.modMon, `public.moderate_traffic_report($1, 'active', 'verified')`, [tc.id]);
+ok('M11 una sola alerta por reporte (verificarlo no la repite)', await alertJobs() === 1);
+
+// Edición de lugares y rutas (F3: servicios)
+const pl = await one(`select id, version from public.tourism_places where id = $1`, [place.id]);
+const upOwnPublished = await rpc(U.ana,   // Beto ya es moderador de Monción (H1): se prueba con alguien sin rol
+                                   `public.update_place($1, $2, '{"description":"cambio"}'::jsonb)`, [pl.id, pl.version]);
+const upStaff = await rpc(U.modMon, `public.update_place($1, $2, '{"services":{"parqueo":true,"banos":true,"guia":"fines de semana"}}'::jsonb)`, [pl.id, pl.version]);
+const upStale = await rpc(U.modMon, `public.update_place($1, $2, '{"description":"otra"}'::jsonb)`, [pl.id, pl.version]);
+const upMass = await rpc(U.modMon, `public.update_place($1, $2, '{"status":"archived"}'::jsonb)`, [pl.id, pl.version + 1]);
+const upBadSvc = await rpc(U.modMon, `public.update_place($1, $2, '{"services":{"parqueo":{"x":1}}}'::jsonb)`, [pl.id, pl.version + 1]);
+ok('M12 lugares: el personal edita servicios; versión, lista blanca y formato validados; un ciudadano no edita',
+   upOwnPublished.reason === 'forbidden' && upStaff.status === 'ok' && upStale.reason === 'version_conflict'
+   && upMass.reason === 'unknown_field' && upBadSvc.reason === 'invalid_services',
+   [upOwnPublished.reason, upStaff.status, upStale.reason, upMass.reason, upBadSvc.reason].join(','));
+const rt = await one(`select id, version, distance_km from public.eco_routes where id = $1`, [route.id]);
+const rtOwn = await rpc(U.beto, `public.update_route($1, $2, '{"services":{"agua":true}}'::jsonb)`, [rt.id, rt.version]);
+const longer = { type: 'LineString', coordinates: [[-71.3412, 19.4752], [-71.3450, 19.4700], [-71.3500, 19.4668], [-71.3600, 19.4600]] };
+const rtGeoOwn = await rpc(U.beto, `public.update_route($1, $2, jsonb_build_object('geojson', $3::jsonb))`, [rt.id, rt.version + 1, JSON.stringify(longer)]);
+const rtGeoStaff = await rpc(U.modSab, `public.update_route($1, $2, jsonb_build_object('geojson', $3::jsonb))`, [rt.id, rt.version + 1, JSON.stringify(longer)]);
+const rtAfter = await one(`select distance_km, services from public.eco_routes where id = $1`, [rt.id]);
+ok('M13 rutas: el autor completa servicios mientras está pendiente; solo el personal cambia el trazado y la distancia se recalcula',
+   rtOwn.status === 'ok' && rtGeoOwn.reason === 'forbidden' && rtGeoStaff.status === 'ok'
+   && Number(rtAfter.distance_km) > Number(rt.distance_km) && rtAfter.services.agua === true,
+   JSON.stringify({ rtOwn, rtGeoOwn, rtGeoStaff, before: rt.distance_km, after: rtAfter.distance_km }));
+
+// Agregados, salud
+const agg = await rpc(null, `public.map_aggregates()`);
+const mon = agg.find(a => a.municipality_id === muni.MON);
+ok('M14 mapa provincial: conteos públicos por municipio (anon)', agg.length === 3 && mon.businesses === 1 && mon.tourism === 1
+   && mon.traffic === 1, JSON.stringify(mon));
+await expectError('M15 la salud de la cola solo la consulta el servidor',
+  () => rpc(U.admProv, `public.worker_queue_health()`), /permission denied|forbidden/);
+const health = await rpc('service', `public.worker_queue_health()`);
+ok('M16 salud de la cola: pendientes, antigüedad y muertos', typeof health.pending === 'number' && 'oldest_pending_seconds' in health);
+
+// Métricas del comercio
+await as(db, null, `select public.track_engagement('business', $1, 'view')`, [biz.id]);
+await as(db, null, `select public.track_engagement('business', $1, 'view')`, [biz.id]);
+await as(db, U.beto, `select public.track_engagement('business', $1, 'whatsapp')`, [biz.id]);
+await as(db, null, `select public.track_engagement('business', $1, 'view')`, ['00000000-0000-0000-0000-000000000000']);
+const eng = await q(`select metric, count from public.engagement_daily where entity_id = $1 order by metric`, [biz.id]);
+ok('M17a métricas del comercio: agregadas por día; ignora entidades inexistentes',
+   eng.length === 2 && eng[0].metric === 'view' && eng[0].count === 2 && eng[1].count === 1
+   && (await one(`select count(*)::int n from public.engagement_daily`)).n === 2, JSON.stringify(eng));
+
+// Promociones y suspensión
+const promo = await rpc(U.cris, `public.create_promotion($1, '2x1 en café', current_date, current_date + 10)`, [biz.id]);
+await rpc(U.modMon, `public.review_content('promotion', $1, 'pending', 'active')`, [promo.id]);
+const anonPromo = (await as(db, null, `select id from public.promotions where id = $1`, [promo.id])).rows.length;
+await rpc(U.modMon, `public.review_content('business', $1, 'approved', 'suspended', 'Datos de contacto falsos')`, [biz.id]);
+const promoAfter = (await one(`select status from public.promotions where id = $1`, [promo.id])).status;
+ok('M17 suspender un negocio pausa sus promociones', anonPromo === 1 && promoAfter === 'paused', `${anonPromo} ${promoAfter}`);
+
+// Baja de cuenta
+await expectError('M18 no se puede dar de baja al único dueño de un negocio activo',
+  () => db.query(`delete from auth.users where id = $1`, [U.cris]), /transfer_ownership_first/);
+await rpc(U.modMon, `public.review_content('business', $1, 'suspended', 'archived')`, [biz.id]);
+await db.query(`delete from auth.users where id = $1`, [U.cris]);
+const crisGone = await one(`select
+  (select count(*) from public.profiles where id = $1)::int as profile,
+  (select count(*) from public.attachments where traffic_report_id = $2 and status <> 'rejected')::int as live_evidence,
+  (select count(*) from private.jobs where kind = 'delete_storage_object')::int as deletions`, [U.cris, tc.id]);
+ok('M19 tras archivar el negocio, la baja procede, se audita y la evidencia privada se elimina',
+   crisGone.profile === 0 && crisGone.live_evidence === 0 && crisGone.deletions >= 3
+   && (await one(`select count(*)::int n from public.audit_logs where action = 'account.delete' and entity_id = $1`, [U.cris])).n === 1,
+   JSON.stringify(crisGone));
 
 // ---------------------------------------------------------------------------------------------
 // L. Mantenimiento y privacidad

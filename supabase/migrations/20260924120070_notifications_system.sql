@@ -25,7 +25,7 @@ create table public.notification_preferences (
   user_id         uuid primary key references public.profiles (id) on delete cascade,
   push_enabled    boolean not null default false,
   email_enabled   boolean not null default true,
-  topics          text[] not null default array['request_status', 'traffic_status', 'content_status']
+  topics          text[] not null default array['request_status', 'traffic_status', 'content_status', 'traffic_nearby']
                   check (topics <@ array['request_status', 'traffic_status', 'content_status', 'traffic_nearby', 'system']),
   municipalities  uuid[] not null default '{}',
   updated_at      timestamptz not null default now()
@@ -50,7 +50,7 @@ create index push_subscriptions_user_idx on public.push_subscriptions (user_id);
 -- ---------------------------------------------------------------------
 create table private.jobs (
   id            bigint generated always as identity primary key,
-  kind          text not null check (kind in ('push', 'email', 'image_process', 'pdf_weekly', 'fanout_alert',
+  kind          text not null check (kind in ('push', 'email', 'image_process', 'publish_media', 'pdf_weekly', 'fanout_alert',
                                               'notify_moderators', 'delete_storage_object')),
   payload       jsonb not null default '{}'::jsonb,
   dedupe_key    text check (char_length(dedupe_key) <= 200),

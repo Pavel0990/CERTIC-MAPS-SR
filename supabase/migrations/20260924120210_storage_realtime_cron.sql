@@ -20,7 +20,8 @@ on conflict (id) do update set public = excluded.public, file_size_limit = exclu
 create policy evidence_upload_own_folder on storage.objects for insert to authenticated
   with check (bucket_id = 'report-evidence'
               and (storage.foldername(name))[1] = 'incoming'
-              and (storage.foldername(name))[2] = (select auth.uid())::text);
+              and (storage.foldername(name))[2] = (select auth.uid())::text
+              and private.upload_quota_ok());   -- máx. 20 subidas por hora
 
 create policy evidence_read_own_or_staff on storage.objects for select to authenticated
   using (bucket_id = 'report-evidence'

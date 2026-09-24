@@ -44,8 +44,8 @@ const R0=[
 {id:'r1',num:1038,kind:'Bache',title:'Bache profundo',addr:'Calle Duarte esq. Restauración',lat:19.4744,lng:-71.3428,status:3,mine:true,muni:'Sabaneta',date:'18 sep',hist:['18 sep · 9:12 a. m.','18 sep · 2:40 p. m.','19 sep · 8:30 a. m.','20 sep · 8:05 a. m.',null]},
 {id:'r2',num:1039,kind:'Alumbrado',title:'Poste sin luz',addr:'Av. Hermanas Mirabal',lat:19.4786,lng:-71.3366,status:0,mine:false,support:3,muni:'Sabaneta',date:'23 sep',hist:['23 sep · 7:48 p. m.',null,null,null,null]},
 {id:'r3',num:1031,kind:'Basura',title:'Vertedero improvisado',addr:'Salida hacia Mao',lat:19.4190,lng:-71.1600,status:4,mine:true,muni:'Monción',date:'12 sep',hist:['12 sep · 10:02 a. m.','12 sep · 4:15 p. m.','12 sep · 5:00 p. m.','13 sep · 9:30 a. m.','15 sep · 1:20 p. m.']},
-{id:'r4',num:1040,kind:'Semáforo',title:'Semáforo intermitente',addr:'Entrada Carretera Sabaneta–Dajabón',lat:19.4712,lng:-71.3355,status:1,mine:false,support:7,muni:'Sabaneta',date:'24 sep',hist:['24 sep · 8:10 a. m.','24 sep · 9:02 a. m.',null,null,null]},
-{id:'r5',num:1036,kind:'Calle cerrada',title:'Derrumbe en camino vecinal',addr:'Camino a Los Cafetales',lat:19.4148,lng:-71.4460,status:1,mine:false,support:4,muni:'Los Almácigos',date:'21 sep',hist:['21 sep · 6:30 a. m.','21 sep · 11:10 a. m.',null,null,null]}
+{id:'r4',num:1040,kind:'Semáforo',title:'Semáforo intermitente',addr:'Entrada Carretera Sabaneta–Dajabón',lat:19.4712,lng:-71.3355,status:1,mine:false,muni:'Sabaneta',date:'24 sep',hist:['24 sep · 8:10 a. m.','24 sep · 9:02 a. m.',null,null,null]},
+{id:'r5',num:1036,kind:'Calle cerrada',title:'Derrumbe en camino vecinal',addr:'Camino a Los Cafetales',lat:19.4148,lng:-71.4460,status:1,mine:false,muni:'Los Almácigos',date:'21 sep',hist:['21 sep · 6:30 a. m.','21 sep · 11:10 a. m.',null,null,null]}
 ];
 // Lista de tránsito según las bases (F4: accidentes, cierres, baches, semáforos dañados y desvíos).
 // Tránsito (temporal, expira) y servicios municipales (seguimiento hasta resolverse) son flujos distintos (ARCHITECTURE.md §21).

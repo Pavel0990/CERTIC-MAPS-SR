@@ -200,11 +200,20 @@ begin
   -- subidas que nunca se confirmaron: se rechazan y se encola el borrado del archivo
   with o as (
     update public.attachments set status = 'rejected'
-    where status in ('pending', 'processing') and created_at < now() - interval '24 hours'
+    where status = 'pending' and created_at < now() - interval '24 hours'
     returning bucket, path)
   select count(*) into n from (
     select private.enqueue('delete_storage_object', jsonb_build_object('bucket', bucket, 'path', path), 'del:' || path) from o) z;
   v := v || jsonb_build_object('orphan_uploads', n);
+
+  -- archivos subidos a incoming/ que nunca se registraron con register_attachment()
+  select count(*) into n from (
+    select private.enqueue('delete_storage_object', jsonb_build_object('bucket', o.bucket_id, 'path', o.name), 'del:' || o.name)
+    from storage.objects o
+    where o.bucket_id = 'report-evidence' and (storage.foldername(o.name))[1] = 'incoming'
+      and o.created_at < now() - interval '24 hours'
+      and not exists (select 1 from public.attachments a where a.path = o.name)) z;
+  v := v || jsonb_build_object('unregistered_uploads', n);
   return v;
 end $$;
 

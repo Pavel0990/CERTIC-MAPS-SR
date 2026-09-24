@@ -68,7 +68,7 @@ as $$
 declare
   v_uid uuid := (select auth.uid());
   b public.businesses;
-  v_allowed constant text[] := array['name', 'description', 'phone', 'whatsapp', 'email', 'website', 'address'];
+  v_allowed constant text[] := array['name', 'description', 'phone', 'whatsapp', 'email', 'website', 'address', 'google_place_id'];
   v_unknown text[];
 begin
   if v_uid is null then return private.reject('not_authenticated'); end if;
@@ -93,7 +93,8 @@ begin
     whatsapp    = case when p_changes ? 'whatsapp'    then nullif(btrim(p_changes ->> 'whatsapp'), '') else whatsapp end,
     email       = case when p_changes ? 'email'       then nullif(btrim(p_changes ->> 'email'), '') else email end,
     website     = case when p_changes ? 'website'     then nullif(btrim(p_changes ->> 'website'), '') else website end,
-    address     = case when p_changes ? 'address'     then nullif(btrim(p_changes ->> 'address'), '') else address end
+    address     = case when p_changes ? 'address'     then nullif(btrim(p_changes ->> 'address'), '') else address end,
+    google_place_id = case when p_changes ? 'google_place_id' then nullif(btrim(p_changes ->> 'google_place_id'), '') else google_place_id end
   where id = p_id and version = p_version;
   if not found then
     return private.reject('version_conflict', jsonb_build_object('current_version', (select version from public.businesses where id = p_id)));
@@ -275,6 +276,18 @@ begin
   elsif p_entity = 'promotion' then
     select b.municipality_id, p.created_by, p.title into v_muni, v_owner, v_title
     from public.promotions p join public.businesses b on b.id = p.business_id where p.id = p_id;
+  elsif p_entity = 'attachment' then
+    -- solo se publican fotos de contenido público; la evidencia de reportes y consultas nunca es pública
+    select coalesce(b.municipality_id, t.municipality_id, r.municipality_id), a.owner_id, 'Foto'
+      into v_muni, v_owner, v_title
+    from public.attachments a
+    left join public.businesses b on b.id = a.business_id
+    left join public.tourism_places t on t.id = a.tourism_place_id
+    left join public.eco_routes r on r.id = a.eco_route_id
+    where a.id = p_id;
+    if v_muni is null and exists (select 1 from public.attachments where id = p_id) then
+      return private.reject('not_publishable');
+    end if;
   end if;
   if v_muni is null then return private.reject('not_found'); end if;
   if not private.is_staff(v_muni) then
@@ -293,8 +306,10 @@ begin
     update public.eco_routes set status = p_to, reviewed_by = v_uid,
            status_reason = case when p_to = 'rejected' then btrim(p_reason) else status_reason end
     where id = p_id and status = p_expected_status;
-  else
+  elsif p_entity = 'promotion' then
     update public.promotions set status = p_to where id = p_id and status = p_expected_status;
+  else
+    update public.attachments set status = p_to where id = p_id and status = p_expected_status;
   end if;
   get diagnostics v_rows = row_count;
   if v_rows = 0 then return private.reject('stale_state'); end if;
@@ -306,6 +321,15 @@ begin
     from public.business_members bm join public.municipalities m on m.id = v_muni
     where bm.business_id = p_id and bm.member_role = 'owner'
     on conflict on constraint user_roles_scope_unique do nothing;
+  end if;
+
+  -- Suspender o archivar un negocio pausa sus promociones activas (dejan de mostrarse y quedan registradas)
+  if p_entity = 'business' and p_to in ('suspended', 'archived') then
+    update public.promotions set status = 'paused' where business_id = p_id and status = 'active';
+  end if;
+  -- Foto aprobada: el worker la copia al bucket público
+  if p_entity = 'attachment' and p_to = 'approved' then
+    perform private.enqueue('publish_media', jsonb_build_object('attachment_id', p_id), 'publish:' || p_id);
   end if;
 
   insert into public.moderation_actions (moderator_id, entity_type, entity_id, action, from_status, to_status, reason)

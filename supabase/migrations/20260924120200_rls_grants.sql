@@ -26,6 +26,7 @@ grant execute on function
   private.is_business_member(uuid, boolean), private.f_unaccent(text), private.is_service(),
   private.reject(text, jsonb)   -- usada por las RPC SECURITY INVOKER (map_features)
 to anon, authenticated, service_role;
+grant execute on function private.upload_quota_ok() to authenticated;   -- política de Storage
 
 -- ---------------------------------------------------------------------
 -- RLS en todas las tablas de public
@@ -236,7 +237,9 @@ create policy kpi_snapshots_read on public.weekly_kpi_snapshots for select to au
 -- ---------------------------------------------------------------------
 grant execute on function
   public.map_features(double precision, double precision, double precision, double precision, text[], integer),
-  public.search_all(text, integer)
+  public.map_aggregates(),
+  public.search_all(text, integer),
+  public.track_engagement(text, uuid, text)
 to anon, authenticated;
 
 grant execute on function
@@ -257,6 +260,9 @@ grant execute on function
   public.review_content(text, uuid, text, text, text),
   public.assign_role(uuid, text, uuid),
   public.revoke_role(uuid, text, uuid),
+  public.register_attachment(text, uuid, text),
+  public.update_place(uuid, integer, jsonb),
+  public.update_route(uuid, integer, jsonb),
   public.my_activity(),
   public.kpi_summary(date, date, uuid),
   public.weekly_report_begin(date, boolean)
@@ -265,6 +271,10 @@ to authenticated;
 grant execute on function
   public.worker_claim_jobs(integer, integer),
   public.worker_finish_job(bigint, boolean, text),
+  public.worker_attachment_processed(uuid, boolean, text, integer, integer, integer, text),
+  public.worker_attachment_published(uuid),
+  public.worker_run_fanout_alert(uuid),
+  public.worker_queue_health(),
   public.weekly_report_begin(date, boolean),
   public.weekly_report_finish(uuid, boolean, text, text),
   public.kpi_summary(date, date, uuid)

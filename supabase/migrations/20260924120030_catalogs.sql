@@ -55,7 +55,7 @@ create table private.traffic_transitions (
 
 -- Transiciones de contenido moderado (negocios, lugares, rutas, promociones)
 create table private.content_transitions (
-  entity       text not null check (entity in ('business', 'place', 'route', 'promotion')),
+  entity       text not null check (entity in ('business', 'place', 'route', 'promotion', 'attachment')),
   from_status  text not null,
   to_status    text not null,
   primary key (entity, from_status, to_status)
@@ -123,7 +123,9 @@ insert into private.content_transitions (entity, from_status, to_status) values
   ('place', 'pending', 'published'), ('place', 'pending', 'rejected'), ('place', 'published', 'archived'),
   ('route', 'pending', 'published'), ('route', 'pending', 'rejected'), ('route', 'published', 'archived'),
   ('promotion', 'pending', 'active'), ('promotion', 'pending', 'rejected'),
-  ('promotion', 'active', 'paused'), ('promotion', 'paused', 'active');
+  ('promotion', 'active', 'paused'), ('promotion', 'paused', 'active'),
+  -- fotos de contenido público (negocio, lugar, ruta): el worker las deja en 'processed' y el moderador publica
+  ('attachment', 'processed', 'approved'), ('attachment', 'processed', 'rejected'), ('attachment', 'approved', 'rejected');
 
 insert into private.rate_limit_rules (action, max_count, window_size) values
   ('traffic_report_create', 5,  interval '1 hour'),
@@ -133,4 +135,6 @@ insert into private.rate_limit_rules (action, max_count, window_size) values
   ('business_update',       30, interval '1 hour'),
   ('proposal_create',       5,  interval '1 day'),
   ('staff_action',          300, interval '1 hour'),
+  ('attachment_register',   30,  interval '1 hour'),
+  ('content_update',        30,  interval '1 hour'),
   ('role_change',           30, interval '1 hour');

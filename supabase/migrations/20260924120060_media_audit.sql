@@ -21,7 +21,7 @@ create table public.attachments (
   bytes               integer not null check (bytes between 1 and 5242880),
   width               smallint check (width between 1 and 4096),
   height              smallint check (height between 1 and 4096),
-  status              text not null default 'pending' check (status in ('pending', 'processing', 'approved', 'rejected')),
+  status              text not null default 'pending' check (status in ('pending', 'processed', 'approved', 'rejected')),
   created_at          timestamptz not null default now(),
   constraint attachments_one_parent check (
     num_nonnulls(business_id, tourism_place_id, eco_route_id, traffic_report_id, citizen_request_id) = 1)
@@ -31,7 +31,7 @@ create index attachments_place_idx    on public.attachments (tourism_place_id) w
 create index attachments_route_idx    on public.attachments (eco_route_id) where eco_route_id is not null;
 create index attachments_traffic_idx  on public.attachments (traffic_report_id) where traffic_report_id is not null;
 create index attachments_request_idx  on public.attachments (citizen_request_id) where citizen_request_id is not null;
-create index attachments_pending_idx  on public.attachments (created_at) where status in ('pending', 'processing');
+create index attachments_pending_idx  on public.attachments (created_at) where status = 'pending';
 
 -- Decisiones de moderación (inmutable)
 create table public.moderation_actions (

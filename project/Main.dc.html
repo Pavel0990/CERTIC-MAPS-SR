@@ -642,6 +642,8 @@ class Component extends DCLogic {
   reduced() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
   stOf(r) { const S = window.SR; return r.rejected ? S.REJ : S.ST[r.status]; }
   isOpen(r) { return !r.rejected && r.status < window.SR.ST_DONE; }
+  // Tránsito: alerta temporal, no se vota (ARCHITECTURE.md §9.4). Solo se votan solicitudes municipales.
+  isTraffic(r) { return window.SR.RTYPES_T.includes(r.kind); }
   init() {
     const S = window.SR; const u = S.wpx(S.U.lat, S.U.lng, 14); const a = S.wpx(19.442, -71.305, 11);
     this.setState({ ready: true, m: { z: 14, cx: u.x, cy: u.y + 120 }, am: { z: 11, cx: a.x, cy: a.y }, sel: null, expanded: false, search: false, q: '', chip: null,
@@ -733,7 +735,7 @@ class Component extends DCLogic {
     this.toast('#SR-' + r.num + ' → ' + S.ST[ns].t + (r.mine ? ' · ciudadana notificada' : ''));
   }
   toggleVote(id) {
-    const r = this.state.reports.find(x => x.id === id); if (!r || r.mine || !this.isOpen(r)) return; const on = !this.state.votes[id];
+    const r = this.state.reports.find(x => x.id === id); if (!r || r.mine || !this.isOpen(r) || this.isTraffic(r)) return; const on = !this.state.votes[id];
     this.setState(s => ({ votes: { ...s.votes, [id]: on }, reports: s.reports.map(x => x.id === id ? { ...x, support: (x.support || 0) + (on ? 1 : -1) } : x) }));
     this.toast(on ? 'Apoyaste #SR-' + r.num + ' · sube en la prioridad del ayuntamiento' : 'Quitaste tu apoyo a #SR-' + r.num);
   }
@@ -798,7 +800,7 @@ class Component extends DCLogic {
         let d = 0; const st = it.pts.map(P); for (let i = 1; i < st.length; i++) d += S.km(st[i - 1], st[i]);
         card = { isRuta: true, name: it.name, cat: it.cat, dist: S.fkm(d * 1.3), stops: st.map((p, i) => ({ n: i + 1, name: p.name })), onRoute: () => this.routeTo(it.pts) };
       } else if (it.type === 'reporte') {
-        const st = this.stOf(it); card = { isReporte: true, kind: it.kind.toUpperCase(), title: it.title, addr: it.addr, dist: dist(it), st: st.t, stC: st.c, stBg: st.bg, num: it.num, date: it.date, cta: it.mine ? 'Ver estado' : !this.isOpen(it) ? (it.support || 0) + ' apoyos' : (s.votes[it.id] ? 'Apoyado · ' : 'Apoyar · ') + (it.support || 0), onOpen: it.mine ? () => this.setState({ status: it.id }) : () => this.toggleVote(it.id) };
+        const st = this.stOf(it); card = { isReporte: true, kind: it.kind.toUpperCase(), title: it.title, addr: it.addr, dist: dist(it), st: st.t, stC: st.c, stBg: st.bg, num: it.num, date: it.date, cta: it.mine ? 'Ver estado' : this.isTraffic(it) ? 'Alerta vial · expira sola' : !this.isOpen(it) ? (it.support || 0) + ' apoyos' : (s.votes[it.id] ? 'Apoyado · ' : 'Apoyar · ') + (it.support || 0), onOpen: it.mine ? () => this.setState({ status: it.id }) : this.isTraffic(it) ? () => this.toast('Las alertas de tránsito se retiran solas al expirar') : () => this.toggleVote(it.id) };
       }
     }
     let det = { show: false, mis: { show: false } };
@@ -911,7 +913,7 @@ class Component extends DCLogic {
     out.aEstChips = ['Todos', 'Abiertos', 'Resueltos'].map(k => ({ label: k, bg: s.aEst === k ? '#111418' : '#F1F2F4', fg: s.aEst === k ? '#fff' : '#111418', onClick: () => this.setState({ aEst: k }) }));
     const q = s.reports.filter(r => muniOk(r) && estOk({ ...r, type: 'reporte' })).slice().sort((a, b) => this.isOpen(b) - this.isOpen(a) || (b.support || 0) - (a.support || 0) || a.status - b.status || b.num - a.num);
     out.aOpenCount = K.open + ' abiertos · se muestran ' + q.length + ' recientes';
-    out.aQueue = q.map(r => { const st = this.stOf(r); const open = this.isOpen(r); return { title: r.title, num: r.num, kind: r.kind, muni: r.muni, date: r.date, st: st.t, stC: st.c, stBg: st.bg, bg: s.aSel === r.id ? '#F3F6FE' : 'transparent', canAdv: open, canRej: open && r.status <= S.ST_LAST_REJECTABLE, next: open ? 'Pasar a ' + S.ST[r.status + 1].t : '', mineTag: r.mine ? 'Ciudadana: María A. · recibe notificaciones' : (r.support || 0) + ' vecinos lo apoyan', onAdv: e => { e.stopPropagation(); this.advance(r.id); }, onRej: e => { e.stopPropagation(); this.reject(r.id); }, onClick: () => { this.setState({ aSel: r.id, aTab: 'resumen' }); this.fly('am', r.lat, r.lng, 15); } }; });
+    out.aQueue = q.map(r => { const st = this.stOf(r); const open = this.isOpen(r); return { title: r.title, num: r.num, kind: r.kind, muni: r.muni, date: r.date, st: st.t, stC: st.c, stBg: st.bg, bg: s.aSel === r.id ? '#F3F6FE' : 'transparent', canAdv: open, canRej: open && r.status <= S.ST_LAST_REJECTABLE, next: open ? 'Pasar a ' + S.ST[r.status + 1].t : '', mineTag: r.mine ? 'Ciudadana: María A. · recibe notificaciones' : this.isTraffic(r) ? 'Alerta vial · expira sola' : (r.support || 0) + ' vecinos lo apoyan', onAdv: e => { e.stopPropagation(); this.advance(r.id); }, onRej: e => { e.stopPropagation(); this.reject(r.id); }, onClick: () => { this.setState({ aSel: r.id, aTab: 'resumen' }); this.fly('am', r.lat, r.lng, 15); } }; });
     const MK = S.MSTATS.map(x => ({ x, k: this.kpiScope(x.k) })); const mx = f => Math.max(...MK.map(o => o.k[f]), 1);
     out.aMuniStats = MK.map(({ x, k }) => ({ name: S.MUNI[x.k].full, users: k.users, rows: [{ l: 'Reportes (semana)', v: k.wRep, p: k.wRep / mx('wRep') * 100, c: '#E5484D' }, { l: 'Resueltos (semana)', v: k.wRes, p: k.wRes / mx('wRep') * 100, c: '#16A34A' }, { l: 'Negocios', v: k.biz, p: k.biz / mx('biz') * 100, c: '#2F6FEB' }] }));
     out.aPend = s.pend.map(p => ({ ...p, kind: p.kind.toUpperCase(), onOk: () => { this.setState(x => ({ pend: x.pend.filter(y => y.id !== p.id) })); this.toast('Aprobado · ' + p.title + ' ya es visible en el mapa'); }, onNo: () => { this.setState(x => ({ pend: x.pend.filter(y => y.id !== p.id) })); this.toast('Rechazado · ' + p.title); } }));

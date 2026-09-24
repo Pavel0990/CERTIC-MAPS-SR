@@ -28,7 +28,7 @@ create table storage.buckets (
 );
 create table storage.objects (
   id uuid primary key default gen_random_uuid(),
-  bucket_id text references storage.buckets (id), name text not null, owner uuid,
+  bucket_id text references storage.buckets (id), name text not null, owner uuid, metadata jsonb,
   created_at timestamptz not null default now()
 );
 alter table storage.objects enable row level security;
