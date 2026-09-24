@@ -1,0 +1,4 @@
+{
+  // Los atributos style usan plantillas {{ ... }} del runtime DC; el validador CSS de VS Code las marca como error.
+  "html.validate.styles": false
+}
