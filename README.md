@@ -22,10 +22,11 @@ Proyecto para el reto TechEmprende SR Conecta 2026.
 
 | Ruta | Qué es |
 |---|---|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Arquitectura (v2.0): requisitos del reto, stack, módulos, seguridad, API, operación, plan y ADRs |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Arquitectura (v2.1): requisitos del reto, stack, módulos, seguridad, API, operación, plan y riesgos |
+| [docs/decisions/](docs/decisions) | 21 decisiones de arquitectura (ADR), una por archivo, con contexto, alternativas y riesgos |
 | [DATABASE.md](DATABASE.md) | Backend y base de datos: capas, convenciones, modelo, catálogo de RPC, matriz RLS |
-| [supabase/migrations/](supabase/migrations) | 16 migraciones SQL (PostgreSQL + PostGIS): la fuente de verdad del modelo |
-| [supabase/tests/](supabase/tests) | 107 pruebas de la base de datos |
+| [supabase/migrations/](supabase/migrations) | 17 migraciones SQL (PostgreSQL + PostGIS): la fuente de verdad del modelo |
+| [supabase/tests/](supabase/tests) | 113 pruebas de la base de datos |
 | [supabase/seed.sql](supabase/seed.sql) | Semilla de desarrollo (municipios rectangulares de demostración) |
 | [supabase/ops/](supabase/ops) | Scripts de operación (crear el administrador provincial) |
 | [project/Main.dc.html](project/Main.dc.html) | Prototipo interactivo: app ciudadana y panel municipal, con datos de demostración |
@@ -40,7 +41,7 @@ No requiere Docker ni una cuenta de Supabase: usa PostgreSQL 18 + PostGIS en Web
 ```bash
 cd supabase/tests
 npm install
-npm test        # 107/107 pruebas · 16 migraciones
+npm test        # 113/113 pruebas · 17 migraciones
 ```
 
 ## Ver el prototipo

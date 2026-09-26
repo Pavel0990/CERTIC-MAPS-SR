@@ -1,10 +1,10 @@
 # SR Conecta — Backend y base de datos
 
-> **Versión 1.1 · 24 de septiembre de 2026.** Complementa [ARCHITECTURE.md](ARCHITECTURE.md) (v2.0).
+> **Versión 1.2 · 25 de septiembre de 2026.** Complementa [ARCHITECTURE.md](ARCHITECTURE.md) (v2.1) y las decisiones de [`docs/decisions/`](docs/decisions).
 >
 > **La fuente de verdad es el SQL** de [`supabase/migrations/`](supabase/migrations). Este documento explica sus decisiones; si discrepan, manda el SQL.
 >
-> **Estado verificado:** las 16 migraciones se aplican desde cero en PostgreSQL 18.3 + PostGIS 3.6.2, y pasan las **107 pruebas** ([`supabase/tests/`](supabase/tests)). Cubren seguridad, integridad, concurrencia, PostGIS, fotos, alertas, KPIs y mantenimiento. Lo que no se puede verificar fuera de Supabase está en §14.
+> **Estado verificado:** las 17 migraciones se aplican desde cero en PostgreSQL 18.3 + PostGIS 3.6.2, y pasan las **113 pruebas** ([`supabase/tests/`](supabase/tests)). Cubren seguridad, integridad, concurrencia, PostGIS, fotos, alertas, KPIs, descarga auditada del PDF y mantenimiento. Lo que no se puede verificar fuera de Supabase está en §14.
 
 ---
 
@@ -13,8 +13,8 @@
 | | |
 |---|---|
 | Motor | PostgreSQL (Supabase; probado en 18.3, compatible con 15+) + PostGIS, `pg_trgm`, `unaccent`, `pgcrypto`, `pg_cron`, `pg_net`, Vault |
-| Esquemas | `public` (expuesto por la Data API): 27 tablas y 34 funciones · `private` (no expuesto): 6 tablas y 33 funciones · `extensions` |
-| Seguridad | RLS en las 27 tablas de `public` (31 políticas + 3 de Storage) · grants por columna · `EXECUTE` explícito por función · 53 funciones `SECURITY DEFINER`, todas con `search_path` fijo |
+| Esquemas | `public` (expuesto por la Data API): 27 tablas y 35 funciones · `private` (no expuesto): 6 tablas y 34 funciones · `extensions` |
+| Seguridad | RLS en las 27 tablas de `public` (31 políticas + 4 de Storage) · grants por columna · `EXECUTE` explícito por función · 55 funciones `SECURITY DEFINER`, todas con `search_path` fijo |
 | Integridad | FK compuestas territoriales, `CHECK` en cada columna con dominio acotado, `UNIQUE NULLS NOT DISTINCT` donde `NULL` tiene significado, arco exclusivo en adjuntos |
 | Rendimiento | 109 índices: GiST geométricos y geográficos, GIN de texto y trigramas, parciales para bandejas y colas, soporte de todas las FK hacia `profiles` |
 | Asincronía | Cola `private.jobs` (outbox) + worker con `FOR UPDATE SKIP LOCKED` + `pg_cron` |
@@ -263,9 +263,19 @@ Toda FK hacia `profiles` tiene índice, parcial (`WHERE … IS NOT NULL`). Sin e
 
 Las FK hacia catálogos y territorio (`ON DELETE RESTRICT`, casi nunca se borran) no se indexan a propósito.
 
+### 5.11 Descarga auditada del informe — `20260925120000_report_download_audit.sql`
+
+| Pieza | Qué hace |
+|---|---|
+| `authorize_report_download(run_id)` | Valida que quien llama sea `municipal_admin` (de municipio o provincial) y que el informe esté `succeeded`; registra `report.download` en `audit_logs` (también los intentos `denied`) y devuelve la ruta en `reports-pdf` |
+| `private.report_download_granted(path)` | Verdadero si el mismo usuario registró la descarga de ese PDF en los últimos 5 minutos |
+| Política `reports_pdf_read_after_audit` | Lectura en Storage del bucket `reports-pdf` solo si `report_download_granted()`. Sin rastro en la auditoría no hay lectura, aunque se llame a Storage directamente |
+
+La URL firmada se crea con el JWT del administrador, nunca con `service_role` (ADR-021). Pruebas N1–N6.
+
 ## 6. Catálogo de RPC
 
-34 funciones en `public`. Todas son `SECURITY DEFINER` salvo las marcadas como **invoker**.
+35 funciones en `public`. Todas son `SECURITY DEFINER` salvo las marcadas como **invoker**.
 
 | RPC | Quién | Rate limit | Idempotencia / concurrencia |
 |---|---|---|---|
@@ -294,6 +304,7 @@ Las FK hacia catálogos y territorio (`ON DELETE RESTRICT`, casi nunca se borran
 | `kpi_summary` | admin (su alcance), service | — | **única fuente de KPIs** |
 | `weekly_report_begin` | service (cron) / admin provincial (manual) | — | toma atómica; versión nueva si es manual |
 | `weekly_report_finish` | service | — | — |
+| `authorize_report_download` | admin municipal o provincial | 300/h | registra la descarga; condición de lectura en Storage |
 | `worker_claim_jobs`, `worker_finish_job` | service | — | `SKIP LOCKED`, recupera locks vencidos |
 | `worker_attachment_processed`, `worker_attachment_published` | service | — | — |
 | `worker_run_fanout_alert` | service | — | una alerta por reporte (`dedupe_key`) |
@@ -328,6 +339,7 @@ Qué endpoint o Server Action consume cada RPC: ARCHITECTURE.md §12.
 **Storage:**
 - `report-evidence` solo acepta subidas en `incoming/{auth.uid()}/…`, con un máximo de 20 por hora (`private.upload_quota_ok()`).
 - `public-media` y `reports-pdf` solo los escribe `service_role`.
+- `reports-pdf` solo se lee con una descarga registrada en `audit_logs` en los últimos 5 minutos (`reports_pdf_read_after_audit`, §5.11).
 
 ## 8. Errores de diseño detectados al ejecutar (y cómo se evitan)
 
@@ -349,7 +361,7 @@ Estos fallos solo aparecieron al correr el SQL contra un PostgreSQL real. Quedan
 |---|---|---|---|
 | `report-evidence` | No | 5 MB, JPEG/PNG/WebP | El ciudadano en `incoming/{uid}/` (20 por hora); el worker guarda `processed/{attachment_id}.webp` |
 | `public-media` | Sí | 5 MB | Solo el worker, tras la moderación (solo fotos de negocios, lugares y rutas) |
-| `reports-pdf` | No | 20 MB, PDF | Solo el servidor; descarga con URL firmada de 5 min |
+| `reports-pdf` | No | 20 MB, PDF | Solo el servidor. Descarga con URL firmada de 5 min, creada con el JWT del administrador tras `authorize_report_download` |
 
 Limpieza diaria (`apply_retention`):
 - los adjuntos `pending` con más de 24 h se marcan `rejected` y se encola el borrado del archivo;
@@ -401,6 +413,7 @@ El panel la llama en vivo. El informe semanal guarda su resultado en `weekly_kpi
 | `…200_rls_grants` | RLS, grants por columna, `EXECUTE` |
 | `…210_storage_realtime_cron` | Buckets, políticas de Storage, broadcast, `pg_cron` |
 | `…220_fk_indexes` | Índices de soporte de FK |
+| `20260925120000_report_download_audit` | Descarga auditada del informe semanal |
 
 **Reglas:**
 - Solo hacia adelante.
@@ -443,6 +456,7 @@ Las pruebas usan stubs mínimos de lo que aporta Supabase ([`supabase/tests/supa
 - que `pg_cron`, `pg_net` y Vault se habiliten y que `cron.schedule` registre las 4 tareas (en las pruebas se omiten);
 - la firma de `realtime.send(payload, event, topic, private)` y la configuración de canales Broadcast públicos;
 - las claves de `storage.objects.metadata` (`mimetype`, `size`) que usa `register_attachment`;
+- que `createSignedUrl` con el JWT del usuario respete la política `reports_pdf_read_after_audit`;
 - que la Data API exponga solo `public`, y los `GRANT` que Supabase aplica por defecto a tablas nuevas (la migración 200 los revoca y concede explícitamente, así que no dependemos de ellos);
 - `storage.foldername()` y los límites de los buckets en el servicio de Storage real;
 - el rendimiento con los polígonos oficiales de los municipios (los de desarrollo son rectángulos).

@@ -56,7 +56,7 @@ ok('A4 authenticated sin escritura directa en tablas críticas', authWrite.lengt
 const privExec = await q(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
                           where n.nspname = 'private' and has_function_privilege('authenticated', p.oid, 'execute') order by 1`);
 ok('A5 authenticated solo ejecuta los helpers de RLS en private',
-   privExec.map(r => r.proname).join(',') === 'can_read_request,f_unaccent,is_admin,is_any_staff,is_business_member,is_provincial_admin,is_service,is_staff,reject,upload_quota_ok',
+   privExec.map(r => r.proname).join(',') === 'can_read_request,f_unaccent,is_admin,is_any_staff,is_business_member,is_provincial_admin,is_service,is_staff,reject,report_download_granted,upload_quota_ok',
    privExec.map(r => r.proname).join(','));
 
 const definerNoPath = await q(`select n.nspname || '.' || p.proname f from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -493,6 +493,28 @@ ok('M19 tras archivar el negocio, la baja procede, se audita y la evidencia priv
    crisGone.profile === 0 && crisGone.live_evidence === 0 && crisGone.deletions >= 3
    && (await one(`select count(*)::int n from public.audit_logs where action = 'account.delete' and entity_id = $1`, [U.cris])).n === 1,
    JSON.stringify(crisGone));
+
+// ---------------------------------------------------------------------------------------------
+// N. Descarga auditada del informe semanal (la auditoría es condición de lectura en Storage)
+// ---------------------------------------------------------------------------------------------
+lastStep = 'N';
+const pdfPath = 'sr/2026/semana-39/v1.pdf';
+await db.query(`insert into storage.objects (bucket_id, name) values ('reports-pdf', $1)`, [pdfPath]);
+const canRead = async who => (await as(db, who, `select count(*)::int n from storage.objects where bucket_id = 'reports-pdf' and name = $1`, [pdfPath])).rows[0].n === 1;
+const dlCit = await rpc(U.ana, `public.authorize_report_download($1)`, [wr1.run_id]);
+const dlMod = await rpc(U.modSab, `public.authorize_report_download($1)`, [wr1.run_id]);
+const deniedLogged = (await one(`select count(*)::int n from public.audit_logs where action = 'report.download' and result = 'denied' and entity_id = $1`, [wr1.run_id])).n;
+ok('N1 ciudadano y moderador no descargan el PDF; el intento queda auditado',
+   dlCit.reason === 'forbidden' && dlMod.reason === 'forbidden' && deniedLogged === 2, JSON.stringify({ dlCit, dlMod, deniedLogged }));
+ok('N2 sin registrar la descarga, ni un administrador puede leer el PDF en Storage', !(await canRead(U.admMon)));
+const dlMon = await rpc(U.admMon, `public.authorize_report_download($1)`, [wr1.run_id]);
+ok('N3 admin municipal registra la descarga y entonces puede leer el PDF',
+   dlMon.status === 'ok' && dlMon.path === pdfPath && await canRead(U.admMon), JSON.stringify(dlMon));
+ok('N4 la autorización es personal: otro administrador no la hereda', !(await canRead(U.admProv)));
+await db.query(`update public.audit_logs set created_at = now() - interval '10 minutes' where action = 'report.download' and actor_id = $1`, [U.admMon]);
+ok('N5 la autorización vence a los 5 minutos', !(await canRead(U.admMon)));
+const dlRunning = await rpc(U.admProv, `public.authorize_report_download($1)`, [wrMan.run_id]);
+ok('N6 un informe que no terminó no se descarga', dlRunning.reason === 'not_ready', JSON.stringify(dlRunning));
 
 // ---------------------------------------------------------------------------------------------
 // L. Mantenimiento y privacidad
