@@ -21,6 +21,7 @@ export default defineConfig([
     'build/**',
     'next-env.d.ts',
     'node_modules/**',
+    'public/vendor/**',
     // Fuera de la aplicación: prototipo de diseño (runtime generado), SQL y sus pruebas, documentación
     'project/**',
     'supabase/**',

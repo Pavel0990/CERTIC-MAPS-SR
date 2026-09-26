@@ -8,21 +8,34 @@
     "node": ">=22"
   },
   "scripts": {
+    "predev": "node scripts/copy-vendor.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-vendor.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "test:boundaries": "node --test tests/boundaries/boundaries.test.mjs",
     "test:db": "npm --prefix supabase/tests test",
-    "check": "npm run lint && npm run typecheck && npm run test:boundaries"
+    "db:types": "supabase gen types typescript --linked --schema public > src/types/database.ts",
+    "check": "npm run lint && npm run typecheck && npm test && npm run test:boundaries"
   },
   "dependencies": {
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.117.2",
+    "clsx": "2.1.1",
+    "lucide-react": "1.48.0",
+    "maplibre-gl": "6.11.2",
     "next": "16.3.6",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "server-only": "0.0.1",
+    "tailwind-merge": "3.7.0",
+    "zod": "4.6.5"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
     "@types/node": "26.6.3",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
@@ -30,7 +43,9 @@
     "eslint-config-next": "16.3.6",
     "eslint-import-resolver-typescript": "4.4.5",
     "eslint-plugin-boundaries": "7.2.0",
+    "tailwindcss": "4.3.3",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.70.1"
+    "typescript-eslint": "8.70.1",
+    "vitest": "5.0.2"
   }
 }

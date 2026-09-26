@@ -18,3 +18,10 @@ next-env.d.ts
 .DS_Store
 Thumbs.db
 npm-debug.log*
+
+# Supabase CLI (estado local)
+supabase/.temp/
+supabase/.branches/
+
+# Archivos copiados por scripts/copy-vendor.mjs
+public/vendor/

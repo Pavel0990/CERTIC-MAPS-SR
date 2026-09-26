@@ -1,3 +1,5 @@
-// API pública del módulo "map". Otros módulos y las páginas solo importan desde aquí (ADR-008).
-// Única frontera con el proveedor de mapa (adaptador): capas, viewport, clustering y selección. No conoce reglas de negocio.
-export {};
+// API pública del módulo "map" (segura para el cliente). Única frontera con el proveedor de mapa (ADR-004, ADR-008).
+// No conoce reglas de negocio: los demás módulos le entregan capas.
+export { MapCanvas, type MapCanvasProps } from './provider/map-canvas';
+export { LAYERS, LAYER_BY_ID, ALL_LAYERS, ICON_PATHS, snapBBox, containsBBox, clampBBox, type LayerDef } from './layers';
+export type * from './types';

@@ -53,3 +53,9 @@ create table net.requests (url text, headers jsonb, body jsonb, at timestamptz d
 create function net.http_post(url text, body jsonb default '{}'::jsonb, params jsonb default '{}'::jsonb,
                               headers jsonb default '{}'::jsonb, timeout_milliseconds integer default 5000)
 returns bigint language sql as $$ insert into net.requests (url, headers, body) values (url, headers, body); select 1::bigint $$;
+
+-- Privilegios por defecto que Supabase aplica en el esquema public (verificado en un proyecto real el 26/09/2026):
+-- toda función nueva es ejecutable por anon y authenticated, y toda secuencia utilizable por ellos.
+-- Imitarlo aquí hace que las pruebas A2/A5 detecten una función expuesta por olvido.
+alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
+alter default privileges in schema public grant usage, select, update on sequences to anon, authenticated, service_role;

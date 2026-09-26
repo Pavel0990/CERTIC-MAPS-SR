@@ -2,7 +2,8 @@
 // La usan eslint.config.mjs y la prueba de regresión tests/boundaries/boundaries.test.mjs.
 //
 // Reglas:
-//   1. Un módulo de dominio solo se importa desde fuera a través de su index.ts.
+//   1. Un módulo de dominio solo se importa desde fuera a través de su API pública:
+//      index.ts (segura para el cliente) o server.ts (solo servidor, con 'server-only').
 //   2. Dentro de un mismo módulo, sus archivos se importan libremente.
 //   3. `map` y `jobs` no conocen reglas de negocio: no importan otros módulos de dominio.
 //   4. Las capas compartidas (components, hooks, lib, config, types, utils) no importan módulos de dominio.
@@ -27,11 +28,11 @@ const toTypes = (types) => ({ to: { element: { types: { anyOf: types } } } });
 export const boundaryPolicies = [
   // Páginas y rutas: módulos (solo por index.ts) y capas compartidas
   { from: { element: { type: 'app' } }, allow: toTypes(['app', ...SHARED]) },
-  { from: { element: { type: 'app' } }, allow: { to: { element: { type: 'module', fileInternalPath: 'index.{ts,tsx}' } } } },
+  { from: { element: { type: 'app' } }, allow: { to: { element: { type: 'module', fileInternalPath: '{index,server}.{ts,tsx}' } } } },
   // Módulos: todo su propio módulo, capas compartidas y la API pública (index.ts) de otros módulos
   { from: { element: { type: 'module' } }, allow: { to: { element: { type: 'module' } }, dependency: { relationship: { to: 'internal' } } } },
   { from: { element: { type: 'module' } }, allow: toTypes(SHARED) },
-  { from: { element: { type: 'module' } }, allow: { to: { element: { type: 'module', fileInternalPath: 'index.{ts,tsx}' } } } },
+  { from: { element: { type: 'module' } }, allow: { to: { element: { type: 'module', fileInternalPath: '{index,server}.{ts,tsx}' } } } },
   // map y jobs no conocen reglas de negocio
   {
     from: { element: { type: 'module', captured: { name: '{map,jobs}' } } },

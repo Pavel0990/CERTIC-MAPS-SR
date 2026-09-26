@@ -35,9 +35,10 @@ test('dentro de un módulo, los archivos se importan libremente', () => {
   allowed('src/modules/traffic/server/internal-ok.ts');
   allowed('src/modules/traffic/index.ts');
 });
-test('un módulo puede usar la API pública (index.ts) de otro módulo', () => {
+test('un módulo puede usar la API pública (index.ts o server.ts) de otro módulo', () => {
   allowed('src/modules/businesses/ok-uses-traffic-index.ts');
   allowed('src/modules/businesses/ok-alias-index.ts');
+  allowed('src/modules/businesses/ok-uses-traffic-server-entry.ts');
 });
 test('un módulo NO puede importar archivos internos de otro módulo', () => {
   blocked('src/modules/businesses/bad-uses-traffic-internal.ts');
