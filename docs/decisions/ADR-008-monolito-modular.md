@@ -32,4 +32,4 @@ Un repositorio, un despliegue y módulos por dominio que solo se comunican por s
 
 | Riesgo | Mitigación |
 |---|---|
-| "Gran bola de lodo" | Reglas de lint de fronteras (`eslint-plugin-boundaries` o `import/no-restricted-paths`) y revisión de dependencias en PR. |
+| "Gran bola de lodo" | Implementado el 25/09/2026: `eslint-plugin-boundaries` en `eslint.boundaries.mjs`, ejecutado en `npm run lint` y en el CI, con prueba de regresión en `tests/boundaries/`. Revisión de dependencias en PR. |

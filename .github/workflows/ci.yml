@@ -1,0 +1,30 @@
+# Comprobaciones obligatorias en cada PR y en main (ARCHITECTURE.md §13.3).
+# Lint (incluye la regla de fronteras de ADR-008), typecheck, prueba de regresión de fronteras
+# y las pruebas de la base de datos (PostgreSQL + PostGIS en PGlite, sin Docker).
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            supabase/tests/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm ci --prefix supabase/tests
+      - run: npm run test:db

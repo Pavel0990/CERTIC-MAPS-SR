@@ -1,6 +1,6 @@
 # SR Conecta — Arquitectura
 
-> **Versión 2.1 · 25 de septiembre de 2026**
+> **Versión 2.2 · 25 de septiembre de 2026**
 > Plataforma geográfica para la provincia Santiago Rodríguez (República Dominicana), para el reto TechEmprende SR Conecta 2026.
 > Este documento es la referencia única de diseño antes de programar. Reemplaza a las versiones 1.x: el historial de esas versiones está en Git.
 
@@ -65,7 +65,8 @@ Si una capacidad no tiene etiqueta, es [MVP].
 | Base de datos (17 migraciones, 113 pruebas) | ✅ Definida y verificada |
 | Decisiones de arquitectura ([`docs/decisions/`](docs/decisions)) | ✅ 21 ADR |
 | Prototipo de diseño (`project/`) | ✅ Navegable, con datos de demostración |
-| Aplicación Next.js | ⏳ No iniciada; su diseño es este documento |
+| Base de la aplicación: `package.json`, `tsconfig.json`, ESLint con la regla de fronteras (8 pruebas), 12 módulos vacíos, CI | ✅ Lista |
+| Aplicación Next.js (páginas y funcionalidades) | ⏳ No iniciada; su diseño es este documento |
 
 ---
 
@@ -186,7 +187,8 @@ Una sola tabla, con la fase en que entra cada pieza.
 
 | Área | Tecnología | Fase | Nota |
 |---|---|---|---|
-| Framework | Next.js 16 (App Router) + React + TypeScript `strict` | MVP | `proxy.ts` (antes `middleware.ts`) solo refresca la sesión |
+| Framework | Next.js 16.3 (App Router) + React 19.3 + TypeScript 6.0 `strict` | MVP | `proxy.ts` (antes `middleware.ts`) solo refresca la sesión. TypeScript 6.0 y no 7: `typescript-eslint` exige TypeScript < 6.1 |
+| Lint | ESLint 9 + `eslint-config-next` + `typescript-eslint` + `eslint-plugin-boundaries` | MVP | ESLint 9 y no 10: los plugins de `eslint-config-next` (`import`, `jsx-a11y`, `react`) aún no soportan ESLint 10. Actualizar cuando lo soporten |
 | UI | Tailwind CSS + shadcn/ui | MVP | Componentes copiados al repo, sin dependencia en runtime |
 | Formularios | React Hook Form + Zod | MVP | Un esquema Zod por operación, compartido cliente/servidor |
 | Estado | TanStack Query (datos del mapa) + Zustand (UI del mapa) | MVP | Sin Redux |
@@ -206,8 +208,8 @@ Una sola tabla, con la fase en que entra cada pieza.
 | Push | Web Push + VAPID (librería `web-push`) | MVP | Sin Firebase |
 | PDF | `@react-pdf/renderer` en Route Handler (runtime Node) | MVP | Vercel Cron diario |
 | Errores | Sentry | MVP | Plan gratuito de 1 usuario (verificar, §20) |
-| Pruebas | PGlite (base de datos) ✅, Vitest y Playwright ⏳ | MVP | §14 |
-| CI/CD | GitHub Actions + Vercel | MVP | Producción: migrar → desplegar (ADR-019) |
+| Pruebas | PGlite (base de datos) ✅, regla de fronteras (`node:test`) ✅, Vitest y Playwright ⏳ | MVP | §14 |
+| CI/CD | GitHub Actions + Vercel | MVP | `.github/workflows/ci.yml` ✅ (lint, typecheck, fronteras, base de datos). Producción: migrar → desplegar (ADR-019) ⏳ |
 | Hosting | Vercel (Hobby en demo → Team Pro) + Supabase (Free en demo → Pro) | MVP → Fase 2 | Cuentas de la organización |
 | Por PR | Supabase Branching | Fase 2 | Requiere plan Pro |
 | Protección extra | Vercel Firewall | Fase 2 | |
@@ -1320,7 +1322,9 @@ sr-conecta/
 │  ├─ seed.sql                  semilla de desarrollo             ✅
 │  ├─ ops/                      scripts de operación              ✅
 │  └─ tests/                    113 pruebas (PGlite)              ✅
-├─ src/                                                           ⏳
+├─ package.json  tsconfig.json  eslint.config.mjs  eslint.boundaries.mjs  ✅
+├─ .github/workflows/ci.yml     comprobaciones en cada PR                      ✅
+├─ src/                         ✅ modules/ (12 módulos con su index.ts) · ⏳ el resto
 │  ├─ app/
 │  │  ├─ (public)/  (app)/mapa/  (app)/cuenta/  (business)/negocio/  (admin)/admin/
 │  │  ├─ api/v1/                Route Handlers (§12.2)
@@ -1336,6 +1340,7 @@ sr-conecta/
 │  ├─ config/env.ts
 │  └─ proxy.ts
 ├─ data/                        importación de datos abiertos (GDAL)          ⏳
+├─ tests/boundaries/            prueba de regresión de la regla de fronteras   ✅
 ├─ tests/e2e/                   Playwright                                     ⏳
 ├─ docs/
 │  ├─ decisions/                21 ADR, una por archivo                        ✅
@@ -1347,7 +1352,8 @@ sr-conecta/
 ```
 
 **Reglas de módulos:**
-- Un módulo solo importa de otro a través de su `index.ts`. Se verifica con reglas de lint.
+- Un módulo solo importa de otro a través de su `index.ts`. Lo exige `eslint-plugin-boundaries` (`eslint.boundaries.mjs`), corre en `npm run lint` y en el CI, y tiene su prueba de regresión (`npm run test:boundaries`).
+- Las capas compartidas (`components`, `hooks`, `lib`, `config`, `types`, `utils`) no importan módulos de dominio, y nada importa de `src/app`.
 - `map` no conoce reglas de negocio: los demás módulos le entregan capas.
 - `jobs` no conoce reglas de negocio: cada módulo registra sus handlers por `kind`.
 - `queries.ts` es la única frontera con la base; no hay capa "repositorio" adicional.
@@ -1594,4 +1600,5 @@ Lo que ninguna prueba local puede confirmar (19 puntos). Se resuelve en la seman
 |---|---|---|
 | 1.0–1.6 | 23–24/09/2026 | Diseño inicial, revisiones, alineación con las bases y definición de la base de datos (historial en Git) |
 | 2.0 | 24/09/2026 | Documento reorganizado de principio a fin. Una decisión por tema, sin secciones retiradas. Alineado con el SQL verificado: fotos, alertas por municipio, edición de lugares y rutas, métricas de uso, Realtime solo para tránsito, sondeo del panel, catálogo completo de API |
-| **2.1** | 25/09/2026 | Recupera lo que la v2.0 había perdido de la v1.6 y añade: 21 ADR completas en `docs/decisions/`, registro de decisiones cambiadas (§18.1), variables de entorno (§13.9), diagramas de secuencia (§11.2), consultas espaciales tipo (§7.4), tamaño por fase (§16.5), 11 riesgos y 7 reglas de "No hacer" más. Nueva descarga auditada del PDF (ADR-021, migración `20260925120000`, 6 pruebas) |
+| 2.1 | 25/09/2026 | Recupera lo que la v2.0 había perdido de la v1.6 y añade: 21 ADR completas en `docs/decisions/`, registro de decisiones cambiadas (§18.1), variables de entorno (§13.9), diagramas de secuencia (§11.2), consultas espaciales tipo (§7.4), tamaño por fase (§16.5), 11 riesgos y 7 reglas de "No hacer" más. Nueva descarga auditada del PDF (ADR-021, migración `20260925120000`, 6 pruebas) |
+| **2.2** | 25/09/2026 | La regla de fronteras de ADR-008 deja de ser solo documento: `package.json`, `tsconfig.json`, ESLint con `eslint-plugin-boundaries` (8 pruebas de regresión, incluido el alias `@/`), los 12 módulos con su `index.ts` y CI en GitHub Actions |

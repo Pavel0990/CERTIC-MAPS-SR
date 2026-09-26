@@ -16,13 +16,13 @@ Proyecto para el reto TechEmprende SR Conecta 2026.
 > - base de datos escrita y verificada con pruebas;
 > - prototipo interactivo de diseño.
 >
-> La aplicación Next.js todavía no existe: su diseño está en [ARCHITECTURE.md](ARCHITECTURE.md).
+> La base de la aplicación está lista (`package.json`, TypeScript, ESLint con la regla de fronteras, CI), pero las pantallas y funcionalidades todavía no existen: su diseño está en [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Contenido
 
 | Ruta | Qué es |
 |---|---|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Arquitectura (v2.1): requisitos del reto, stack, módulos, seguridad, API, operación, plan y riesgos |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Arquitectura (v2.2): requisitos del reto, stack, módulos, seguridad, API, operación, plan y riesgos |
 | [docs/decisions/](docs/decisions) | 21 decisiones de arquitectura (ADR), una por archivo, con contexto, alternativas y riesgos |
 | [DATABASE.md](DATABASE.md) | Backend y base de datos: capas, convenciones, modelo, catálogo de RPC, matriz RLS |
 | [supabase/migrations/](supabase/migrations) | 17 migraciones SQL (PostgreSQL + PostGIS): la fuente de verdad del modelo |
@@ -33,6 +33,15 @@ Proyecto para el reto TechEmprende SR Conecta 2026.
 | [project/sr-core.js](project/sr-core.js) | Datos de demostración y utilidades del prototipo |
 | [project/support.js](project/support.js) | Runtime del lienzo de diseño. Archivo **generado**: no editar |
 | [project/canvas.json](project/canvas.json) | Configuración del lienzo de diseño |
+
+## Comprobaciones
+
+```bash
+npm install
+npm run check      # lint (con la regla de fronteras), typecheck y prueba de fronteras
+```
+
+El CI (`.github/workflows/ci.yml`) ejecuta lo mismo y las pruebas de la base de datos en cada PR.
 
 ## Probar la base de datos
 
