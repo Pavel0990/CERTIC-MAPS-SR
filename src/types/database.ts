@@ -1590,6 +1590,14 @@ export type Database = {
         Args: { p_entity: string; p_entity_id: string; p_path: string }
         Returns: Json
       }
+      request_assignees: {
+        Args: { p_ids: string[] }
+        Returns: {
+          assignee_id: string
+          assignee_name: string
+          request_id: string
+        }[]
+      }
       review_content: {
         Args: {
           p_entity: string
@@ -1621,6 +1629,15 @@ export type Database = {
       set_request_public: {
         Args: { p_id: string; p_public: boolean }
         Returns: Json
+      }
+      staff_directory: {
+        Args: { p_municipality_id: string }
+        Returns: {
+          display_name: string
+          provincial: boolean
+          role: string
+          user_id: string
+        }[]
       }
       submit_business: {
         Args: {

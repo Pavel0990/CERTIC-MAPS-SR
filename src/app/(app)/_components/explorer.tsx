@@ -181,6 +181,7 @@ export function Explorer({ catalogs, children, initialLayers = ALL_LAYERS }: { c
         selectedId={selected?.properties.id}
         onMoveEnd={onMoveEnd}
         onSelect={setSelected}
+        overlayInsets
       />
 
       {/* Panel superior: búsqueda y capas */}

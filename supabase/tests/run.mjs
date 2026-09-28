@@ -517,6 +517,22 @@ const dlRunning = await rpc(U.admProv, `public.authorize_report_download($1)`, [
 ok('N6 un informe que no terminó no se descarga', dlRunning.reason === 'not_ready', JSON.stringify(dlRunning));
 
 // ---------------------------------------------------------------------------------------------
+// O. Responsables y directorio del personal (solo el personal del municipio los ve)
+// ---------------------------------------------------------------------------------------------
+lastStep = 'O';
+const asg = async (who) => (await as(db, who, `select * from public.request_assignees($1::uuid[])`, [[inc.id]])).rows;
+const asgSab = await asg(U.modSab);
+ok('O1 el personal del municipio ve quién atiende cada consulta', asgSab.length === 1 && asgSab[0].assignee_id === U.modSab && asgSab[0].assignee_name === 'Moderador Sabaneta', JSON.stringify(asgSab));
+ok('O2 personal de otro municipio y ciudadanos no ven al responsable', (await asg(U.modMon)).length === 0 && (await asg(U.cris)).length === 0);
+const dir = async (who) => (await as(db, who, `select * from public.staff_directory($1)`, [muni.SAB])).rows.map((r) => r.user_id);
+const dirSab = await dir(U.modSab);
+ok('O3 directorio del personal: incluye moderadores del municipio y administración provincial, no de otros municipios',
+   dirSab.includes(U.modSab) && dirSab.includes(U.admProv) && !dirSab.includes(U.modMon) && (await dir(U.cris)).length === 0, JSON.stringify(dirSab));
+ok('O4 anon no puede ejecutar las funciones del personal',
+   !(await one(`select has_function_privilege('anon', 'public.staff_directory(uuid)', 'execute') a`)).a
+   && !(await one(`select has_function_privilege('anon', 'public.request_assignees(uuid[])', 'execute') a`)).a);
+
+// ---------------------------------------------------------------------------------------------
 // L. Mantenimiento y privacidad
 // ---------------------------------------------------------------------------------------------
 await db.query(`update public.traffic_reports set expires_at = created_at + interval '1 second' where id = $1`, [t1.id]);

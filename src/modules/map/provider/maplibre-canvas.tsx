@@ -24,6 +24,8 @@ export interface MapCanvasProps {
   onMoveEnd?: (view: { bbox: BBox; zoom: number; center: LatLng }) => void;
   onSelect?: (feature: MapFeature | null) => void;
   interactive?: boolean;
+  /** Hay paneles flotantes sobre el mapa (búsqueda arriba, hoja abajo o panel lateral): el encuadre inicial los evita. */
+  overlayInsets?: boolean;
   className?: string;
   ariaLabel?: string;
 }
@@ -35,6 +37,15 @@ function markerSvg(color: string, path: string, size = 44) {
     <circle cx="22" cy="22" r="19" fill="${color}" stroke="#fff" stroke-width="3"/>
     <g transform="translate(12 12) scale(0.8333)" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></g>
   </svg>`;
+}
+
+/** Márgenes del encuadre inicial, proporcionales al tamaño real del mapa. */
+function fitPadding(el: HTMLElement, small: boolean, overlays: boolean) {
+  const h = el.clientHeight;
+  const w = el.clientWidth;
+  if (!overlays) return 24;
+  if (small) return { top: Math.round(h * 0.2), bottom: Math.round(h * 0.42), left: 16, right: 16 };
+  return { top: 60, bottom: 60, left: Math.min(440, Math.round(w * 0.35)), right: 60 };
 }
 
 function loadImage(svg: string, px: number) {
@@ -57,6 +68,7 @@ export default function MaplibreCanvas({
   onMoveEnd,
   onSelect,
   interactive = true,
+  overlayInsets = false,
   className,
   ariaLabel = 'Mapa de Santiago Rodríguez',
 }: MapCanvasProps) {
@@ -81,7 +93,7 @@ export default function MaplibreCanvas({
       center: [initialView.center.lng, initialView.center.lat],
       zoom: initialView.zoom,
       // Encuadrar la provincia completa; en móvil se deja espacio para la hoja inferior y la búsqueda
-      ...(b ? { bounds: [[b.minLng, b.minLat], [b.maxLng, b.maxLat]] as [[number, number], [number, number]], fitBoundsOptions: { padding: small ? { top: 150, bottom: 320, left: 16, right: 16 } : { top: 60, bottom: 60, left: 440, right: 60 } } } : {}),
+      ...(b ? { bounds: [[b.minLng, b.minLat], [b.maxLng, b.maxLat]] as [[number, number], [number, number]], fitBoundsOptions: { padding: fitPadding(container.current, small, overlayInsets) } } : {}),
       minZoom: 7,
       maxZoom: 18,
       interactive,

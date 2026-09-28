@@ -1,3 +1,2 @@
-// API pública del módulo "media". Otros módulos y las páginas solo importan desde aquí (ADR-008).
-// Subida, validación y procesamiento de fotos; rutas de Storage.
-export {};
+// API pública del módulo "media" (segura para el cliente): compresión y subida de fotos (§10.5).
+export { compressImage, uploadPhotos, type PhotoEntity } from './client/photos';
