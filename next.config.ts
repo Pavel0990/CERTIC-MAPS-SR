@@ -11,9 +11,18 @@ const securityHeaders = [
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
 ];
 
+// Solo en desarrollo: permitir abrir el servidor local desde un túnel de VS Code (Puertos → Reenviar,
+// dominio *.devtunnels.ms) para probar en el teléfono. En producción no se agrega ningún origen.
+const isDev = process.env.NODE_ENV === 'development';
+const DEV_TUNNELS = ['**.devtunnels.ms'];
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  ...(isDev && {
+    allowedDevOrigins: DEV_TUNNELS,
+    experimental: { serverActions: { allowedOrigins: DEV_TUNNELS } },
+  }),
   images: {
     remotePatterns: [{ protocol: 'https', hostname: supabaseHost, pathname: '/storage/v1/object/public/**' }],
   },
