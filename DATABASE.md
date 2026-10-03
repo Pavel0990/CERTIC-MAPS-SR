@@ -4,7 +4,7 @@
 >
 > **La fuente de verdad es el SQL** de [`supabase/migrations/`](supabase/migrations). Este documento explica sus decisiones; si discrepan, manda el SQL.
 >
-> **Estado verificado:** las 22 migraciones se aplican desde cero en PostgreSQL 18.3 + PostGIS 3.6.2, y pasan las **139 pruebas** ([`supabase/tests/`](supabase/tests)). Cubren seguridad, integridad, concurrencia, PostGIS, fotos, alertas, KPIs, descarga auditada del PDF, entrega del worker, push y mantenimiento. Las 22 están aplicadas también en el Supabase de staging. Lo que no se puede verificar fuera de Supabase está en §14.
+> **Estado verificado:** las 23 migraciones se aplican desde cero en PostgreSQL 18.3 + PostGIS 3.6.2, y pasan las **142 pruebas** ([`supabase/tests/`](supabase/tests)). Cubren seguridad, integridad, concurrencia, PostGIS, fotos, alertas, KPIs, descarga auditada del PDF, entrega del worker, push y mantenimiento. Las 23 están aplicadas también en el Supabase de staging. Lo que no se puede verificar fuera de Supabase está en §14.
 
 ---
 
@@ -316,6 +316,10 @@ Pruebas Q1–Q6.
 | `unregister_push_device(endpoint)` | Baja del dispositivo propio; si era el último, apaga el push de la cuenta |
 
 Pruebas R1–R6.
+
+### 5.17 Fecha local en las promociones — `20261002150000_promotions_local_date.sql`
+
+`current_date` usa la zona de la sesión, que en Supabase es UTC. Entre las 8 p. m. y la medianoche de RD ya es "mañana" en UTC: se rechazaban las promociones que empiezan hoy, y la política de lectura escondía antes de tiempo las que terminan hoy. `private.local_today()` devuelve la fecha de Santo Domingo y la usan `create_promotion` y la política `promotions_read`. **Regla:** ninguna función ni política compara con `current_date`; las fechas civiles se calculan siempre en `America/Santo_Domingo`. Pruebas S1–S3.
 
 ## 6. Catálogo de RPC
 

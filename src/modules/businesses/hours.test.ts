@@ -71,7 +71,7 @@ describe('promotionStartMin', () => {
     expect(promotionStartMin(at('2026-10-02T10:00:00'))).toBe('2026-10-02');
   });
 
-  it('de noche en RD usa la fecha UTC, que ya es mañana (la base compara con current_date en UTC)', () => {
-    expect(promotionStartMin(at('2026-10-02T22:50:00'))).toBe('2026-10-03');
+  it('de noche en RD sigue siendo hoy (la base compara con la fecha de RD, migración 290)', () => {
+    expect(promotionStartMin(at('2026-10-02T22:50:00'))).toBe('2026-10-02');
   });
 });

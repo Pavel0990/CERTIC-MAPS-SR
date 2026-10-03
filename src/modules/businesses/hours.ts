@@ -22,14 +22,11 @@ export function localToday(now: Date = new Date()) {
 }
 
 /**
- * Primer día en que puede empezar una promoción. create_promotion compara con `current_date`
- * de la base, que va en UTC: entre las 8 p. m. y la medianoche de RD ya es "mañana" allí.
- * Se toma la fecha más tardía de las dos para no proponer una fecha que la base rechace.
+ * Primer día en que puede empezar una promoción: hoy en RD. create_promotion compara con la misma
+ * fecha (private.local_today(), migración 290), así que también vale de 8 p. m. a medianoche.
  */
 export function promotionStartMin(now: Date = new Date()) {
-  const local = localToday(now);
-  const utc = now.toISOString().slice(0, 10);
-  return utc > local ? utc : local;
+  return localToday(now);
 }
 
 /**

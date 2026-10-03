@@ -56,7 +56,7 @@ ok('A4 authenticated sin escritura directa en tablas críticas', authWrite.lengt
 const privExec = await q(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
                           where n.nspname = 'private' and has_function_privilege('authenticated', p.oid, 'execute') order by 1`);
 ok('A5 authenticated solo ejecuta los helpers de RLS en private',
-   privExec.map(r => r.proname).join(',') === 'can_read_request,f_unaccent,is_admin,is_any_staff,is_business_member,is_provincial_admin,is_service,is_staff,reject,report_download_granted,upload_quota_ok',
+   privExec.map(r => r.proname).join(',') === 'can_read_request,f_unaccent,is_admin,is_any_staff,is_business_member,is_provincial_admin,is_service,is_staff,local_today,reject,report_download_granted,upload_quota_ok',
    privExec.map(r => r.proname).join(','));
 
 const definerNoPath = await q(`select n.nspname || '.' || p.proname f from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -472,8 +472,20 @@ ok('M17a métricas del comercio: agregadas por día; ignora entidades inexistent
    eng.length === 2 && eng[0].metric === 'view' && eng[0].count === 2 && eng[1].count === 1
    && (await one(`select count(*)::int n from public.engagement_daily`)).n === 2, JSON.stringify(eng));
 
+// S. Promociones con la fecha de República Dominicana (migración 290), no la UTC
+const rdToday = (await one(`select private.local_today()::text d, ((now() at time zone 'America/Santo_Domingo')::date)::text e`));
+ok('S1 "hoy" es la fecha de Santo Domingo', rdToday.d === rdToday.e, JSON.stringify(rdToday));
+const pToday = await rpc(U.cris, `public.create_promotion($1, 'Empieza hoy', private.local_today(), private.local_today() + 3)`, [biz.id]);
+const pYesterday = await rpc(U.cris, `public.create_promotion($1, 'Empezó ayer', private.local_today() - 1, private.local_today() + 3)`, [biz.id]);
+ok('S2 se acepta una promoción que empieza hoy (hora de RD) y se rechaza una de ayer',
+   pToday.status === 'ok' && pYesterday.reason === 'invalid_dates', JSON.stringify([pToday, pYesterday]));
+const pTomorrow = await rpc(U.cris, `public.create_promotion($1, 'Empieza mañana', private.local_today() + 1, private.local_today() + 3)`, [biz.id]);
+for (const p of [pToday, pTomorrow]) await rpc(U.modMon, `public.review_content('promotion', $1, 'pending', 'active')`, [p.id]);
+const anonSees = async (id) => (await as(db, null, `select id from public.promotions where id = $1`, [id])).rows.length === 1;
+ok('S3 el público ve la promoción vigente hoy y todavía no la de mañana', (await anonSees(pToday.id)) && !(await anonSees(pTomorrow.id)));
+
 // Promociones y suspensión
-const promo = await rpc(U.cris, `public.create_promotion($1, '2x1 en café', current_date, current_date + 10)`, [biz.id]);
+const promo = await rpc(U.cris, `public.create_promotion($1, '2x1 en café', private.local_today(), private.local_today() + 10)`, [biz.id]);
 await rpc(U.modMon, `public.review_content('promotion', $1, 'pending', 'active')`, [promo.id]);
 const anonPromo = (await as(db, null, `select id from public.promotions where id = $1`, [promo.id])).rows.length;
 await rpc(U.modMon, `public.review_content('business', $1, 'approved', 'suspended', 'Datos de contacto falsos')`, [biz.id]);

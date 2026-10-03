@@ -5,12 +5,13 @@ Plataforma geográfica para la provincia **Santiago Rodríguez** (República Dom
 > **Estado (02/10/2026):** la base de datos está terminada y aplicada en Supabase. Funcionan:
 >
 > - el mapa en vivo, el acceso por código, los reportes y su seguimiento;
+> - negocios, turismo, rutas y propuestas;
 > - el panel municipal;
 > - el worker de la cola (fotos, avisos y push);
 > - el informe semanal en PDF;
 > - el uso sin conexión.
 >
-> Faltan negocios, turismo y rutas, y publicar en Vercel con dominio y correo propio. El trabajo pendiente está repartido en [docs/REPARTO-DE-TRABAJO.md](docs/REPARTO-DE-TRABAJO.md). Para publicar: [DEPLOYMENT.md](DEPLOYMENT.md).
+> Falta publicar en Vercel con dominio y correo propio, y el mapa de Google (opcional). El trabajo pendiente está repartido en [docs/REPARTO-DE-TRABAJO.md](docs/REPARTO-DE-TRABAJO.md). Para publicar: [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ---
 
@@ -81,7 +82,7 @@ Quita el reenvío al terminar: cualquiera con la URL ve la app.
 
 ```bash
 npm run check     # lint (con la regla de fronteras), tipos, pruebas unitarias y de fronteras
-npm run test:db   # 139 pruebas de la base de datos (PostgreSQL 18 + PostGIS, sin Docker)
+npm run test:db   # 142 pruebas de la base de datos (PostgreSQL 18 + PostGIS, sin Docker)
 ```
 
 El CI de GitHub ejecuta ambas en cada pull request.
@@ -104,7 +105,7 @@ Nunca pegues claves en un chat ni las subas a git: van en `.env.local` (y en Ver
 | 6 | Notificaciones push | Avisos en el teléfono | Claves VAPID: `npx web-push generate-vapid-keys` | ✅ En `.env.local` local · ⏳ en Vercel al publicar |
 | 7 | **Supabase de producción** | Separar la demo de los datos reales | Segundo proyecto en la misma organización | Después de la demo |
 
-Ya listos: **GitHub** (con CI) y **Supabase `staging`**, con las 22 migraciones aplicadas, los límites reales de los municipios y datos de demostración. Paso a paso para publicar: [DEPLOYMENT.md](DEPLOYMENT.md).
+Ya listos: **GitHub** (con CI) y **Supabase `staging`**, con las 23 migraciones aplicadas, los límites reales de los municipios y datos de demostración. Paso a paso para publicar: [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ### 2. Construir lo que falta
 
@@ -117,7 +118,7 @@ El reparto entre las dos personas del equipo, con qué carpetas toca cada una, e
 | PDF semanal: cron diario y "Generar ahora" | ✅ |
 | PWA: *service worker*, página sin conexión, envío de la cola al volver la red, push por dispositivo | ✅ |
 | Manual de despliegue y manual administrativo | ✅ [DEPLOYMENT.md](DEPLOYMENT.md) · [docs/manual-administrativo.md](docs/manual-administrativo.md) |
-| **Negocios, turismo y rutas**: fichas, alta de negocio, panel del comercio, propuestas | ⏳ Frente A |
+| Negocios, turismo y rutas: fichas, alta de negocio, panel del comercio, propuestas y edición | ✅ |
 | **Proveedor Google Maps** | ⏳ Necesita la clave de Google |
 | **Publicar**: Vercel, dominio, Resend, Supabase de producción | ⏳ Necesita las cuentas ([DEPLOYMENT.md](DEPLOYMENT.md)) |
 | `LICENSE` | ⏳ Elegir entre MIT y Apache-2.0 |
@@ -136,9 +137,9 @@ El reparto entre las dos personas del equipo, con qué carpetas toca cada una, e
 
 | Funcionalidad de las bases | Estado |
 |---|---|
-| F1 Mapa interactivo (ver y agregar) | ✅ Mapa, capas, búsqueda, tránsito en vivo, lista y ubicación · ⏳ proponer lugares y rutas |
-| F2 Negocios | ✅ Base de datos · ⏳ pantallas |
-| F3 Rutas de ecoturismo | ✅ Base de datos y trazado en el mapa · ⏳ fichas y propuestas |
+| F1 Mapa interactivo (ver y agregar) | ✅ Mapa, capas, búsqueda, tránsito en vivo, lista, ubicación y propuestas de lugares y rutas |
+| F2 Negocios | ✅ Fichas con "abierto ahora", alta en 3 pasos, panel del comercio con horario, fotos, promociones y estadísticas |
+| F3 Rutas de ecoturismo | ✅ Fichas con trazado, distancia y dificultad; propuestas dibujadas o desde GPX |
 | F4 Reporte de tránsito | ✅ Reportar, ver en vivo, moderar en el panel y alertas a los vecinos |
 | F5 Consultas ciudadanas | ✅ Reportar, seguimiento, votos y gestión en el panel |
 | F6 PDF semanal | ✅ Generación automática y a pedido, descarga auditada |
@@ -159,8 +160,8 @@ El reparto entre las dos personas del equipo, con qué carpetas toca cada una, e
 | `src/app/` | Páginas y API (`/api/v1`) |
 | `src/modules/` | Un módulo por dominio (mapa, tránsito, consultas, fotos, notificaciones…). Solo se comunican por su `index.ts` o `server.ts`, y el lint lo exige |
 | `src/components/`, `src/lib/`, `src/hooks/` | Interfaz compartida, clientes de Supabase, utilidades |
-| `supabase/migrations/` | 22 migraciones SQL: la fuente de verdad del modelo |
-| `supabase/tests/` | 139 pruebas de la base de datos |
+| `supabase/migrations/` | 23 migraciones SQL: la fuente de verdad del modelo |
+| `supabase/tests/` | 142 pruebas de la base de datos |
 | `supabase/ops/` | Scripts de operación: límites de municipios, datos de demostración, prueba de humo, administrador provincial |
 | `scripts/` | Utilidades (cuentas de prueba, copia del worker del mapa) |
 | `data/` | Datos geográficos (OpenStreetMap, ODbL) e importador |
