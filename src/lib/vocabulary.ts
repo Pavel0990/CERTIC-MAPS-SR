@@ -102,6 +102,14 @@ export const REASON_MESSAGE: Record<string, string> = {
   not_ready: 'El informe todavía no está listo.',
   invalid_geometry: 'El trazado no es válido.',
   bbox_too_large: 'Acerca el mapa para ver los detalles.',
+  invalid_dates: 'La promoción debe empezar hoy o después y durar como mucho 90 días.',
+  invalid_hours: 'Revisa el horario: cada turno necesita una hora de abrir y otra de cerrar distintas.',
+  invalid_services: 'Los servicios no son válidos.',
+  not_editable: 'Esto ya no se puede editar.',
+  invalid_field: 'Algún dato no tiene el formato correcto. Revísalo.',
+  unknown_field: 'Algún dato no tiene el formato correcto. Revísalo.',
+  invalid_path: 'La foto no terminó de subir. Inténtalo otra vez.',
+  already_registered: 'Esa foto ya estaba guardada.',
 };
 
 export const reasonMessage = (reason?: string | null) =>
