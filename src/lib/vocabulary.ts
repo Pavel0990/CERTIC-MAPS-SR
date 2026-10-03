@@ -106,6 +106,14 @@ export const REASON_MESSAGE: Record<string, string> = {
   period_must_start_monday: 'Elige una semana completa (de lunes a domingo).',
   invalid_period: 'Elige una de las semanas de la lista.',
   invalid_subscription: 'Este navegador no devolvió una suscripción válida. Inténtalo otra vez.',
+  invalid_dates: 'La promoción debe empezar hoy o después y durar como mucho 90 días.',
+  invalid_hours: 'Revisa el horario: cada turno necesita una hora de abrir y otra de cerrar distintas.',
+  invalid_services: 'Los servicios no son válidos.',
+  not_editable: 'Esto ya no se puede editar.',
+  invalid_field: 'Algún dato no tiene el formato correcto. Revísalo.',
+  unknown_field: 'Algún dato no tiene el formato correcto. Revísalo.',
+  invalid_path: 'La foto no terminó de subir. Inténtalo otra vez.',
+  already_registered: 'Esa foto ya estaba guardada.',
 };
 
 export const reasonMessage = (reason?: string | null) =>
