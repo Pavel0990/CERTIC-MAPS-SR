@@ -36,3 +36,13 @@ export async function authorizeReportDownload(supabase: ServerSupabase, runId: s
   if (!signed?.signedUrl) return { status: 'rejected' as const, reason: 'not_ready' };
   return { status: 'ok' as const, url: signed.signedUrl };
 }
+
+/**
+ * "Generar ahora" (solo administración provincial): crea una versión nueva con sus snapshots y la
+ * encola; el worker renderiza el PDF en segundos. Nunca usa service_role en este request (§9.6).
+ */
+export async function requestWeeklyReport(supabase: ServerSupabase, periodStart: string) {
+  const { data, error } = await supabase.rpc('request_weekly_report', { p_period_start: periodStart });
+  if (error) throw new Error(`request_weekly_report: ${error.message}`);
+  return data as unknown as RpcResult;
+}

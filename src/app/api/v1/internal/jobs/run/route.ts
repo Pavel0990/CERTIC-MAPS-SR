@@ -1,6 +1,7 @@
 import { runJobs } from '@/modules/jobs/server';
 import { mediaJobHandlers } from '@/modules/media/server';
 import { notificationJobHandlers } from '@/modules/notifications/server';
+import { reportJobHandlers } from '@/modules/reports/server';
 import { serverEnv } from '@/config/server-env';
 import { errorResponse, NO_STORE } from '@/lib/http';
 import { hasBearer } from '@/lib/internal-auth';
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
   const supabase = createServiceClient();
   try {
     const summary = await runJobs(supabase, {
-      handlers: { ...mediaJobHandlers(supabase), ...notificationJobHandlers(supabase) },
+      handlers: { ...mediaJobHandlers(supabase), ...notificationJobHandlers(supabase), ...reportJobHandlers(supabase) },
       budgetMs: 45_000,
     });
     return Response.json(summary, { headers: NO_STORE });

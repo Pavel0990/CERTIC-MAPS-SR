@@ -2,12 +2,15 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { FileText } from 'lucide-react';
 import { listReportRuns } from '@/modules/admin/server';
+import { closedWeeks } from '@/modules/reports';
 import { Card, EmptyState, Eyebrow, Notice } from '@/components/ui/primitives';
 import { Badge } from '@/components/ui/primitives';
 import { requireStaff } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { formatDate, formatDateTime } from '@/utils/format';
+import { AutoRefresh } from '../_components/auto-refresh';
 import { DownloadButton } from './download-button';
+import { GenerateForm } from './generate-form';
 
 export const metadata: Metadata = { title: 'Informes' };
 
@@ -21,6 +24,12 @@ export default async function ReportsPage() {
   const viewer = await requireStaff('/admin/informes');
   if (!viewer.isAdmin) redirect('/admin');
   const runs = await listReportRuns(await createClient());
+  const generating = runs.some((r) => r.status === 'running');
+  const weeks = closedWeeks(new Date()).map((monday) => {
+    const sunday = new Date(`${monday}T12:00:00Z`);
+    sunday.setUTCDate(sunday.getUTCDate() + 6);
+    return { value: monday, label: `${formatDate(monday + 'T12:00:00')} – ${formatDate(sunday.toISOString())}` };
+  });
   return (
     <>
       <header className="mb-5">
@@ -28,13 +37,21 @@ export default async function ReportsPage() {
         <h1 className="text-[28px] font-extrabold md:text-[34px]">Informes semanales</h1>
         <p className="mt-1 text-[16px] text-muted">Cada lunes se genera solo un PDF con las cifras de la semana anterior. Cada descarga queda registrada.</p>
       </header>
-      <div className="mb-4">
-        <Notice tone="warn">
-          La generación automática del PDF se activa cuando se publique la aplicación (tarea programada en Vercel). Mientras tanto, los indicadores están en el <a href="/admin" className="font-semibold underline">Resumen</a>.
-        </Notice>
-      </div>
+      {viewer.isProvincialAdmin && (
+        <Card className="mb-4 p-5">
+          <h2 className="mb-1 text-lg font-bold">Generar un informe</h2>
+          <p className="mb-4 text-[15px] text-muted">Crea una versión nueva de una semana ya cerrada con las cifras de ahora. Las versiones anteriores se conservan.</p>
+          <GenerateForm weeks={weeks} />
+        </Card>
+      )}
+      {generating && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <Notice tone="neutral">Hay un informe generándose. La lista se actualiza sola.</Notice>
+          <AutoRefresh seconds={10} />
+        </div>
+      )}
       {runs.length === 0 ? (
-        <Card><EmptyState icon={<FileText className="size-7" />} title="Todavía no hay informes">El primero aparecerá el lunes siguiente a la publicación.</EmptyState></Card>
+        <Card><EmptyState icon={<FileText className="size-7" />} title="Todavía no hay informes">El primero se genera solo el lunes siguiente a la publicación.</EmptyState></Card>
       ) : (
         <Card className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-[15px]">

@@ -582,6 +582,29 @@ await expectError('P10 un usuario no puede consultar las rutas internas de las f
 ok('P8 un push ya enviado no se vuelve a entregar', (await rpc('service', `public.worker_push_payload($1)`, [pushNotif.id])) === null);
 
 // ---------------------------------------------------------------------------------------------
+// Q. Informe semanal: "Generar ahora" por la cola y datos del PDF
+// ---------------------------------------------------------------------------------------------
+const lastClosed = (await one(`select (date_trunc('week', (now() at time zone 'America/Santo_Domingo')::date)::date - 7)::text d`)).d;
+const thisWeek = (await one(`select date_trunc('week', (now() at time zone 'America/Santo_Domingo')::date)::date::text d`)).d;
+ok('Q1 solo la administración provincial pide un informe manual',
+   (await rpc(U.admMon, `public.request_weekly_report($1)`, [lastClosed])).reason === 'forbidden'
+   && (await rpc(U.modSab, `public.request_weekly_report($1)`, [lastClosed])).reason === 'forbidden');
+ok('Q2 no se genera una semana que no ha terminado',
+   (await rpc(U.admProv, `public.request_weekly_report($1)`, [thisWeek])).reason === 'period_not_closed');
+const manual = await rpc(U.admProv, `public.request_weekly_report($1)`, [lastClosed]);
+const pdfJob = await one(`select count(*)::int n from private.jobs where kind = 'pdf_weekly' and payload->>'run_id' = $1`, [manual.run_id]);
+ok('Q3 el pedido crea una versión nueva y encola el PDF para el worker', manual.status === 'ok' && pdfJob.n === 1, JSON.stringify(manual));
+await expectError('Q4 un usuario no lee los datos internos de un informe',
+  () => rpc(U.admProv, `public.worker_report_run($1)`, [manual.run_id]), /permission denied/);
+const runData = await rpc('service', `public.worker_report_run($1)`, [manual.run_id]);
+ok('Q5 el worker recibe periodo, provincia y snapshots con nombres (provincia primero)',
+   runData.period_start === lastClosed && runData.province_code === 'sr' && runData.snapshots[0].municipality_id === null
+   && runData.snapshots.length > 1 && runData.snapshots.slice(1).every((s) => s.municipality_name)
+   && typeof runData.traffic_types === 'object', JSON.stringify(runData).slice(0, 300));
+await rpc('service', `public.weekly_report_finish($1, true, $2)`, [manual.run_id, `sr/x/v${manual.version}.pdf`]);
+ok('Q6 un informe terminado no se vuelve a renderizar', (await rpc('service', `public.worker_report_run($1)`, [manual.run_id])) === null);
+
+// ---------------------------------------------------------------------------------------------
 // L. Mantenimiento y privacidad
 // ---------------------------------------------------------------------------------------------
 await db.query(`update public.traffic_reports set expires_at = created_at + interval '1 second' where id = $1`, [t1.id]);

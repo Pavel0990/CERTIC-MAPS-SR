@@ -1598,6 +1598,7 @@ export type Database = {
           request_id: string
         }[]
       }
+      request_weekly_report: { Args: { p_period_start: string }; Returns: Json }
       review_content: {
         Args: {
           p_entity: string
@@ -1725,6 +1726,7 @@ export type Database = {
         Returns: undefined
       }
       worker_queue_health: { Args: never; Returns: Json }
+      worker_report_run: { Args: { p_run_id: string }; Returns: Json }
       worker_run_fanout_alert: {
         Args: { p_traffic_report_id: string }
         Returns: number

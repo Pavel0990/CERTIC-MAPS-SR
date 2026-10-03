@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { moderateTrafficReport, escalateTrafficReport } from '@/modules/traffic/server';
 import { assignRequest, changeRequestStatus, setRequestPublic } from '@/modules/citizen-reports/server';
-import { assignRole, authorizeReportDownload, reviewContent, revokeRole, type ContentEntity } from '@/modules/admin/server';
+import { assignRole, authorizeReportDownload, requestWeeklyReport, reviewContent, revokeRole, type ContentEntity } from '@/modules/admin/server';
 import { createClient } from '@/lib/supabase/server';
 import type { RpcResult } from '@/lib/http';
 
@@ -72,4 +72,9 @@ export async function downloadReport(runId: string): Promise<ActionResult & { ur
   } catch {
     return { status: 'rejected', reason: 'unavailable' };
   }
+}
+
+export async function generateReport(periodStart: string) {
+  if (!z.iso.date().safeParse(periodStart).success) return { status: 'rejected', reason: 'invalid_period' } as ActionResult;
+  return run((s) => requestWeeklyReport(s, periodStart), ['/admin/informes']);
 }

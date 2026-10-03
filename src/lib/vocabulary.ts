@@ -102,6 +102,9 @@ export const REASON_MESSAGE: Record<string, string> = {
   not_ready: 'El informe todavía no está listo.',
   invalid_geometry: 'El trazado no es válido.',
   bbox_too_large: 'Acerca el mapa para ver los detalles.',
+  period_not_closed: 'Esa semana todavía no ha terminado.',
+  period_must_start_monday: 'Elige una semana completa (de lunes a domingo).',
+  invalid_period: 'Elige una de las semanas de la lista.',
 };
 
 export const reasonMessage = (reason?: string | null) =>

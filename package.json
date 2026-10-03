@@ -22,6 +22,7 @@
     "check": "npm run lint && npm run typecheck && npm test && npm run test:boundaries"
   },
   "dependencies": {
+    "@react-pdf/renderer": "4.9.0",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.117.2",
     "clsx": "2.1.1",
