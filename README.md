@@ -2,7 +2,7 @@
 
 Plataforma geográfica para la provincia **Santiago Rodríguez** (República Dominicana), para el reto TechEmprende SR Conecta 2026. Pone en un solo mapa el turismo, los negocios, las rutas ecoturísticas, las alertas de tránsito en vivo y los reportes de los vecinos al municipio, con un panel municipal y un informe semanal en PDF.
 
-> **Estado (01/10/2026):** la base de datos está terminada y aplicada en Supabase. La aplicación funciona con el mapa, el acceso, los reportes y su seguimiento. Faltan el panel municipal, negocios, turismo y rutas, el PDF y algunas piezas de fondo (ver [Qué falta](#qué-falta)).
+> **Estado (02/10/2026):** la base de datos está terminada y aplicada en Supabase. La aplicación funciona con el mapa, el acceso, los reportes, su seguimiento y el panel municipal. Faltan negocios, turismo y rutas, el PDF y algunas piezas de fondo. **El trabajo pendiente está repartido en [docs/REPARTO-DE-TRABAJO.md](docs/REPARTO-DE-TRABAJO.md).**
 
 ---
 
