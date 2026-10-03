@@ -55,7 +55,7 @@ git switch -c feat/plataforma origin/feat/app-mvp    # Pavel
 
 ---
 
-## Frente A: Contenido (compañero)
+## Frente A: Contenido 
 
 ### Carpetas tuyas (solo tú las editas)
 
@@ -108,7 +108,7 @@ src/app/api/v1/routes/**
 
 ---
 
-## Frente B: Plataforma (Pavel)
+## Frente B: Plataforma ()
 
 ### Carpetas tuyas
 
