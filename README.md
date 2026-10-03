@@ -99,7 +99,7 @@ Nunca pegues claves en un chat ni las subas a git: van en `.env.local` (y en Ver
 |---|---|---|---|---|
 | 1 | **Vercel** | URL pública, sin depender de una computadora | Cuenta con el email de la organización, conectada a GitHub; luego `npx vercel login` | ⏳ Pendiente |
 | 2 | **Dominio** | Correo verificado y dirección propia | Comprarlo (`.com` o `.do`) a nombre de la organización | ⏳ Pendiente |
-| 3 | **Resend** (correo) | Hoy Supabase envía como máximo 2 correos por hora y sin código | Verificar el dominio (SPF y DKIM), crear la API key → `RESEND_API_KEY`. Luego activar las plantillas de `supabase/config.toml` | ⏳ Pendiente (requiere dominio) |
+| 3 | **Resend** (correo) | Hoy Supabase envía como máximo 2 correos por hora y sin código | Verificar el dominio (SPF y DKIM), crear la API key → `RESEND_API_KEY`. Luego activar las plantillas de `supabase/config.toml` | ⏳ Pendiente (requiere dominio). Mientras tanto, staging envía con **Gmail SMTP** (sin límite de 2 por hora) y las plantillas en español ya están activas |
 | 4 | **Google Maps** | Mapa de Google | Proyecto en Google Cloud, Maps JavaScript API + Places API (New), Map ID, clave restringida → `NEXT_PUBLIC_GOOGLE_MAPS_KEY` y `NEXT_PUBLIC_GOOGLE_MAP_ID` | ⏳ Pendiente (la app funciona sin esto) |
 | 5 | **Sentry** | Ver los errores en producción | Proyecto Next.js → `SENTRY_DSN` | ⏳ Opcional |
 | 6 | Notificaciones push | Avisos en el teléfono | Claves VAPID: `npx web-push generate-vapid-keys` | ✅ En `.env.local` local · ⏳ en Vercel al publicar |
