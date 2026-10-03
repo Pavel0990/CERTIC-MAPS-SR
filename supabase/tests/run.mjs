@@ -605,6 +605,29 @@ await rpc('service', `public.weekly_report_finish($1, true, $2)`, [manual.run_id
 ok('Q6 un informe terminado no se vuelve a renderizar', (await rpc('service', `public.worker_report_run($1)`, [manual.run_id])) === null);
 
 // ---------------------------------------------------------------------------------------------
+// R. Dispositivos de push: alta, cambio de cuenta en el mismo navegador y baja
+// ---------------------------------------------------------------------------------------------
+const EP = 'https://push.example.com/telefono-compartido';
+ok('R1 sin sesión no se registra un dispositivo',
+   (await rpc(null, `public.register_push_device($1, 'k', 'a')`, [EP]).catch((e) => ({ reason: e.message }))).reason?.match(/not_authenticated|permission denied/));
+ok('R2 una suscripción inválida se rechaza',
+   (await rpc(U.beto, `public.register_push_device('http://inseguro.example', 'k', 'a')`)).reason === 'invalid_subscription');
+await rpc(U.beto, `public.register_push_device($1, 'k', 'a', 'Android')`, [EP]);
+const betoPrefs = await one(`select push_enabled from public.notification_preferences where user_id = $1`, [U.beto]);
+ok('R3 registrar el dispositivo activa el push de la cuenta', betoPrefs.push_enabled === true);
+await rpc(U.admMon, `public.register_push_device($1, 'k2', 'a2', 'Android')`, [EP]);
+const owners = await q(`select user_id from public.push_subscriptions where endpoint = $1`, [EP]);
+ok('R4 si otra persona entra en el mismo navegador, el dispositivo pasa a su cuenta',
+   owners.length === 1 && owners[0].user_id === U.admMon, JSON.stringify(owners));
+await rpc(U.beto, `public.unregister_push_device($1)`, [EP]);
+ok('R5 nadie puede dar de baja el dispositivo de otro',
+   (await one(`select count(*)::int n from public.push_subscriptions where endpoint = $1`, [EP])).n === 1);
+await rpc(U.admMon, `public.unregister_push_device($1)`, [EP]);
+ok('R6 al quitar el último dispositivo se apaga el push de la cuenta',
+   (await one(`select count(*)::int n from public.push_subscriptions where endpoint = $1`, [EP])).n === 0
+   && (await one(`select push_enabled from public.notification_preferences where user_id = $1`, [U.admMon])).push_enabled === false);
+
+// ---------------------------------------------------------------------------------------------
 // L. Mantenimiento y privacidad
 // ---------------------------------------------------------------------------------------------
 await db.query(`update public.traffic_reports set expires_at = created_at + interval '1 second' where id = $1`, [t1.id]);

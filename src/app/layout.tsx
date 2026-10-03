@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { headers } from 'next/headers';
+import { ServiceWorker } from '@/components/shared/service-worker';
 import { ToastProvider } from '@/components/ui/toast';
 import './globals.css';
 
@@ -32,6 +33,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           Saltar al contenido
         </a>
         <ToastProvider>{children}</ToastProvider>
+        <ServiceWorker />
       </body>
     </html>
   );

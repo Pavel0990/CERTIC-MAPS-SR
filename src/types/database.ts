@@ -1590,6 +1590,15 @@ export type Database = {
         Args: { p_entity: string; p_entity_id: string; p_path: string }
         Returns: Json
       }
+      register_push_device: {
+        Args: {
+          p_auth: string
+          p_endpoint: string
+          p_p256dh: string
+          p_user_agent?: string
+        }
+        Returns: Json
+      }
       request_assignees: {
         Args: { p_ids: string[] }
         Returns: {
@@ -1661,6 +1670,7 @@ export type Database = {
         Args: { p_entity_id: string; p_entity_type: string; p_metric: string }
         Returns: undefined
       }
+      unregister_push_device: { Args: { p_endpoint: string }; Returns: Json }
       update_business: {
         Args: { p_changes: Json; p_id: string; p_version: number }
         Returns: Json

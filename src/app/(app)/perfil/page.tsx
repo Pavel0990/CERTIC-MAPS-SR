@@ -1,15 +1,16 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Bell, ChevronRight, LayoutDashboard, LogOut, MapPinPlus, Route, Store } from 'lucide-react';
+import { Bell, ChevronRight, LayoutDashboard, MapPinPlus, Route, Store } from 'lucide-react';
 import { getPreferences, TOPICS } from '@/modules/notifications/server';
 import { PageShell } from '@/components/shared/page';
-import { Button } from '@/components/ui/button';
 import { Card, Eyebrow } from '@/components/ui/primitives';
 import { requireViewer } from '@/lib/auth';
 import { getCatalogs } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
-import { signOut } from '../entrar/actions';
+import { publicEnv } from '@/config/env';
 import { PreferencesForm, ProfileForm } from './forms';
+import { PushToggle } from './push-toggle';
+import { SignOutButton } from './sign-out-button';
 
 export const metadata: Metadata = { title: 'Perfil' };
 
@@ -34,8 +35,11 @@ export default async function ProfilePage() {
           <Card className="p-5">
             <h2 className="mb-1 text-lg font-bold">Avisos</h2>
             <p className="mb-4 text-[15px] text-muted">
-              Siempre los verás en la campana de la aplicación. Las notificaciones en el teléfono se activan pronto.
+              Siempre los verás en la campana de la aplicación. Además, puedes recibirlos como notificación en este dispositivo.
             </p>
+            <div className="mb-5">
+              <PushToggle vapidKey={publicEnv.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
+            </div>
             <PreferencesForm
               topics={TOPICS}
               selectedTopics={prefs.topics}
@@ -60,11 +64,7 @@ export default async function ProfilePage() {
               Tu nombre nunca sale en el mapa público. Solo usamos tu ubicación cuando tú la pides para un reporte, y quitamos los datos ocultos de tus fotos.
             </p>
           </Card>
-          <form action={signOut}>
-            <Button type="submit" variant="secondary" block icon={<LogOut className="size-4" />}>
-              Salir de mi cuenta
-            </Button>
-          </form>
+          <SignOutButton />
         </div>
       </div>
     </PageShell>

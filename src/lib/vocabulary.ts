@@ -105,6 +105,7 @@ export const REASON_MESSAGE: Record<string, string> = {
   period_not_closed: 'Esa semana todavía no ha terminado.',
   period_must_start_monday: 'Elige una semana completa (de lunes a domingo).',
   invalid_period: 'Elige una de las semanas de la lista.',
+  invalid_subscription: 'Este navegador no devolvió una suscripción válida. Inténtalo otra vez.',
 };
 
 export const reasonMessage = (reason?: string | null) =>

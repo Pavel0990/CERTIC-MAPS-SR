@@ -27,7 +27,11 @@ const nextConfig: NextConfig = {
     remotePatterns: [{ protocol: 'https', hostname: supabaseHost, pathname: '/storage/v1/object/public/**' }],
   },
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      // El service worker siempre se revisa en la red: si quedara en caché, una corrección tardaría días en llegar
+      { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' }] },
+    ];
   },
 };
 

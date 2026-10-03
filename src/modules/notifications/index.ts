@@ -1,3 +1,4 @@
 // API pública del módulo "notifications". Otros módulos y las páginas solo importan desde aquí (ADR-008).
 // Centro in-app, preferencias, suscripciones push y canales de entrega.
-export {};
+export { notificationHref, type NotificationPayload } from './href';
+export { pushSupport, currentSubscription, subscribeDevice, unsubscribeDevice, type PushSupport, type DeviceSubscription } from './client/push';
