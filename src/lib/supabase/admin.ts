@@ -13,3 +13,5 @@ export function createServiceClient() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+
+export type ServiceSupabase = ReturnType<typeof createServiceClient>;

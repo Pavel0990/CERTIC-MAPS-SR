@@ -533,6 +533,55 @@ ok('O4 anon no puede ejecutar las funciones del personal',
    && !(await one(`select has_function_privilege('anon', 'public.request_assignees(uuid[])', 'execute') a`)).a);
 
 // ---------------------------------------------------------------------------------------------
+// P. Entrega del worker: aviso al personal (notify_moderators) y Web Push
+// ---------------------------------------------------------------------------------------------
+const staffNotified = async (entityId) => (await q(`select user_id from public.notifications
+   where payload->>'id' = $1 and payload->>'staff' = 'true'`, [entityId])).map((r) => r.user_id);
+const reqMon = await rpc(U.beto, `public.create_citizen_request('inquiry', 'consulta', 'Permiso de construcción', 'Quisiera saber qué papeles piden para construir.', 'beto-req-00101', null, null, $1)`, [muni.MON]);
+await expectError('P1 un usuario no puede disparar avisos del worker',
+  () => rpc(U.admProv, `public.worker_notify_moderators('citizen_request', $1)`, [reqMon.id]), /permission denied|forbidden/);
+const nMon = await rpc('service', `public.worker_notify_moderators('citizen_request', $1)`, [reqMon.id]);
+const toMon = await staffNotified(reqMon.id);
+// beto es moderador de Monción (sección H) y autor de la consulta: no se avisa a sí mismo
+ok('P2 la consulta avisa a los moderadores de su municipio, no a otros, ni a la administración, ni al autor',
+   nMon === 1 && toMon.length === 1 && toMon[0] === U.modMon, JSON.stringify(toMon));
+await db.query(`delete from private.rate_limit_hits where user_id = $1`, [U.ana]);   // Ana agotó su cupo en E y F
+const reqVla = await rpc(U.ana, `public.create_citizen_request('inquiry', 'consulta', 'Horario del cementerio', 'Quisiera saber a qué hora abre el cementerio.', 'ana-req-00102', null, null, $1)`, [muni.VLA]);
+await rpc('service', `public.worker_notify_moderators('citizen_request', $1)`, [reqVla.id]);
+const toVla = await staffNotified(reqVla.id);
+// Villa Los Almácigos no tiene moderadores: avisa a su admin municipal (beto, sección H) y a la provincial
+ok('P3 sin moderadores en el municipio avisa a la administración con alcance, no a la de otros municipios',
+   toVla.length === 2 && toVla.includes(U.beto) && toVla.includes(U.admProv), JSON.stringify(toVla));
+ok('P4 entidad desconocida o ya revisada: no avisa a nadie',
+   (await rpc('service', `public.worker_notify_moderators('otra', $1)`, [reqVla.id])) === 0);
+
+await db.query(`insert into public.notification_preferences (user_id, push_enabled, topics) values ($1, true, array['request_status'])
+                on conflict (user_id) do update set push_enabled = true, topics = array['request_status']`, [U.modMon]);
+await as(db, U.modMon, `insert into public.push_subscriptions (user_id, endpoint, p256dh, auth) values ($1, 'https://push.example.com/a', 'k', 'a'),
+                                                                                                      ($1, 'https://push.example.com/b', 'k', 'a')`, [U.modMon]);
+const reqMon2 = await rpc(U.beto, `public.create_citizen_request('inquiry', 'consulta', 'Recogida de escombros', 'Quisiera saber cuándo pasan a recoger escombros.', 'beto-req-00103', null, null, $1)`, [muni.MON]);
+await rpc('service', `public.worker_notify_moderators('citizen_request', $1)`, [reqMon2.id]);
+const pushNotif = await one(`select id, push_status from public.notifications where payload->>'id' = $1 and user_id = $2`, [reqMon2.id, U.modMon]);
+const pushJob = await one(`select count(*)::int n from private.jobs where kind = 'push' and payload->>'notification_id' = $1`, [pushNotif.id]);
+const payload = await rpc('service', `public.worker_push_payload($1)`, [pushNotif.id]);
+ok('P5 push activo: la notificación queda pendiente, con su job y sus dos dispositivos',
+   pushNotif.push_status === 'pending' && pushJob.n === 1 && payload.subscriptions.length === 2, JSON.stringify(payload));
+await expectError('P6 un usuario no puede leer los dispositivos ni el contenido de un push',
+  () => rpc(U.modMon, `public.worker_push_payload($1)`, [pushNotif.id]), /permission denied/);
+await rpc('service', `public.worker_push_result($1, true, array['https://push.example.com/a'], array['https://push.example.com/b'])`, [pushNotif.id]);
+const subs = await q(`select endpoint, last_success_at from public.push_subscriptions where user_id = $1`, [U.modMon]);
+ok('P7 tras el envío: notificación enviada, dispositivo vivo sellado y dispositivo caído eliminado',
+   (await one(`select push_status from public.notifications where id = $1`, [pushNotif.id])).push_status === 'sent'
+   && subs.length === 1 && subs[0].endpoint === 'https://push.example.com/a' && subs[0].last_success_at !== null, JSON.stringify(subs));
+const infoBiz = await rpc('service', `public.worker_attachment_info($1)`, [aBiz.id]);
+ok('P9 el worker sabe dónde está cada foto y si puede publicarse',
+   infoBiz.bucket === 'public-media' && infoBiz.public === true
+   && (await rpc('service', `public.worker_attachment_info($1)`, [a1.id])).public === false, JSON.stringify(infoBiz));
+await expectError('P10 un usuario no puede consultar las rutas internas de las fotos',
+  () => rpc(U.modSab, `public.worker_attachment_info($1)`, [aBiz.id]), /permission denied/);
+ok('P8 un push ya enviado no se vuelve a entregar', (await rpc('service', `public.worker_push_payload($1)`, [pushNotif.id])) === null);
+
+// ---------------------------------------------------------------------------------------------
 // L. Mantenimiento y privacidad
 // ---------------------------------------------------------------------------------------------
 await db.query(`update public.traffic_reports set expires_at = created_at + interval '1 second' where id = $1`, [t1.id]);

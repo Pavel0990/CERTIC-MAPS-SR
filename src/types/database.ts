@@ -1685,6 +1685,7 @@ export type Database = {
         }
         Returns: Json
       }
+      worker_attachment_info: { Args: { p_id: string }; Returns: Json }
       worker_attachment_processed: {
         Args: {
           p_bytes?: number
@@ -1704,6 +1705,23 @@ export type Database = {
       }
       worker_finish_job: {
         Args: { p_error?: string; p_id: number; p_ok: boolean }
+        Returns: undefined
+      }
+      worker_notify_moderators: {
+        Args: { p_entity: string; p_id: string }
+        Returns: number
+      }
+      worker_push_payload: {
+        Args: { p_notification_id: string }
+        Returns: Json
+      }
+      worker_push_result: {
+        Args: {
+          p_gone_endpoints?: string[]
+          p_notification_id: string
+          p_ok_endpoints?: string[]
+          p_sent: boolean
+        }
         Returns: undefined
       }
       worker_queue_health: { Args: never; Returns: Json }
