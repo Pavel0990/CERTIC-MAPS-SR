@@ -1,10 +1,10 @@
 # SR Conecta — Backend y base de datos
 
-> **Versión 1.2 · 25 de septiembre de 2026.** Complementa [ARCHITECTURE.md](ARCHITECTURE.md) (v2.1) y las decisiones de [`docs/decisions/`](docs/decisions).
+> **Versión 1.3 · 2 de octubre de 2026.** Complementa [ARCHITECTURE.md](ARCHITECTURE.md) (v2.1) y las decisiones de [`docs/decisions/`](docs/decisions).
 >
 > **La fuente de verdad es el SQL** de [`supabase/migrations/`](supabase/migrations). Este documento explica sus decisiones; si discrepan, manda el SQL.
 >
-> **Estado verificado:** las 17 migraciones se aplican desde cero en PostgreSQL 18.3 + PostGIS 3.6.2, y pasan las **113 pruebas** ([`supabase/tests/`](supabase/tests)). Cubren seguridad, integridad, concurrencia, PostGIS, fotos, alertas, KPIs, descarga auditada del PDF y mantenimiento. Lo que no se puede verificar fuera de Supabase está en §14.
+> **Estado verificado:** las 22 migraciones se aplican desde cero en PostgreSQL 18.3 + PostGIS 3.6.2, y pasan las **139 pruebas** ([`supabase/tests/`](supabase/tests)). Cubren seguridad, integridad, concurrencia, PostGIS, fotos, alertas, KPIs, descarga auditada del PDF, entrega del worker, push y mantenimiento. Las 22 están aplicadas también en el Supabase de staging. Lo que no se puede verificar fuera de Supabase está en §14.
 
 ---
 
@@ -273,9 +273,53 @@ Las FK hacia catálogos y territorio (`ON DELETE RESTRICT`, casi nunca se borran
 
 La URL firmada se crea con el JWT del administrador, nunca con `service_role` (ADR-021). Pruebas N1–N6.
 
+### 5.12 Privilegios por defecto de Supabase — `20260926120000_harden_default_privileges.sql`
+
+Supabase concede por defecto `EXECUTE` a `anon` y `authenticated` sobre toda función nueva de `public`, y uso de toda secuencia. Esta migración revoca esos privilegios por defecto: **cada función nace cerrada** y recibe su `GRANT` explícito en su propia migración. La suite emula ese comportamiento de Supabase (`supabase/tests/supabase-stubs.sql`) para que una función olvidada falle en las pruebas y no en producción.
+
+### 5.13 Responsables y directorio del personal — `20260927120000_staff_directory.sql`
+
+| Pieza | Qué hace |
+|---|---|
+| `request_assignees(ids[])` | Quién atiende cada consulta. Solo devuelve las del alcance de quien llama (`assigned_to` está oculto por grant de columna incluso para el personal) |
+| `staff_directory(municipio)` | Moderadores y administradores con alcance sobre un municipio: a quién se puede asignar una consulta |
+
+Pruebas O1–O4.
+
+### 5.14 Entrega del worker — `20261002120000_worker_delivery.sql`
+
+El worker nunca lee tablas directamente: todo lo que necesita sale de estas funciones (`service_role` únicamente).
+
+| Pieza | Qué hace |
+|---|---|
+| `worker_notify_moderators(entidad, id)` | Job `notify_moderators`. Avisa a los moderadores del municipio y a los provinciales; si el municipio no tiene moderadores, a la administración con alcance. **Nunca avisa al autor** y no avisa de lo que ya se revisó. El aviso enlaza a la bandeja o a validaciones |
+| `worker_push_payload(notificación)` | Título, texto, enlace y dispositivos de una notificación con push pendiente; `NULL` si ya se envió |
+| `worker_push_result(notificación, enviado, ok[], muertos[])` | Marca `sent`/`failed`, sella `last_success_at` de los dispositivos que respondieron y borra los que el servicio dio por muertos (404/410) |
+| `worker_attachment_info(id)` | Bucket, ruta y estado de una foto, y si puede publicarse (negocios, lugares y rutas; nunca evidencia) |
+
+Pruebas P1–P10.
+
+### 5.15 Informe a pedido — `20261002130000_weekly_report_queue.sql`
+
+| Pieza | Qué hace |
+|---|---|
+| `request_weekly_report(lunes)` | "Generar ahora" del panel. Solo administración provincial, solo semanas cerradas (hora de RD), 5 por hora. Crea la versión nueva con `weekly_report_begin(…, manual)` y encola `pdf_weekly`: el request del usuario nunca usa `service_role` |
+| `worker_report_run(run_id)` | Lo que necesita el PDF: periodo, versión, provincia, snapshots con nombres de municipio y nombres de los tipos de tránsito. Solo ejecuciones en curso |
+
+Pruebas Q1–Q6.
+
+### 5.16 Dispositivos de push — `20261002140000_push_devices.sql`
+
+| Pieza | Qué hace |
+|---|---|
+| `register_push_device(endpoint, p256dh, auth, ua)` | Alta del dispositivo y `push_enabled = true`. Si el navegador estaba suscrito con otra cuenta (teléfono compartido), el dispositivo **pasa a la cuenta actual**: los avisos privados de la anterior dejan de llegar ahí. Con RLS sola no se puede, porque nadie ve filas ajenas |
+| `unregister_push_device(endpoint)` | Baja del dispositivo propio; si era el último, apaga el push de la cuenta |
+
+Pruebas R1–R6.
+
 ## 6. Catálogo de RPC
 
-35 funciones en `public`. Todas son `SECURITY DEFINER` salvo las marcadas como **invoker**.
+45 funciones en `public`. Todas son `SECURITY DEFINER` salvo las marcadas como **invoker**.
 
 | RPC | Quién | Rate limit | Idempotencia / concurrencia |
 |---|---|---|---|
@@ -309,6 +353,10 @@ La URL firmada se crea con el JWT del administrador, nunca con `service_role` (A
 | `worker_attachment_processed`, `worker_attachment_published` | service | — | — |
 | `worker_run_fanout_alert` | service | — | una alerta por reporte (`dedupe_key`) |
 | `worker_queue_health` | service | — | — |
+| `request_assignees`, `staff_directory` | personal del municipio | — | — |
+| `request_weekly_report` | admin provincial | 5/h | crea versión nueva + job `pdf_weekly` |
+| `register_push_device`, `unregister_push_device` | ciudadano | 20/h (alta) | `ON CONFLICT (endpoint)`; el dispositivo pasa a la cuenta actual |
+| `worker_notify_moderators`, `worker_push_payload`, `worker_push_result`, `worker_attachment_info`, `worker_report_run` | service | — | idempotentes: ignoran estados ya avanzados |
 
 Qué endpoint o Server Action consume cada RPC: ARCHITECTURE.md §12.
 
@@ -375,7 +423,7 @@ Limpieza diaria (`apply_retention`):
 | Expirar reportes de tránsito | cada 15 min | `private.expire_traffic_reports()` (el mapa ya filtra por `expires_at`; esto es para los KPIs y el broadcast) |
 | Archivar consultas resueltas | diaria, 04:15 UTC | `private.archive_resolved_requests()` (30 días después de resolver) |
 | Retención | diaria, 04:30 UTC | `private.apply_retention()` (plazos en ARCHITECTURE.md §10.10) |
-| Informe semanal | diaria, 10:00 UTC (Vercel Cron) | `weekly_report_begin()` → PDF → `weekly_report_finish()` |
+| Informe semanal | diaria, 10:00 UTC (Vercel Cron) | `weekly_report_begin()` → PDF → `weekly_report_finish()`. "Generar ahora": `request_weekly_report()` → job `pdf_weekly` → el worker hace lo mismo |
 
 **Tiempo real:**
 - El trigger `traffic_reports_broadcast` emite con `realtime.send` en el canal `traffic:{province_id}`, solo con datos públicos (id, tipo, gravedad, coordenadas, estado), cuando el reporte pasa a `active`, `verified`, `resolved`, `expired` o `rejected`.

@@ -103,8 +103,9 @@ src/app/api/v1/routes/**
 
 ### Lo que dependes del frente B
 
-- **Fotos procesadas (B1):** mientras el worker no esté listo, las fotos subidas quedan en estado `pending`. Muestra un *placeholder*, sin bloquearte. Cuando B1 esté listo, aparecerán solas.
-- **Aviso al dueño cuando aprueban su negocio:** la notificación in-app ya la crea la base de datos. El push lo agrega B4. No tienes que hacer nada.
+- **Fotos procesadas (B1): ✅ listo desde el 02/10.** Al subir una foto, el worker la limpia y la convierte a WebP en segundos. Cuando el moderador la aprueba, la copia al bucket público. Usa `listPhotos()` de `@/modules/media/server`: ya devuelve la URL correcta según el estado.
+- **Aviso al dueño cuando aprueban su negocio: ✅ listo.** La notificación in-app la crea la base de datos y el push lo envía el worker. Tampoco tienes que hacer nada.
+- **Aviso al personal cuando llega algo nuevo: ✅ listo.** Cada negocio, lugar, ruta o promoción que se registre avisa a los moderadores del municipio, con enlace a `/admin/validaciones`.
 
 ---
 
@@ -125,6 +126,8 @@ docs/**, ARCHITECTURE.md, DATABASE.md, README.md, .env.example
 ```
 
 ### Tareas, en orden de prioridad
+
+**Estado (02/10/2026):** B1, B2, B3, B4 y B7 terminados (falta el `LICENSE`, que hay que elegir). Quedan B5 y B6, que necesitan las cuentas de Google, Vercel, el dominio y Resend.
 
 | # | Tarea | Qué usa (ya existe) |
 | --- | --- | --- |

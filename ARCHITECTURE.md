@@ -1,6 +1,6 @@
 # SR Conecta — Arquitectura
 
-> **Versión 2.2 · 25 de septiembre de 2026**
+> **Versión 2.3 · 2 de octubre de 2026**
 > Plataforma geográfica para la provincia Santiago Rodríguez (República Dominicana), para el reto TechEmprende SR Conecta 2026.
 > Este documento es la referencia única de diseño antes de programar. Reemplaza a las versiones 1.x: el historial de esas versiones está en Git.
 
@@ -58,15 +58,17 @@ Este documento no repite columnas ni firmas de funciones: las nombra y remite a 
 
 Si una capacidad no tiene etiqueta, es [MVP].
 
-**Estado del repositorio (24/09/2026):**
+**Estado del repositorio (02/10/2026):**
 
 | Pieza | Estado |
 |---|---|
-| Base de datos (17 migraciones, 113 pruebas) | ✅ Definida y verificada |
+| Base de datos (22 migraciones, 139 pruebas), aplicada en Supabase staging | ✅ Verificada |
 | Decisiones de arquitectura ([`docs/decisions/`](docs/decisions)) | ✅ 21 ADR |
-| Prototipo de diseño (`project/`) | ✅ Navegable, con datos de demostración |
-| Base de la aplicación: `package.json`, `tsconfig.json`, ESLint con la regla de fronteras (8 pruebas), 12 módulos vacíos, CI | ✅ Lista |
-| Aplicación Next.js (páginas y funcionalidades) | ⏳ No iniciada; su diseño es este documento |
+| Mapa con tránsito en vivo, acceso por código, reportes y seguimiento, perfil | ✅ Funcionando contra staging |
+| Panel municipal: resumen, bandeja, validaciones, informes, equipo, auditoría | ✅ |
+| Worker de la cola, informe semanal en PDF, PWA sin conexión, Web Push | ✅ |
+| Negocios, turismo, rutas y propuestas (fichas y altas) | ⏳ En curso ([reparto](docs/REPARTO-DE-TRABAJO.md)) |
+| Proveedor Google Maps, despliegue en Vercel con dominio y correo propio | ⏳ Pendiente de cuentas |
 
 ---
 
@@ -1017,14 +1019,14 @@ sequenceDiagram
 
 | `kind` | Productor | Qué hace el worker |
 |---|---|---|
-| `push` | `private.notify()` | Envía Web Push |
-| `notify_moderators` | Creación de reportes de tránsito, consultas, negocios, promociones y propuestas | Avisa al personal del municipio |
+| `push` | `private.notify()` | Envía Web Push (`worker_push_payload` / `worker_push_result`) |
+| `notify_moderators` | Creación de reportes de tránsito, consultas, negocios, promociones y propuestas | `worker_notify_moderators`: avisa al personal del municipio (nunca al autor) |
 | `image_process` | `register_attachment` | Procesa la foto (§10.5) |
 | `publish_media` | Aprobación de una foto pública | Copia a `public-media` |
 | `fanout_alert` | Trigger `traffic_reports_alert` | Llama `worker_run_fanout_alert` y después envía los push |
 | `delete_storage_object` | Procesamiento, retención, baja de cuenta | Borra el objeto de Storage |
 | `email` | — (reservado) | **[Fase 2]**: canal email de notificaciones |
-| `pdf_weekly` | — (reservado) | **[Fase 2]**: mover la generación del PDF a la cola si crece |
+| `pdf_weekly` | "Generar ahora" del panel (`request_weekly_report`) | Renderiza y sube el PDF de esa versión (`worker_report_run`). El cron diario sigue en línea |
 
 **Salud:** `worker_queue_health()` devuelve los pendientes, el más antiguo, los fallidos y los `dead`. `/api/v1/health` falla si el pendiente más antiguo tiene más de 10 minutos.
 
@@ -1081,8 +1083,8 @@ Los consumen la PWA, la cola offline y los cron.
 | `GET /api/v1/me/activity` | citizen | RPC `my_activity` |
 | `GET /api/v1/me/notifications`, `PATCH …/:id` (leída) | citizen | Tabla `notifications` por RLS (solo `read_at` es editable) |
 | `GET`, `PUT /api/v1/me/notification-preferences` | citizen | Tabla `notification_preferences` por RLS |
-| `POST`, `DELETE /api/v1/push/subscriptions` | citizen | Tabla `push_subscriptions` por RLS |
-| `POST /api/v1/internal/jobs/run` | `JOBS_SECRET` | `worker_claim_jobs`, `worker_finish_job`, `worker_attachment_processed`, `worker_attachment_published`, `worker_run_fanout_alert` (con `service_role`) |
+| Activar o desactivar push en este dispositivo (Server Action del perfil) | citizen | RPC `register_push_device` / `unregister_push_device` |
+| `POST /api/v1/internal/jobs/run` | `JOBS_SECRET` | `worker_claim_jobs`, `worker_finish_job`, `worker_attachment_info`, `worker_attachment_processed`, `worker_attachment_published`, `worker_run_fanout_alert`, `worker_notify_moderators`, `worker_push_payload`, `worker_push_result`, `worker_report_run` (con `service_role`) |
 | `GET /api/v1/cron/weekly-report` | `CRON_SECRET` | `weekly_report_begin`, `kpi_summary`, `weekly_report_finish` (con `service_role`) |
 | `GET /api/v1/reports/:id/download` | municipal_admin | RPC `authorize_report_download` + `createSignedUrl` con el JWT del usuario (§9.6) |
 | `GET /api/v1/health` | público | Ping a la base + `worker_queue_health` (sin detalles al público) |
@@ -1248,7 +1250,7 @@ cd supabase/tests && npm install && npm test
 
 - **Motor:** PGlite (PostgreSQL 18.3 + PostGIS 3.6.2 en WebAssembly), sin Docker.
 - **Stubs de Supabase** (`supabase-stubs.sql`): `auth.uid()` desde los claims del JWT, `storage.objects`, `realtime.send`, Vault y los roles `anon`, `authenticated` y `service_role`.
-- **Resultado:** **113 pruebas en 14 secciones (A–N), todas pasan.**
+- **Resultado:** **139 pruebas en 18 secciones (A–R), todas pasan.**
 
 | Qué cubren |
 |---|
@@ -1318,18 +1320,18 @@ sr-conecta/
 ├─ README.md  ARCHITECTURE.md  DATABASE.md                       ✅
 ├─ project/                     prototipo de diseño               ✅
 ├─ supabase/
-│  ├─ migrations/               17 migraciones                    ✅
+│  ├─ migrations/               22 migraciones                    ✅
 │  ├─ seed.sql                  semilla de desarrollo             ✅
 │  ├─ ops/                      scripts de operación              ✅
-│  └─ tests/                    113 pruebas (PGlite)              ✅
+│  └─ tests/                    139 pruebas (PGlite)              ✅
 ├─ package.json  tsconfig.json  eslint.config.mjs  eslint.boundaries.mjs  ✅
 ├─ .github/workflows/ci.yml     comprobaciones en cada PR                      ✅
-├─ src/                         ✅ modules/ (12 módulos con su index.ts) · ⏳ el resto
+├─ src/                         ✅ (negocios, turismo y rutas en curso)
 │  ├─ app/
 │  │  ├─ (public)/  (app)/mapa/  (app)/cuenta/  (business)/negocio/  (admin)/admin/
 │  │  ├─ api/v1/                Route Handlers (§12.2)
 │  │  ├─ auth/                  callback, reset
-│  │  └─ manifest.ts  sw.ts
+│  │  └─ manifest.ts  offline/        (service worker: public/sw.js)
 │  ├─ modules/                  map · businesses · tourism · routes · traffic · citizen-reports
 │  │                            notifications · jobs · media · admin · analytics · reports
 │  │                            (cada uno: components/ server/ schemas.ts queries.ts types.ts index.ts)
@@ -1339,7 +1341,7 @@ sr-conecta/
 │  ├─ types/                    supabase gen types
 │  ├─ config/env.ts
 │  └─ proxy.ts
-├─ data/                        importación de datos abiertos (GDAL)          ⏳
+├─ data/                        límites OSM de los municipios                  ✅
 ├─ tests/boundaries/            prueba de regresión de la regla de fronteras   ✅
 ├─ tests/e2e/                   Playwright                                     ⏳
 ├─ docs/
@@ -1348,7 +1350,8 @@ sr-conecta/
 ├─ DEPLOYMENT.md                manual de despliegue (entregable)              ⏳
 ├─ SECURITY.md  CONTRIBUTING.md  API.md                                        ⏳
 ├─ LICENSE                      MIT o Apache-2.0                               ⏳
-└─ .env.example                                                                ⏳
+├─ vercel.json                  cron diario del informe                        ✅
+└─ .env.example                                                                ✅
 ```
 
 **Reglas de módulos:**
@@ -1565,7 +1568,7 @@ Lo que ninguna prueba local puede confirmar (19 puntos). Se resuelve en la seman
 
 | # | Qué verificar | Dónde |
 |---|---|---|
-| 1 | Las 17 migraciones se aplican en un proyecto Supabase recién creado | Supabase |
+| 1 | Todas las migraciones se aplican en un proyecto Supabase recién creado (verificado en staging: 22 de 22) | Supabase |
 | 2 | `pg_cron`, `pg_net` y Vault se habilitan, y `cron.schedule` registra las 4 tareas (en las pruebas se omiten) | Supabase |
 | 3 | La firma de `realtime.send(payload, event, topic, private)` y la suscripción del cliente a un canal Broadcast público | Documentación de Supabase Realtime |
 | 4 | Las claves de `storage.objects.metadata` (`mimetype`, `size`) que usa `register_attachment` | Supabase Storage |
