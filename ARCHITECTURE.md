@@ -1,6 +1,6 @@
 # SR Conecta — Arquitectura
 
-> **Versión 2.3 · 2 de octubre de 2026**
+> **Versión 2.4 · 5 de octubre de 2026** · mapa base: MapLibre + OpenFreeMap ([ADR-022](docs/decisions/ADR-022-maplibre-openfreemap.md))
 > Plataforma geográfica para la provincia Santiago Rodríguez (República Dominicana), para el reto TechEmprende SR Conecta 2026.
 > Este documento es la referencia única de diseño antes de programar. Reemplaza a las versiones 1.x: el historial de esas versiones está en Git.
 
@@ -68,7 +68,7 @@ Si una capacidad no tiene etiqueta, es [MVP].
 | Panel municipal: resumen, bandeja, validaciones, informes, equipo, auditoría | ✅ |
 | Worker de la cola, informe semanal en PDF, PWA sin conexión, Web Push | ✅ |
 | Negocios, turismo, rutas y propuestas: fichas, alta, panel del comercio, edición | ✅ |
-| Proveedor Google Maps, despliegue en Vercel con dominio y correo propio | ⏳ Pendiente de cuentas |
+| En línea en https://sr-conecta.vercel.app (Vercel + Supabase staging); dominio y correo propio | ✅ / ⏳ dominio |
 
 ---
 
@@ -142,18 +142,18 @@ Texto literal de las bases:
 SR Conecta es un **monolito modular**:
 - **Aplicación:** Next.js 16 (App Router) con TypeScript, desplegada en Vercel.
 - **Datos:** Supabase (PostgreSQL + PostGIS, Auth, Storage).
-- **Mapa base:** Google Maps, detrás de un adaptador propio.
+- **Mapa base:** MapLibre GL con teselas de OpenFreeMap, detrás de un adaptador propio (ADR-022, que sustituye a ADR-004).
 
 Tres ideas sostienen todo el diseño:
 
 1. **PostgreSQL es la fuente de verdad y la barrera de seguridad.** Toda operación que cambia estado, permisos o contadores es una función SQL (RPC) que valida todo por sí misma. Cualquiera puede llamar la API de Supabase directamente, sin pasar por Next.js (ADR-018).
-2. **Google aporta el mapa base, nunca los datos.** Negocios, rutas, reportes y consultas viven en PostGIS. Google solo pinta el mapa, busca direcciones y ofrece el enlace "Cómo llegar".
+2. **El mapa base solo pinta; los datos son nuestros.** Negocios, rutas, reportes y consultas viven en PostGIS. OpenFreeMap solo dibuja calles y relieve, y "Cómo llegar" es un enlace externo, sin API.
 3. **Todo efecto lento o externo va por una cola.** Push, procesamiento de fotos y alertas se encolan en la misma transacción que los origina y los ejecuta un worker con reintentos (ADR-016).
 
 ```mermaid
 flowchart LR
     U[Ciudadano · turista · comercio · municipio] --> PWA[PWA Next.js]
-    PWA -->|mapa base y direcciones| G[Google Maps]
+    PWA -->|teselas del mapa base| G[OpenFreeMap]
     PWA -->|/api/v1 · Server Actions| NX[Next.js en Vercel]
     PWA -.->|alertas en vivo · Broadcast| RT[Supabase Realtime]
     NX -->|JWT del usuario| DB[(PostgreSQL + PostGIS<br/>RLS + RPC)]
@@ -174,7 +174,7 @@ flowchart LR
 2. **Una operación crítica es una transacción.** Nunca "leer en JS, decidir en JS, escribir en JS".
 3. **Rechazar no es fallar.** Un rechazo de negocio (límite alcanzado, transición no válida) se **devuelve** como `{status:'rejected', reason}` y hace commit, para que el contador de rate limit y la auditoría persistan. `RAISE EXCEPTION` queda solo para errores de programación.
 4. **Mínimo privilegio.** No hay `super_admin` (ADR-020). Cada rol tiene alcance territorial, y las columnas personales están ocultas por grants.
-5. **Google por intención del usuario, nunca por evento del mapa.**
+5. **Servicios externos por intención del usuario, nunca por evento del mapa** (p. ej. "Cómo llegar" abre la app de navegación solo al tocarlo).
 6. **Privacidad por defecto.** Ubicación puntual ligada a una acción, nunca rastreo. Sin EXIF en las fotos. Sin autor en el mapa público.
 7. **Todo cambio relevante deja rastro:** historial de estados, acciones de moderación y auditoría.
 8. **Reintentar es seguro.** Idempotencia en creaciones reintentables, compare-and-set en cambios de estado y bloqueo optimista en ediciones.
@@ -195,10 +195,10 @@ Una sola tabla, con la fase en que entra cada pieza.
 | Formularios | React Hook Form + Zod | MVP | Un esquema Zod por operación, compartido cliente/servidor |
 | Estado | TanStack Query (datos del mapa) + Zustand (UI del mapa) | MVP | Sin Redux |
 | Gráficos | Recharts | MVP | Panel municipal |
-| Mapa | Google Maps JavaScript API vía `@vis.gl/react-google-maps`, AdvancedMarkerElement (requiere Map ID), `@googlemaps/markerclusterer` | MVP | Detrás del adaptador `modules/map/provider` |
-| Direcciones | Places Autocomplete (New) con session tokens | MVP (opcional) | Solo si la búsqueda propia no encuentra nada |
+| Mapa | MapLibre GL 6 + estilo `liberty` de OpenFreeMap; clústeres y capas GeoJSON propios | MVP | Detrás del adaptador `modules/map/provider` (ADR-022) |
+| Búsqueda | `search_all` sobre nuestros datos, tolerante a errores (`pg_trgm` + `unaccent`) | MVP | Sin geocodificador externo |
 | Navegación | Enlace `https://www.google.com/maps/dir/?api=1&destination=lat,lng` | MVP | Sin costo de API |
-| Tráfico de Google | TrafficLayer como capa opcional | MVP (opcional) | Apagada por defecto |
+| Tráfico | Alertas propias de los vecinos en vivo (Realtime) | MVP | Sin capa de tráfico externa |
 | Base de datos | Supabase PostgreSQL + PostGIS + `pg_trgm` + `unaccent` + `pgcrypto` | MVP | Probado en PostgreSQL 18.3 + PostGIS 3.6.2; compatible con 15+ |
 | Lógica crítica | RPC PL/pgSQL + RLS + grants por columna | MVP | ADR-018 |
 | Auth | Supabase Auth: email con contraseña u OTP/magic link; Google OAuth opcional; captcha Turnstile nativo | MVP | SMS postergado por costo |
@@ -228,13 +228,13 @@ Una sola tabla, con la fase en que entra cada pieza.
 
 ```text
 ┌──────────────────────── Dispositivo (PWA) ─────────────────────────┐
-│ Next.js client · Mapa (Google Maps JS) · Service Worker (Serwist)   │
+│ Next.js client · Mapa (MapLibre GL) · Service Worker (propio)       │
 │ Borradores y cola offline (IndexedDB) · Web Push · canal Broadcast  │
 └──────────────┬──────────────────────────────┬───────────────────────┘
-               │ HTTPS (cookie de sesión)       │ Maps JS / Autocomplete
+               │ HTTPS (cookie de sesión)       │ teselas vectoriales
                ▼                                ▼
-┌──────────── Vercel ─────────────┐   ┌──── Google Maps Platform ────┐
-│ Next.js 16                      │   │ Maps JS · Places Autocomplete │
+┌──────────── Vercel ─────────────┐   ┌──────── OpenFreeMap ─────────┐
+│ Next.js 16                      │   │ Teselas del mapa base (OSM)   │
 │ · Server Components (páginas)   │   └──────────────────────────────┘
 │ · Route Handlers /api/v1        │
 │ · Server Actions (paneles)      │
@@ -277,7 +277,7 @@ No hay un servidor de aplicación separado. Son **cuatro capas con una sola auto
 | Navegador | Render, ubicación (con permiso), compresión de fotos, borradores y cola offline, validación temprana |
 | Next.js (Vercel) | Páginas, API `/api/v1`, Server Actions, firma de URLs de Storage, worker de la cola (procesamiento de fotos, push, alertas), PDF |
 | PostgreSQL | Reglas de negocio, pertenencia territorial, transiciones, historial, auditoría, rate limits, encolado, broadcast |
-| Google | Mapa base, autocompletado de direcciones, navegación externa |
+| OpenFreeMap | Teselas del mapa base. "Cómo llegar" abre la app de navegación del teléfono por enlace |
 
 ---
 
@@ -347,6 +347,8 @@ No hay un servidor de aplicación separado. Son **cuatro capas con una sola auto
 ---
 
 ## 7. Mapa y geografía
+
+> **Cambio de decisión (05/10/2026, [ADR-022](docs/decisions/ADR-022-maplibre-openfreemap.md)):** el mapa base es **MapLibre GL + OpenFreeMap**, no Google Maps. Lo que esta sección y §13 dicen de Google (Map ID, Places, cuotas, CSP de `googleapis`) describe el diseño original de ADR-004, ya sustituido, y se conserva como contexto. El adaptador `modules/map/provider`, los datos en PostGIS y las reglas de privacidad no cambian.
 
 ### 7.1 Capas
 
@@ -1349,7 +1351,7 @@ sr-conecta/
 │  └─ manual-administrativo.md  manual del panel municipal (entregable)        ⏳
 ├─ DEPLOYMENT.md                manual de despliegue (entregable)              ⏳
 ├─ SECURITY.md  CONTRIBUTING.md  API.md                                        ⏳
-├─ LICENSE                      MIT o Apache-2.0                               ⏳
+├─ LICENSE                      MIT                                            ✅
 ├─ vercel.json                  cron diario del informe                        ✅
 └─ .env.example                                                                ✅
 ```
@@ -1470,7 +1472,7 @@ Lo que no cambia en ninguna fase: PostgreSQL como fuente de verdad, la lógica c
 | Saturación del mapa | Media | Medio | Clustering, zoom con agregados, máximo 500 features por respuesta | Vector tiles (Fase 2/3) |
 | Crecimiento de la base | Baja | Medio | Retención automática, fotos comprimidas, sin filas por evento | Plan superior, particionado |
 | Caída de un proveedor durante la demo | Baja | Alto | Deployment congelado, semilla de datos, lista en lugar de mapa (modo DEGRADED) | Video de respaldo |
-| Cambio de términos o precios de Google | Media | Alto | Datos 100 % propios, adaptador de mapa (ADR-004) | MapLibre + OSM |
+| OpenFreeMap deja de servir teselas | Baja | Alto | Adaptador de mapa (ADR-022); el estilo es una URL | MapTiler, Stadia o PMTiles propios |
 | Lock-in de Vercel o Supabase | Baja | Medio | Tecnologías portables y autoalojables | Autoalojar (Docker/Coolify + Supabase self-hosted) |
 | El municipio abandona la plataforma | Media | Alto | Costos bajos, operación simple, KPIs útiles para el municipio, manual administrativo | La licencia abierta permite que otros la continúen |
 
@@ -1485,7 +1487,7 @@ Cada ADR tiene su archivo en [`docs/decisions/`](docs/decisions), con contexto, 
 | [001](docs/decisions/ADR-001-react.md) | React | Vue, Svelte, Flutter Web | Ecosistema de mapas y más desarrolladores disponibles para quien herede el proyecto |
 | [002](docs/decisions/ADR-002-nextjs-app-router.md) | Next.js 16 App Router; Route Handlers para la PWA, Server Actions para los paneles; `proxy.ts` solo para sesión | Vite SPA + API aparte; Remix; Astro | Disciplina de fronteras `server-only` |
 | [003](docs/decisions/ADR-003-typescript-strict.md) | TypeScript `strict`, tipos generados desde la base, Zod en fronteras | JavaScript | Tipos regenerados en CI |
-| [004](docs/decisions/ADR-004-google-maps.md) | Google Maps como mapa base, detrás de un adaptador; Places solo Autocomplete; navegación por enlace | Leaflet/MapLibre + OSM | Datos 100 % propios; plan B MapLibre |
+| [004](docs/decisions/ADR-004-google-maps.md) | ~~Google Maps como mapa base~~ **Sustituida por ADR-022** | — | — |
 | [005](docs/decisions/ADR-005-supabase.md) | Supabase como plataforma de datos; sin Edge Functions en el MVP | Firebase; Neon + Auth.js + S3; NestJS | Postgres real, portable y autoalojable |
 | [006](docs/decisions/ADR-006-postgresql-unica.md) | PostgreSQL como única base de datos | Firestore, Mongo, Redis | Una sola copia de la verdad |
 | [007](docs/decisions/ADR-007-postgis.md) | PostGIS con SRID 4326 y cast a `geography` | Turf en JS; Google para distancias | Consultas espaciales indexadas y gratuitas |
@@ -1503,6 +1505,7 @@ Cada ADR tiene su archivo en [`docs/decisions/`](docs/decisions), con contexto, 
 | [019](docs/decisions/ADR-019-orden-despliegue.md) | Producción: la Action migra y luego despliega; E2E contra Supabase local | Migrar desde el build de Vercel; base compartida | Nunca hay código nuevo sobre un esquema viejo |
 | [020](docs/decisions/ADR-020-sin-super-admin.md) | Sin `super_admin`; gobernanza por `municipal_admin` provincial y scripts de operación | `super_admin` con 2FA | Nadie amplía su propio poder desde la aplicación |
 | [021](docs/decisions/ADR-021-descarga-pdf-auditada.md) | Descarga del PDF con auditoría obligatoria: la política de Storage exige el registro en `audit_logs` | Firmar con `service_role` y auditar desde Next.js; no auditar | La auditoría no se puede saltar; sin `service_role` en requests de usuario |
+| [022](docs/decisions/ADR-022-maplibre-openfreemap.md) | MapLibre + OpenFreeMap como mapa base definitivo del MVP, detrás del mismo adaptador | Google Maps (ADR-004) | Sin costo ni claves, cacheable sin conexión, coherente con los datos de OSM |
 
 ### 18.1 Decisiones que cambiaron de la v1.6 a la v2.x
 

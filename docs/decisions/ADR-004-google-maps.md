@@ -2,7 +2,7 @@
 
 | Estado | Fecha | Referencia |
 |---|---|---|
-| Aceptada | 23/09/2026 | [ARCHITECTURE.md](../../ARCHITECTURE.md) §7.3 |
+| **Sustituida** por [ADR-022](ADR-022-maplibre-openfreemap.md) el 05/10/2026 | 23/09/2026 | [ARCHITECTURE.md](../../ARCHITECTURE.md) §7.3 |
 
 ## Contexto
 

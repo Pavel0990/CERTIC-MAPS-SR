@@ -30,27 +30,27 @@ Este documento divide lo que falta de SR Conecta en dos frentes que se pueden tr
 ## Ramas y flujo de Git
 
 ```
-feat/app-mvp   ← rama de integración (Dev se reemplaza más adelante)
- ├─ feat/contenido    ← frente A (compañero)
- └─ feat/plataforma   ← frente B (Pavel)
+main   ← rama principal y de producción (desde el 05/10/2026; antes era feat/app-mvp)
+ ├─ Veneno / feat/contenido   ← frente A (compañero)
+ └─ feat/plataforma           ← frente B (Pavel)
 ```
 
 Para empezar, cada uno crea su rama:
 
 ```bash
 git fetch origin
-git switch -c feat/contenido origin/feat/app-mvp     # compañero
-git switch -c feat/plataforma origin/feat/app-mvp    # Pavel
+git switch -c feat/contenido origin/main     # compañero
+git switch -c feat/plataforma origin/main    # Pavel
 ```
 
-- **Pull requests pequeños y frecuentes** hacia `feat/app-mvp`: idealmente uno por pantalla o funcionalidad, no uno gigante al final.
+- **Pull requests pequeños y frecuentes** hacia `main`: idealmente uno por pantalla o funcionalidad, no uno gigante al final.
 - **Antes de cada PR:**
   ```bash
-  git fetch origin && git rebase origin/feat/app-mvp
+  git fetch origin && git rebase origin/main
   npm run check          # lint + tipos + unit + fronteras de módulos
   npm run test:db        # si tocaste migraciones
   ```
-- **Nunca** hacer `push --force` a `feat/app-mvp`, `main` ni `Dev`. En tu propia rama sí se puede, después de un rebase.
+- **Nunca** hacer `push --force` a `main` ni a las ramas de otra persona. En tu propia rama sí se puede, después de un rebase.
 - **Secretos:** las claves van solo en `.env.local`. No van en el chat, en el código ni en los commits.
 
 ---
@@ -147,10 +147,12 @@ Vercel está conectado al repositorio:
 
 | Cuando se sube a… | Vercel hace… |
 |---|---|
-| `feat/app-mvp` | Publica en **https://sr-conecta.vercel.app** (producción) |
-| cualquier otra rama (`feat/contenido`, `Veneno`, `feat/plataforma`…) | Crea una **vista previa** con su propia URL. El enlace aparece en el PR |
+| `main` | Publica en **https://sr-conecta.vercel.app** (producción) |
+| cualquier otra rama (`Veneno`, `feat/plataforma`, `feat/app-mvp`…) | Crea una **vista previa** con su propia URL. El enlace aparece en el PR |
 
-**Regla:** si un cambio trae una migración nueva, se aplica primero a la base (`npx supabase db push`) y **después** se sube el código a `feat/app-mvp`. Si no, la web nueva llamaría a funciones que la base todavía no tiene.
+**No publiques a mano en producción** con `npx vercel deploy --prod` desde tu computadora: sube a GitHub y Vercel publica solo. El 05/10 una publicación manual desde una copia vieja de `main` dejó la web sin app unos minutos.
+
+**Regla:** si un cambio trae una migración nueva, se aplica primero a la base (`npx supabase db push`) y **después** se sube el código a `main`. Si no, la web nueva llamaría a funciones que la base todavía no tiene.
 
 ## Archivos compartidos: reglas para no chocar
 

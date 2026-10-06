@@ -2,18 +2,18 @@
 
 Plataforma geográfica para la provincia **Santiago Rodríguez** (República Dominicana), para el reto TechEmprende SR Conecta 2026. Pone en un solo mapa el turismo, los negocios, las rutas ecoturísticas, las alertas de tránsito en vivo y los reportes de los vecinos al municipio, con un panel municipal y un informe semanal en PDF.
 
-> **En línea:** https://sr-conecta.vercel.app (Vercel + Supabase staging, con datos de demostración).
+> **En línea:** https://sr-conecta.vercel.app, con **datos reales** de la provincia: 84 negocios, 16 lugares y 3 rutas de OpenStreetMap.
 >
-> **Estado (05/10/2026):** la base de datos está terminada y aplicada en Supabase. Funcionan:
+> **Estado (05/10/2026):** las seis funcionalidades del reto funcionan en línea:
 >
 > - el mapa en vivo, el acceso por código, los reportes y su seguimiento;
-> - negocios, turismo, rutas y propuestas;
+> - negocios, turismo y rutas, en mapa y en **lista**, y las propuestas;
 > - el panel municipal;
 > - el worker de la cola (fotos, avisos y push);
 > - el informe semanal en PDF;
 > - el uso sin conexión.
 >
-> Falta publicar en Vercel con dominio y correo propio, y el mapa de Google (opcional). El trabajo pendiente está repartido en [docs/REPARTO-DE-TRABAJO.md](docs/REPARTO-DE-TRABAJO.md). Para publicar: [DEPLOYMENT.md](DEPLOYMENT.md).
+> Lo que falta ya no es código: [probar con vecinos](docs/prueba-con-vecinos.md), [ensayar la demo](docs/guion-demo.md), el dominio y el correo propio, y [pasar las cuentas a la organización](DEPLOYMENT.md#9-traspaso-a-cuentas-de-la-organización).
 
 ---
 
@@ -37,7 +37,7 @@ Plataforma geográfica para la provincia **Santiago Rodríguez** (República Dom
 **Cómo está construida:**
 - **Interfaz:** Next.js 16, instalable como app en el teléfono.
 - **Datos y seguridad:** Supabase (PostgreSQL + PostGIS). La base de datos decide permisos y estados, aunque alguien intente saltarse la app.
-- **Mapa:** OpenStreetMap (MapLibre) hoy; pasa a Google Maps al vincular la clave.
+- **Mapa:** MapLibre con teselas de OpenFreeMap: gratis, sin claves y usable sin conexión ([ADR-022](docs/decisions/ADR-022-maplibre-openfreemap.md)).
 
 Todo el detalle está en [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -85,9 +85,11 @@ Quita el reenvío al terminar: cualquiera con la URL ve la app.
 ```bash
 npm run check     # lint (con la regla de fronteras), tipos, pruebas unitarias y de fronteras
 npm run test:db   # 150 pruebas de la base de datos (PostgreSQL 18 + PostGIS, sin Docker)
+npm run test:e2e  # 4 recorridos en un navegador real contra staging (con npm run dev corriendo)
+npm run backup    # copia de los datos de staging en backups/ (antes de cambios grandes)
 ```
 
-El CI de GitHub ejecuta ambas en cada pull request.
+El CI de GitHub ejecuta las dos primeras en cada pull request. Las de punta a punta (`test:e2e`) usan las cuentas de prueba y se corren a mano; los recorridos que dependen del teléfono están en el [guion de la demo](docs/guion-demo.md#prueba-completa-a-mano-teléfono-real).
 
 ---
 
@@ -102,12 +104,12 @@ Nunca pegues claves en un chat ni las subas a git: van en `.env.local` (y en Ver
 | 1 | **Vercel** | URL pública, sin depender de una computadora | Proyecto `sr-conecta` en el equipo CERTIC SR MAPS; variables cargadas; el worker se despierta solo (Vault) | ✅ https://sr-conecta.vercel.app |
 | 2 | **Dominio** | Correo verificado y dirección propia | Comprarlo (`.com` o `.do`) a nombre de la organización | ⏳ Pendiente |
 | 3 | **Resend** (correo) | Hoy Supabase envía como máximo 2 correos por hora y sin código | Verificar el dominio (SPF y DKIM), crear la API key → `RESEND_API_KEY`. Luego activar las plantillas de `supabase/config.toml` | ⏳ Pendiente (requiere dominio). Mientras tanto, staging envía con **Gmail SMTP** (sin límite de 2 por hora) y las plantillas en español ya están activas |
-| 4 | **Google Maps** | Mapa de Google | Proyecto en Google Cloud, Maps JavaScript API + Places API (New), Map ID, clave restringida → `NEXT_PUBLIC_GOOGLE_MAPS_KEY` y `NEXT_PUBLIC_GOOGLE_MAP_ID` | ⏳ Pendiente (la app funciona sin esto) |
+| 4 | ~~Google Maps~~ | — | Descartado: el mapa usa MapLibre + OpenFreeMap, gratis, sin claves y usable sin conexión ([ADR-022](docs/decisions/ADR-022-maplibre-openfreemap.md)) | ✅ No hace falta |
 | 5 | **Sentry** | Ver los errores en producción | Proyecto Next.js → `SENTRY_DSN` | ⏳ Opcional |
-| 6 | Notificaciones push | Avisos en el teléfono | Claves VAPID: `npx web-push generate-vapid-keys` | ✅ En `.env.local` local · ⏳ en Vercel al publicar |
+| 6 | Notificaciones push | Avisos en el teléfono | Claves VAPID: `npx web-push generate-vapid-keys` | ✅ En Vercel |
 | 7 | **Supabase de producción** | Separar la demo de los datos reales | Segundo proyecto en la misma organización | Después de la demo |
 
-Ya listos: **GitHub** (con CI) y **Supabase `staging`**, con las 24 migraciones aplicadas, los límites reales de los municipios y datos de demostración. Paso a paso para publicar: [DEPLOYMENT.md](DEPLOYMENT.md).
+Ya listos: **GitHub** (con CI y copia de seguridad diaria cifrada, a activar), **Vercel** (publica solo desde `main`) y **Supabase `staging`**, con las 24 migraciones aplicadas y datos reales de OpenStreetMap. Paso a paso: [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ### 2. Construir lo que falta
 
@@ -121,17 +123,22 @@ El reparto entre las dos personas del equipo, con qué carpetas toca cada una, e
 | PWA: *service worker*, página sin conexión, envío de la cola al volver la red, push por dispositivo | ✅ |
 | Manual de despliegue y manual administrativo | ✅ [DEPLOYMENT.md](DEPLOYMENT.md) · [docs/manual-administrativo.md](docs/manual-administrativo.md) |
 | Negocios, turismo y rutas: fichas, alta de negocio, panel del comercio, propuestas y edición | ✅ |
-| **Proveedor Google Maps** | ⏳ Necesita la clave de Google |
-| **Publicar**: Vercel, dominio, Resend, Supabase de producción | ⏳ Necesita las cuentas ([DEPLOYMENT.md](DEPLOYMENT.md)) |
-| `LICENSE` | ⏳ Elegir entre MIT y Apache-2.0 |
+| Listados `/negocios`, `/turismo` y `/rutas` con filtros grandes, búsqueda sin tildes y "Llamar" | ✅ |
+| Datos reales de la provincia (OpenStreetMap) en lugar de la demo | ✅ [data/README.md](data/README.md) |
+| Pruebas de punta a punta (Playwright) y copias de seguridad | ✅ `npm run test:e2e` · [DEPLOYMENT.md §8.1](DEPLOYMENT.md#81-copias-de-seguridad) |
+| Mapa base definitivo: MapLibre + OpenFreeMap | ✅ [ADR-022](docs/decisions/ADR-022-maplibre-openfreemap.md) |
+| Dominio, Resend, Supabase de producción, captcha | ⏳ Necesitan cuentas ([DEPLOYMENT.md](DEPLOYMENT.md), [SECURITY.md](SECURITY.md)) |
+| `LICENSE` | ✅ MIT |
 
 ### 3. Antes de la entrega (27/10/2026)
 
-- [ ] Hacer **público** este repositorio: las bases lo exigen.
-- [ ] Probar la app con al menos **5 vecinos reales**: criterio de baja alfabetización digital, 20 puntos.
-- [ ] Cambiar los datos de demostración por datos reales: `supabase/ops/remove_demo_content.sql` y los datos abiertos de la provincia.
-- [ ] Ensayar la demo de 25 minutos y grabar un video de respaldo.
-- [ ] Elegir la licencia (MIT o Apache-2.0).
+- [x] Repositorio **público** con `main` al día.
+- [x] Datos reales en lugar de la demo (OpenStreetMap). Cuando la organización entregue los datos abiertos oficiales, se cargan encima.
+- [x] Licencia MIT.
+- [ ] Probar la app con al menos **5 vecinos reales**: criterio de baja alfabetización digital, 20 puntos → [guía](docs/prueba-con-vecinos.md).
+- [ ] Completar desde el panel las descripciones y fotos de los lugares, y validar las 3 rutas con el municipio.
+- [ ] Ensayar la demo de 25 minutos y grabar el video de respaldo → [guion](docs/guion-demo.md).
+- [ ] Activar la copia de seguridad diaria (`BACKUP_ENABLED`) y pasar las cuentas a la organización → [DEPLOYMENT.md §8.1 y §9](DEPLOYMENT.md#81-copias-de-seguridad).
 
 ---
 
@@ -164,15 +171,17 @@ El reparto entre las dos personas del equipo, con qué carpetas toca cada una, e
 | `src/components/`, `src/lib/`, `src/hooks/` | Interfaz compartida, clientes de Supabase, utilidades |
 | `supabase/migrations/` | 24 migraciones SQL: la fuente de verdad del modelo |
 | `supabase/tests/` | 150 pruebas de la base de datos |
-| `supabase/ops/` | Scripts de operación: límites de municipios, datos de demostración, prueba de humo, administrador provincial |
-| `scripts/` | Utilidades (cuentas de prueba, copia del worker del mapa) |
-| `data/` | Datos geográficos (OpenStreetMap, ODbL) e importador |
-| `docs/decisions/` | 21 decisiones de arquitectura (ADR) |
+| `supabase/ops/` | Scripts de operación: límites de municipios, datos reales de OSM, prueba de humo, administrador provincial |
+| `scripts/` | Utilidades: cuentas de prueba, copia de seguridad, copia del worker del mapa |
+| `data/` | Datos geográficos reales (OpenStreetMap, ODbL) y sus importadores ([data/README.md](data/README.md)) |
+| `tests/e2e/` | Pruebas de punta a punta con Playwright |
+| `docs/decisions/` | 22 decisiones de arquitectura (ADR) |
+| `docs/` | Manual administrativo, guía de prueba con vecinos, guion de la demo, reparto del trabajo |
 | `project/` | Prototipo de diseño original (referencia visual) |
-| [ARCHITECTURE.md](ARCHITECTURE.md) · [DATABASE.md](DATABASE.md) | Arquitectura y base de datos |
+| [ARCHITECTURE.md](ARCHITECTURE.md) · [DATABASE.md](DATABASE.md) · [DEPLOYMENT.md](DEPLOYMENT.md) · [SECURITY.md](SECURITY.md) | Arquitectura, base de datos, despliegue y seguridad |
 
 ## Licencia
 
-Por definir: MIT o Apache-2.0, según las bases del reto.
+[MIT](LICENSE).
 
 Datos geográficos © colaboradores de OpenStreetMap (ODbL). Mapa base: OpenFreeMap.

@@ -102,7 +102,7 @@ Hazlo en un proyecto **separado** de `staging`, para que la demo y los datos rea
    ```
 3. **Dominio.** *Settings → Domains* → agrega `<tu-dominio>` y crea en tu DNS el registro que indique Vercel.
 4. **Cron del informe.** Ya está en [`vercel.json`](vercel.json): todos los días a las 10:00 UTC (06:00 en RD). Vercel le envía `CRON_SECRET` solo.
-5. **Despliegue automático (ADR-019).** El despliegue de `main` lo hace el workflow [`deploy.yml`](.github/workflows/deploy.yml): primero migra la base y después publica. Por eso `vercel.json` desactiva el despliegue automático de `main` en Vercel; las vistas previas de los PR siguen funcionando.
+5. **Despliegue automático (ADR-019).** El despliegue de `main` lo hace el workflow [`deploy.yml`](.github/workflows/deploy.yml): primero migra la base y después publica. Cuando se active, hay que desactivar el despliegue automático de `main` en Vercel (`"git": { "deploymentEnabled": { "main": false } }` en `vercel.json`) para que solo publique el workflow; las vistas previas de los PR siguen funcionando.
 
    En GitHub → *Settings → Secrets and variables → Actions*:
 
@@ -120,10 +120,10 @@ Hazlo en un proyecto **separado** de `staging`, para que la demo y los datos rea
 ### 4.1 Estado actual (05/10/2026)
 
 - **Proyecto:** `sr-conecta`, en el equipo CERTIC SR MAPS de Vercel, conectado al repositorio de GitHub.
-- **Producción:** cada push a `feat/app-mvp` publica en https://sr-conecta.vercel.app (rama de producción provisional hasta fusionar el PR #1 en `main`).
-- **Base de datos:** la de **staging**.
-- **Vistas previas:** las demás ramas generan una vista previa cada una.
-- **Pendiente:** el workflow `deploy.yml` (migrar y luego publicar) se activa cuando exista el Supabase de producción. Entonces la rama de producción pasa a `main` y se quita el despliegue automático de Vercel.
+- **Producción:** cada push a **`main`** publica en https://sr-conecta.vercel.app. Nadie publica a mano con `vercel deploy --prod`.
+- **Base de datos:** la de **staging**. Las migraciones se aplican antes de subir el código que las usa.
+- **Vistas previas:** las demás ramas generan una vista previa cada una (solo visible para el equipo).
+- **Pendiente:** cuando exista el Supabase de producción, se activa el workflow `deploy.yml` (`DEPLOY_ENABLED=true`), que migra y luego publica, y se desactiva el despliegue automático de Vercel para `main` en `vercel.json` (ADR-019).
 
 ## 5. Primer arranque
 
@@ -155,9 +155,9 @@ Si `/api/v1/health` responde `degraded`, hay trabajos esperando más de 10 minut
 - que `JOBS_SECRET` sea idéntico en Vercel;
 - los registros de la función en Vercel.
 
-## 7. Opcional: Google Maps
+## 7. Mapa base (no requiere cuentas)
 
-Sin claves de Google la app usa OpenFreeMap (gratis, sin cuenta). Para usar Google (ADR-004):
+El mapa usa **MapLibre + OpenFreeMap**: gratis, sin cuenta ni claves ([ADR-022](docs/decisions/ADR-022-maplibre-openfreemap.md)). Google Maps quedó descartado; los pasos de abajo solo sirven si algún día se decide volver a él (ADR-004, sustituida):
 
 1. En Google Cloud, crea un proyecto con facturación.
 2. Activa *Maps JavaScript API* y *Places API (New)*.
@@ -176,3 +176,51 @@ Sin claves de Google la app usa OpenFreeMap (gratis, sin cuenta). Para usar Goog
 | Volver a una versión anterior de la app | Vercel → *Deployments* → *Promote to Production* en la anterior. Las migraciones son compatibles con el código anterior (ADR-017), así que no se revierte la base |
 | Ver errores | Registros de Vercel y, si se configuró, Sentry |
 | Ver la cola | `/api/v1/health`, o `select * from private.jobs where status in ('failed', 'dead')` en el SQL Editor |
+| Datos reales de OpenStreetMap | `npm run data:osm` regenera `supabase/ops/load_osm_content.sql` desde `data/osm/`. Se aplica con `npx supabase db query --linked -f supabase/ops/load_osm_content.sql`; es idempotente |
+
+### 8.1 Copias de seguridad
+
+El plan gratuito de Supabase **no tiene restauración a un punto en el tiempo**. Hay dos copias complementarias:
+
+| Copia | Qué guarda | Cuándo | Dónde |
+|---|---|---|---|
+| `npm run backup` | Los **datos** de todas las tablas de `public`, en JSON (el esquema está en las migraciones) | Antes de cambios grandes de datos y antes de la demo | `backups/` en tu computadora (fuera de git: tiene datos personales) |
+| Workflow [`backup.yml`](.github/workflows/backup.yml) | `pg_dump` **completo** (esquema y datos de `public`, `private`, `auth` y `storage`), **cifrado** con AES-256 | Todos los días a las 04:00 de RD, y a mano desde *Actions → backup → Run workflow* | Artefacto de GitHub, 30 días |
+
+**Activar el workflow.** En GitHub → *Settings → Secrets and variables → Actions*:
+
+| Tipo | Nombre | Valor |
+|---|---|---|
+| Secreto | `SUPABASE_DB_URL` | Supabase → *Connect* → **Session pooler** (incluye la contraseña de la base) |
+| Secreto | `BACKUP_PASSPHRASE` | Una frase larga generada con el comando de abajo. **Guárdala en el gestor de contraseñas: sin ella no se puede restaurar** |
+| Variable | `BACKUP_ENABLED` | `true` |
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+```
+
+**Restaurar** (en un proyecto nuevo o después de un desastre):
+
+```bash
+# 1. Descargar el artefacto desde Actions → backup → la ejecución → Artifacts
+openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in sr-conecta-AAAAMMDD-HHMM.dump.enc -out copia.dump   # pide la frase
+# 2. Restaurar con PostgreSQL 17 (por ejemplo, con Docker)
+docker run --rm -v "$PWD:/w" postgres:17 pg_restore --no-owner --no-privileges --clean --if-exists -d "<SUPABASE_DB_URL>" /w/copia.dump
+```
+
+Restaurar **solo los datos** desde el JSON de `npm run backup`: cada tabla es una lista de filas. Se reinsertan con `insert into public.<tabla> select * from jsonb_populate_recordset(null::public.<tabla>, '<filas>')`, respetando el orden de las claves foráneas (primero provincias y municipios, después perfiles, negocios y el resto).
+
+## 9. Traspaso a cuentas de la organización
+
+Hoy las cuentas están a nombre de una persona del equipo. Las bases piden que el proyecto se pueda transferir a FUNDESER, y si esa persona pierde el acceso, se cae todo. Antes de la entrega:
+
+| Servicio | Hoy | Qué hacer |
+|---|---|---|
+| **GitHub** | Repositorio en la cuenta personal `Pavel0990` | Crear una organización de GitHub (gratis) y *Settings → Transfer ownership*. Los enlaces viejos redirigen solos |
+| **Supabase** | Organización personal | Invitar a la cuenta de la organización como *Owner* (*Organization → Team*), o transferir el proyecto a una organización nueva (*Project Settings → General → Transfer project*) |
+| **Vercel** | Equipo "CERTIC SR MAPS" de una persona | Invitar a la cuenta de la organización. En el plan Hobby solo puede haber un miembro: pasar a Pro o transferir el proyecto (*Settings → Transfer*) |
+| **Correo de acceso (SMTP)** | Gmail personal con contraseña de aplicación | Pasar a **Resend con el dominio** (§3.5), o al menos a un Gmail de la organización. Se cambia solo en *Authentication → SMTP Settings* |
+| **Claves VAPID, `CRON_SECRET`, `JOBS_SECRET`** | En la computadora de quien publicó | Guardarlas en el gestor de contraseñas de la organización. Si se pierden las VAPID, las personas tienen que reactivar las notificaciones |
+| **Contraseña de la base** | Personal | Cambiarla (*Project Settings → Database → Reset password*) al traspasar, y actualizar `SUPABASE_DB_URL` en GitHub |
+
+Al terminar, la persona que hizo el traspaso **sale** de cada servicio, o queda solo como miembro, y se rotan los secretos.

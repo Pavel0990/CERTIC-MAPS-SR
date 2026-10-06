@@ -8,7 +8,7 @@ Una decisión no se edita en silencio: si cambia, su estado dice "revisada" o "r
 | [001](ADR-001-react.md) | React para la interfaz | Aceptada |
 | [002](ADR-002-nextjs-app-router.md) | Next.js 16 con App Router | Aceptada |
 | [003](ADR-003-typescript-strict.md) | TypeScript estricto | Aceptada |
-| [004](ADR-004-google-maps.md) | Google Maps como mapa base, detrás de un adaptador | Aceptada |
+| [004](ADR-004-google-maps.md) | Google Maps como mapa base, detrás de un adaptador | Sustituida por ADR-022 (05/10/2026) |
 | [005](ADR-005-supabase.md) | Supabase como plataforma de datos | Aceptada |
 | [006](ADR-006-postgresql-unica.md) | PostgreSQL como única base de datos | Aceptada |
 | [007](ADR-007-postgis.md) | PostGIS con SRID 4326 | Aceptada |
@@ -26,5 +26,6 @@ Una decisión no se edita en silencio: si cambia, su estado dice "revisada" o "r
 | [019](ADR-019-orden-despliegue.md) | Orden de despliegue y bases por PR | Aceptada |
 | [020](ADR-020-sin-super-admin.md) | Sin rol super_admin | Aceptada |
 | [021](ADR-021-descarga-pdf-auditada.md) | Descarga del PDF con auditoría obligatoria | Aceptada |
+| [022](ADR-022-maplibre-openfreemap.md) | MapLibre + OpenFreeMap como mapa base | Aceptada |
 
 Resumen y contexto general: [ARCHITECTURE.md §18](../../ARCHITECTURE.md#18-decisiones-de-arquitectura-adr).
