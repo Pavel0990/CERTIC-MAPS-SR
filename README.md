@@ -2,7 +2,9 @@
 
 Plataforma geográfica para la provincia **Santiago Rodríguez** (República Dominicana), para el reto TechEmprende SR Conecta 2026. Pone en un solo mapa el turismo, los negocios, las rutas ecoturísticas, las alertas de tránsito en vivo y los reportes de los vecinos al municipio, con un panel municipal y un informe semanal en PDF.
 
-> **Estado (02/10/2026):** la base de datos está terminada y aplicada en Supabase. Funcionan:
+> **En línea:** https://sr-conecta.vercel.app (Vercel + Supabase staging, con datos de demostración).
+>
+> **Estado (05/10/2026):** la base de datos está terminada y aplicada en Supabase. Funcionan:
 >
 > - el mapa en vivo, el acceso por código, los reportes y su seguimiento;
 > - negocios, turismo, rutas y propuestas;
@@ -97,7 +99,7 @@ Nunca pegues claves en un chat ni las subas a git: van en `.env.local` (y en Ver
 
 | # | Servicio | Para qué | Qué hacer | Estado |
 |---|---|---|---|---|
-| 1 | **Vercel** | URL pública, sin depender de una computadora | Cuenta con el email de la organización, conectada a GitHub; luego `npx vercel login` | ⏳ Pendiente |
+| 1 | **Vercel** | URL pública, sin depender de una computadora | Proyecto `sr-conecta` en el equipo CERTIC SR MAPS; variables cargadas; el worker se despierta solo (Vault) | ✅ https://sr-conecta.vercel.app |
 | 2 | **Dominio** | Correo verificado y dirección propia | Comprarlo (`.com` o `.do`) a nombre de la organización | ⏳ Pendiente |
 | 3 | **Resend** (correo) | Hoy Supabase envía como máximo 2 correos por hora y sin código | Verificar el dominio (SPF y DKIM), crear la API key → `RESEND_API_KEY`. Luego activar las plantillas de `supabase/config.toml` | ⏳ Pendiente (requiere dominio). Mientras tanto, staging envía con **Gmail SMTP** (sin límite de 2 por hora) y las plantillas en español ya están activas |
 | 4 | **Google Maps** | Mapa de Google | Proyecto en Google Cloud, Maps JavaScript API + Places API (New), Map ID, clave restringida → `NEXT_PUBLIC_GOOGLE_MAPS_KEY` y `NEXT_PUBLIC_GOOGLE_MAP_ID` | ⏳ Pendiente (la app funciona sin esto) |
