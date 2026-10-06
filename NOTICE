@@ -1,0 +1,8 @@
+SR Conecta
+Copyright (c) 2026 Equipo SR Conecta (Pavel0990 y colaboradores). Código bajo licencia MIT (ver LICENSE).
+
+Datos geográficos incluidos en data/osm/ y en supabase/ops/load_osm_*.sql:
+© colaboradores de OpenStreetMap, disponibles bajo la Open Database License (ODbL) 1.0.
+https://www.openstreetmap.org/copyright
+
+Mapa base: teselas de OpenFreeMap (https://openfreemap.org), datos © colaboradores de OpenStreetMap.
