@@ -62,7 +62,7 @@ Si una capacidad no tiene etiqueta, es [MVP].
 
 | Pieza | Estado |
 |---|---|
-| Base de datos (23 migraciones, 142 pruebas), aplicada en Supabase staging | ✅ Verificada |
+| Base de datos (24 migraciones, 150 pruebas), aplicada en Supabase staging | ✅ Verificada |
 | Decisiones de arquitectura ([`docs/decisions/`](docs/decisions)) | ✅ 21 ADR |
 | Mapa con tránsito en vivo, acceso por código, reportes y seguimiento, perfil | ✅ Funcionando contra staging |
 | Panel municipal: resumen, bandeja, validaciones, informes, equipo, auditoría | ✅ |
@@ -1250,7 +1250,7 @@ cd supabase/tests && npm install && npm test
 
 - **Motor:** PGlite (PostgreSQL 18.3 + PostGIS 3.6.2 en WebAssembly), sin Docker.
 - **Stubs de Supabase** (`supabase-stubs.sql`): `auth.uid()` desde los claims del JWT, `storage.objects`, `realtime.send`, Vault y los roles `anon`, `authenticated` y `service_role`.
-- **Resultado:** **142 pruebas en 19 secciones (A–S), todas pasan.**
+- **Resultado:** **150 pruebas en 20 secciones (A–T), todas pasan.**
 
 | Qué cubren |
 |---|
@@ -1320,10 +1320,10 @@ sr-conecta/
 ├─ README.md  ARCHITECTURE.md  DATABASE.md                       ✅
 ├─ project/                     prototipo de diseño               ✅
 ├─ supabase/
-│  ├─ migrations/               23 migraciones                    ✅
+│  ├─ migrations/               24 migraciones                    ✅
 │  ├─ seed.sql                  semilla de desarrollo             ✅
 │  ├─ ops/                      scripts de operación              ✅
-│  └─ tests/                    142 pruebas (PGlite)              ✅
+│  └─ tests/                    150 pruebas (PGlite)              ✅
 ├─ package.json  tsconfig.json  eslint.config.mjs  eslint.boundaries.mjs  ✅
 ├─ .github/workflows/ci.yml     comprobaciones en cada PR                      ✅
 ├─ src/                         ✅ (negocios, turismo y rutas en curso)
@@ -1568,7 +1568,7 @@ Lo que ninguna prueba local puede confirmar (19 puntos). Se resuelve en la seman
 
 | # | Qué verificar | Dónde |
 |---|---|---|
-| 1 | Todas las migraciones se aplican en un proyecto Supabase recién creado (verificado en staging: 23 de 23) | Supabase |
+| 1 | Todas las migraciones se aplican en un proyecto Supabase recién creado (verificado en staging: 24 de 24) | Supabase |
 | 2 | `pg_cron`, `pg_net` y Vault se habilitan, y `cron.schedule` registra las 4 tareas (en las pruebas se omiten) | Supabase |
 | 3 | La firma de `realtime.send(payload, event, topic, private)` y la suscripción del cliente a un canal Broadcast público | Documentación de Supabase Realtime |
 | 4 | Las claves de `storage.objects.metadata` (`mimetype`, `size`) que usa `register_attachment` | Supabase Storage |

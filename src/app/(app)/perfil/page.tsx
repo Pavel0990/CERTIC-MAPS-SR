@@ -45,7 +45,6 @@ export default async function ProfilePage() {
               selectedTopics={prefs.topics}
               municipalities={catalogs.municipalities}
               selectedMunicipalities={prefs.municipalities}
-              emailEnabled={prefs.email_enabled}
             />
           </Card>
         </div>

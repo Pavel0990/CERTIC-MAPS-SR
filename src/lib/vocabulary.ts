@@ -114,6 +114,8 @@ export const REASON_MESSAGE: Record<string, string> = {
   unknown_field: 'Algún dato no tiene el formato correcto. Revísalo.',
   invalid_path: 'La foto no terminó de subir. Inténtalo otra vez.',
   already_registered: 'Esa foto ya estaba guardada.',
+  last_active: 'Tiene que quedar al menos una opción activa.',
+  invalid_catalog: 'Ese catálogo no existe.',
 };
 
 export const reasonMessage = (reason?: string | null) =>

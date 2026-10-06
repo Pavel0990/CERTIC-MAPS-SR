@@ -1,13 +1,10 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Ban, CarFront, Check, ChevronLeft, CircleAlert, CircleHelp, CloudOff, Construction, Droplets, HardHat, ImagePlus,
-  Lightbulb, LocateFixed, MessageCircleQuestion, MessageSquareWarning, Mountain, Signpost, Siren, Sparkles, TrafficCone,
-  Trash2, Waves, X, type LucideIcon,
-} from 'lucide-react';
+import { Check, ChevronLeft, CircleAlert, CloudOff, ImagePlus, LocateFixed, MessageCircleQuestion, Siren, X, type LucideIcon } from 'lucide-react';
 import { MapCanvas, type LatLng } from '@/modules/map';
 import { compressImage, uploadPhotos } from '@/modules/media';
+import { catalogIcon } from '@/components/shared/catalog-icon';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select, Textarea } from '@/components/ui/form';
 import { ErrorNote, Notice } from '@/components/ui/primitives';
@@ -19,21 +16,14 @@ import { SEVERITY, reasonMessage } from '@/lib/vocabulary';
 import { cn } from '@/utils/cn';
 
 export interface ReportCatalogs {
-  trafficTypes: { code: string; name: string; default_severity: number }[];
-  requestCategories: { code: string; kind: 'incident' | 'inquiry'; name: string }[];
+  trafficTypes: { code: string; name: string; icon: string; default_severity: number }[];
+  requestCategories: { code: string; kind: 'incident' | 'inquiry'; name: string; icon: string }[];
   municipalities: { id: string; name: string }[];
 }
 
 type Choice =
   | { flow: 'traffic'; code: string; name: string; severity: number }
   | { flow: 'request'; kind: 'incident' | 'inquiry'; code: string; name: string };
-
-const ICONS: Record<string, LucideIcon> = {
-  accidente: CarFront, bache: Construction, calle_cerrada: Ban, derrumbe: Mountain, desvio: Signpost, obra: HardHat,
-  semaforo: TrafficCone, via_inundada: Waves, otro: CircleHelp,
-  agua: Droplets, alumbrado: Lightbulb, basura: Trash2, infraestructura: Construction, otro_incidente: CircleAlert,
-  consulta: MessageCircleQuestion, queja: MessageSquareWarning, propuesta: Sparkles,
-};
 
 const MAX_PHOTOS = 3;
 const newKey = () => crypto.randomUUID().replace(/-/g, '');
@@ -169,17 +159,17 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
           <p className="mt-1 text-[17px] text-muted">Toca lo que más se parece.</p>
           <Group title="En la calle o la carretera" hint="Sale en el mapa para avisar a todos y se quita sola cuando vence.">
             {traffic.map((t) => (
-              <Tile key={t.code} icon={ICONS[t.code] ?? Siren} label={t.name} tone="danger" onClick={() => pick({ flow: 'traffic', code: t.code, name: t.name, severity: t.default_severity })} />
+              <Tile key={t.code} icon={catalogIcon(t.icon, Siren)} label={t.name} tone="danger" onClick={() => pick({ flow: 'traffic', code: t.code, name: t.name, severity: t.default_severity })} />
             ))}
           </Group>
           <Group title="Un problema para el municipio" hint="Lo atiende el ayuntamiento y puedes seguir su avance.">
             {incidents.map((c) => (
-              <Tile key={c.code} icon={ICONS[c.code] ?? CircleAlert} label={c.name} tone="brand" onClick={() => pick({ flow: 'request', kind: 'incident', code: c.code, name: c.name })} />
+              <Tile key={c.code} icon={catalogIcon(c.icon, CircleAlert)} label={c.name} tone="brand" onClick={() => pick({ flow: 'request', kind: 'incident', code: c.code, name: c.name })} />
             ))}
           </Group>
           <Group title="Una consulta, queja o propuesta" hint="No hace falta que sea en un lugar.">
             {inquiries.map((c) => (
-              <Tile key={c.code} icon={ICONS[c.code] ?? MessageCircleQuestion} label={c.name} tone="violet" onClick={() => pick({ flow: 'request', kind: 'inquiry', code: c.code, name: c.name })} />
+              <Tile key={c.code} icon={catalogIcon(c.icon, MessageCircleQuestion)} label={c.name} tone="violet" onClick={() => pick({ flow: 'request', kind: 'inquiry', code: c.code, name: c.name })} />
             ))}
           </Group>
         </section>

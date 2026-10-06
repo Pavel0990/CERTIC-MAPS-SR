@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { moderateTrafficReport, escalateTrafficReport } from '@/modules/traffic/server';
 import { assignRequest, changeRequestStatus, setRequestPublic } from '@/modules/citizen-reports/server';
-import { assignRole, authorizeReportDownload, requestWeeklyReport, reviewContent, revokeRole, type ContentEntity } from '@/modules/admin/server';
+import { assignRole, authorizeReportDownload, requestWeeklyReport, reviewContent, revokeRole, saveCatalogItem, type ContentEntity } from '@/modules/admin/server';
 import { createClient } from '@/lib/supabase/server';
 import type { RpcResult } from '@/lib/http';
 
@@ -77,4 +77,21 @@ export async function downloadReport(runId: string): Promise<ActionResult & { ur
 export async function generateReport(periodStart: string) {
   if (!z.iso.date().safeParse(periodStart).success) return { status: 'rejected', reason: 'invalid_period' } as ActionResult;
   return run((s) => requestWeeklyReport(s, periodStart), ['/admin/informes']);
+}
+
+const catalogChanges = z.object({
+  name: z.string().trim().min(2).max(60).optional(),
+  icon: z.string().regex(/^[a-z0-9-]{2,30}$/).optional(),
+  sort: z.number().int().min(0).max(999).optional(),
+  active: z.boolean().optional(),
+  kind: z.enum(['incident', 'inquiry']).optional(),
+  default_severity: z.number().int().min(1).max(3).optional(),
+  default_ttl_hours: z.number().int().min(1).max(720).optional(),
+}).strict();
+
+export async function saveCatalog(catalog: string, code: string | null, changes: unknown) {
+  if (!['traffic_types', 'request_categories', 'business_categories'].includes(catalog)) return { status: 'rejected', reason: 'invalid_catalog' } as ActionResult;
+  const parsed = catalogChanges.safeParse(changes);
+  if (!parsed.success) return { status: 'rejected', reason: 'invalid_field' } as ActionResult;
+  return run((s) => saveCatalogItem(s, catalog, code, parsed.data), ['/admin/catalogos']);
 }

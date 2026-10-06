@@ -20,7 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   };
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-10 pt-5 md:px-8 md:pt-8">
-      <AdminNav isAdmin={viewer.isAdmin} counts={counts} />
+      <AdminNav isAdmin={viewer.isAdmin} isProvincialAdmin={viewer.isProvincialAdmin} counts={counts} />
       {children}
     </div>
   );

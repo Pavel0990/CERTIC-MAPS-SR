@@ -8,5 +8,5 @@ export const metadata: Metadata = { title: 'Registrar un negocio' };
 export default async function RegisterBusinessPage() {
   await requireViewer('/negocios/registrar');
   const { businessCategories } = await getCatalogs();
-  return <BusinessWizard categories={businessCategories.map((c) => ({ slug: c.slug, name: c.name }))} />;
+  return <BusinessWizard categories={businessCategories.map((c) => ({ slug: c.slug, name: c.name, icon: c.icon }))} />;
 }

@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, ClipboardCheck, FileText, Inbox, ScrollText, Users } from 'lucide-react';
+import { BarChart3, ClipboardCheck, FileText, Inbox, ListChecks, ScrollText, Users } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
 const ITEMS = [
@@ -11,11 +11,12 @@ const ITEMS = [
   { href: '/admin/informes', label: 'Informes', icon: FileText, admin: true },
   { href: '/admin/equipo', label: 'Equipo', icon: Users, admin: true },
   { href: '/admin/auditoria', label: 'Auditoría', icon: ScrollText, admin: true },
+  { href: '/admin/catalogos', label: 'Catálogos', icon: ListChecks, admin: true, provincial: true },
 ];
 
-export function AdminNav({ isAdmin, counts }: { isAdmin: boolean; counts: { inbox: number; validations: number } }) {
+export function AdminNav({ isAdmin, isProvincialAdmin, counts }: { isAdmin: boolean; isProvincialAdmin: boolean; counts: { inbox: number; validations: number } }) {
   const pathname = usePathname();
-  const items = ITEMS.filter((i) => !i.admin || isAdmin);
+  const items = ITEMS.filter((i) => (!i.admin || isAdmin) && (!('provincial' in i) || isProvincialAdmin));
   return (
     <nav aria-label="Panel municipal" className="-mx-4 mb-6 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none] md:mx-0 md:px-0">
       {items.map((i) => {

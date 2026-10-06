@@ -1,10 +1,9 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import {
-  Coffee, HeartPulse, Hotel, Palette, ShoppingBasket, Sprout, Store, UtensilsCrossed, Wrench, type LucideIcon,
-} from 'lucide-react';
+import { Store } from 'lucide-react';
 import { businessInput } from '@/modules/businesses';
 import type { LatLng } from '@/modules/map';
+import { catalogIcon } from '@/components/shared/catalog-icon';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Textarea } from '@/components/ui/form';
 import { ErrorNote } from '@/components/ui/primitives';
@@ -14,13 +13,9 @@ import { PhotoPicker, usePhotos } from '../../_contenido/photo-picker';
 import { DoneScreen, StepTitle, WizardHeader } from '../../_contenido/wizard';
 import { registerBusiness } from './actions';
 
-const ICONS: Record<string, LucideIcon> = {
-  colmado: ShoppingBasket, restaurante: UtensilsCrossed, cafeteria: Coffee, hotel: Hotel, agroturismo: Sprout,
-  artesania: Palette, servicios: Wrench, salud: HeartPulse,
-};
 const newKey = () => crypto.randomUUID().replace(/-/g, '');
 
-export function BusinessWizard({ categories }: { categories: { slug: string; name: string }[] }) {
+export function BusinessWizard({ categories }: { categories: { slug: string; name: string; icon: string }[] }) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [category, setCategory] = useState('');
   const [name, setName] = useState('');
@@ -85,7 +80,7 @@ export function BusinessWizard({ categories }: { categories: { slug: string; nam
             <legend className="text-[15px] font-semibold">Toca el tipo que más se parece</legend>
             <div className="mt-2 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
               {categories.map((c) => {
-                const Icon = ICONS[c.slug] ?? Store;
+                const Icon = catalogIcon(c.icon, Store);
                 const active = category === c.slug;
                 return (
                   <button

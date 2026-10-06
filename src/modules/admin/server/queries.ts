@@ -132,3 +132,25 @@ export async function searchPeople(supabase: ServerSupabase, q: string) {
   const { data } = await supabase.from('profiles').select('id, display_name, home_municipality_id').ilike('display_name', `%${q.trim()}%`).limit(10);
   return data ?? [];
 }
+
+export type CatalogKey = 'traffic_types' | 'request_categories' | 'business_categories';
+export interface CatalogItem {
+  code: string;
+  name: string;
+  icon: string;
+  sort: number;
+  active: boolean;
+  in_use: number;
+  kind?: 'incident' | 'inquiry';
+  default_severity?: number;
+  default_ttl_hours?: number;
+}
+export type CatalogLists = Record<CatalogKey, CatalogItem[]>;
+
+/** Catálogos completos, también lo desactivado (solo administración provincial; la RPC lo verifica). */
+export async function listCatalogs(supabase: ServerSupabase): Promise<CatalogLists | null> {
+  const { data, error } = await supabase.rpc('catalog_admin_list');
+  if (error) throw new Error(`catalog_admin_list: ${error.message}`);
+  const r = data as unknown as ({ status: 'ok' } & CatalogLists) | { status: 'rejected' };
+  return r.status === 'ok' ? { traffic_types: r.traffic_types, request_categories: r.request_categories, business_categories: r.business_categories } : null;
+}

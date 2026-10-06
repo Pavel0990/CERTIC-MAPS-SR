@@ -19,6 +19,7 @@ const GROUPS = [
   { id: 'business', label: 'Negocios' },
   { id: 'report', label: 'Informes' },
   { id: 'account', label: 'Cuentas' },
+  { id: 'catalog', label: 'Catálogos' },
 ];
 
 /** Traduce la acción técnica (p. ej. "request.status_change") a una frase. */
@@ -31,6 +32,7 @@ function describe(action: string) {
     'content.review': 'Revisó contenido', 'business.submit': 'Registró un negocio', 'business.update': 'Editó un negocio', 'business.hours': 'Cambió un horario',
     'place.update': 'Editó un lugar', 'route.update': 'Editó una ruta',
     'report.begin': 'Generó un informe', 'report.download': 'Descargó un informe', 'account.delete': 'Se eliminó una cuenta',
+    'catalog.create': 'Agregó una opción a un catálogo', 'catalog.update': 'Cambió una opción de un catálogo',
   };
   return map[action] ?? action;
 }

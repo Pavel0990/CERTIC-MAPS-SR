@@ -4,7 +4,7 @@
 >
 > **La fuente de verdad es el SQL** de [`supabase/migrations/`](supabase/migrations). Este documento explica sus decisiones; si discrepan, manda el SQL.
 >
-> **Estado verificado:** las 23 migraciones se aplican desde cero en PostgreSQL 18.3 + PostGIS 3.6.2, y pasan las **142 pruebas** ([`supabase/tests/`](supabase/tests)). Cubren seguridad, integridad, concurrencia, PostGIS, fotos, alertas, KPIs, descarga auditada del PDF, entrega del worker, push y mantenimiento. Las 23 están aplicadas también en el Supabase de staging. Lo que no se puede verificar fuera de Supabase está en §14.
+> **Estado verificado:** las 24 migraciones se aplican desde cero en PostgreSQL 18.3 + PostGIS 3.6.2, y pasan las **150 pruebas** ([`supabase/tests/`](supabase/tests)). Cubren seguridad, integridad, concurrencia, PostGIS, fotos, alertas, KPIs, descarga auditada del PDF, entrega del worker, push y mantenimiento. Las 24 están aplicadas también en el Supabase de staging. Lo que no se puede verificar fuera de Supabase está en §14.
 
 ---
 
@@ -321,9 +321,18 @@ Pruebas R1–R6.
 
 `current_date` usa la zona de la sesión, que en Supabase es UTC. Entre las 8 p. m. y la medianoche de RD ya es "mañana" en UTC: se rechazaban las promociones que empiezan hoy, y la política de lectura escondía antes de tiempo las que terminan hoy. `private.local_today()` devuelve la fecha de Santo Domingo y la usan `create_promotion` y la política `promotions_read`. **Regla:** ninguna función ni política compara con `current_date`; las fechas civiles se calculan siempre en `America/Santo_Domingo`. Pruebas S1–S3.
 
+### 5.18 Catálogos editables desde el panel — `20261005120000_catalog_admin.sql`
+
+| Pieza | Qué hace |
+|---|---|
+| `catalog_admin_list()` | Los tres catálogos completos, también lo desactivado, con cuántos reportes o negocios usan cada opción. Solo administración provincial |
+| `save_catalog_item(catálogo, código, cambios)` | Alta (código nulo) o edición. Campos en lista blanca por catálogo. El código se deriva del nombre al crear y no cambia nunca, porque lo guardan los reportes y los negocios. El tipo de una categoría de reporte tampoco cambia. Nunca deja un catálogo, o un tipo de reporte, sin ninguna opción activa. Audita `catalog.create` y `catalog.update` |
+
+No se borra nada: desactivar quita la opción de los formularios y del mapa (la política de lectura solo muestra lo activo) y conserva el historial. El campo `icon` se resuelve en la app con `src/components/shared/catalog-icon.tsx`. Pruebas T1–T8.
+
 ## 6. Catálogo de RPC
 
-45 funciones en `public`. Todas son `SECURITY DEFINER` salvo las marcadas como **invoker**.
+47 funciones en `public`. Todas son `SECURITY DEFINER` salvo las marcadas como **invoker**.
 
 | RPC | Quién | Rate limit | Idempotencia / concurrencia |
 |---|---|---|---|
@@ -359,6 +368,7 @@ Pruebas R1–R6.
 | `worker_queue_health` | service | — | — |
 | `request_assignees`, `staff_directory` | personal del municipio | — | — |
 | `request_weekly_report` | admin provincial | 5/h | crea versión nueva + job `pdf_weekly` |
+| `catalog_admin_list`, `save_catalog_item` | admin provincial | 300/h (`staff_action`) | lista blanca; código estable; nunca sin una opción activa |
 | `register_push_device`, `unregister_push_device` | ciudadano | 20/h (alta) | `ON CONFLICT (endpoint)`; el dispositivo pasa a la cuenta actual |
 | `worker_notify_moderators`, `worker_push_payload`, `worker_push_result`, `worker_attachment_info`, `worker_report_run` | service | — | idempotentes: ignoran estados ya avanzados |
 

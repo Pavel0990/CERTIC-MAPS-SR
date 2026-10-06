@@ -46,3 +46,11 @@ export async function requestWeeklyReport(supabase: ServerSupabase, periodStart:
   if (error) throw new Error(`request_weekly_report: ${error.message}`);
   return data as unknown as RpcResult;
 }
+
+/** Crear (code null) o editar un elemento de catálogo. La RPC valida rol, campos y que quede uno activo. */
+export async function saveCatalogItem(supabase: ServerSupabase, catalog: string, code: string | null, changes: Record<string, unknown>) {
+  // p_code null = alta: la función SQL lo acepta aunque el tipo generado lo declare obligatorio
+  const { data, error } = await supabase.rpc('save_catalog_item', { p_catalog: catalog, p_code: code as string, p_changes: changes as never });
+  if (error) throw new Error(`save_catalog_item: ${error.message}`);
+  return data as unknown as RpcResult;
+}

@@ -18,6 +18,7 @@ El panel está en **Perfil → Panel municipal**, o directamente en `/admin`. Fu
 | Dar o quitar el rol de moderación | — | ✅ su municipio | ✅ |
 | Dar o quitar el rol de administración municipal | — | — | ✅ |
 | Ver la auditoría | — | ✅ | ✅ |
+| Editar los catálogos (tipos de tránsito, categorías de reportes y de negocios) | — | — | ✅ |
 
 - **La administración provincial no se da desde la app.** La crea el equipo técnico con un script revisado (ver [DEPLOYMENT.md](../DEPLOYMENT.md) §5). Así nadie puede darse más poder a sí mismo.
 - Para recibir un rol, la persona tiene que haber entrado al menos una vez a la aplicación con su correo.
@@ -117,7 +118,27 @@ Para quitar un rol, usa **Quitar** en la lista de personal actual. No puedes qui
 
 Registro de todo lo que hace el personal: quién, cuándo, qué y con qué resultado. Incluye los intentos que fueron **denegados**. Nadie lo puede editar ni borrar, tampoco la administración. Filtra por tipo (roles, reportes, tránsito, revisiones, negocios, informes, cuentas) para encontrar algo rápido.
 
-## 8. Buenas prácticas
+## 8. Catálogos (administración provincial)
+
+Las listas que los vecinos ven en los formularios se cambian aquí, sin ayuda técnica. Hay tres:
+
+- **Tránsito:** los tipos de alerta del mapa.
+- **Reportes al municipio:** problemas y consultas.
+- **Negocios:** las categorías de comercio.
+
+| Para… | Haz esto |
+|---|---|
+| Cambiar el nombre o el ícono | **Editar** → cambia el nombre o toca otro ícono → **Guardar** |
+| Agregar una opción | **Agregar** → nombre, ícono y, en reportes, si es un *problema* o una *consulta* (no se puede cambiar después) |
+| Quitar una opción | **Editar** → desmarca **Activo**. Deja de ofrecerse, pero los reportes y negocios que ya la usan la conservan |
+| Cambiar el orden | **Orden**: los números más bajos salen primero |
+| Ajustar una alerta de tránsito | **Gravedad** que se propone y cuánto tiempo **se muestra en el mapa** si nadie la cierra |
+
+- Cada opción indica cuántas veces se ha usado, para que veas qué piden más los vecinos.
+- Siempre tiene que quedar al menos una opción activa.
+- Cada cambio queda en la **Auditoría**.
+
+## 9. Buenas prácticas
 
 - **Responde rápido, aunque sea para decir "En revisión".** Que el vecino vea movimiento es lo que más confianza da.
 - **Escribe los motivos y las notas en lenguaje sencillo.** Los lee el vecino, no un técnico.

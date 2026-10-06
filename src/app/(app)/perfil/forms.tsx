@@ -36,13 +36,12 @@ export function ProfileForm({ name, municipalityId, municipalities }: { name: st
 }
 
 export function PreferencesForm({
-  topics, selectedTopics, municipalities, selectedMunicipalities, emailEnabled,
+  topics, selectedTopics, municipalities, selectedMunicipalities,
 }: {
   topics: readonly { id: string; label: string; hint: string }[];
   selectedTopics: string[];
   municipalities: { id: string; name: string }[];
   selectedMunicipalities: string[];
-  emailEnabled: boolean;
 }) {
   const [state, action, pending] = useActionState(savePreferences, {});
   useSavedToast(state, 'Guardamos tus avisos.');
@@ -73,13 +72,6 @@ export function PreferencesForm({
           ))}
         </div>
       </fieldset>
-      <label className="flex cursor-pointer items-start gap-3 rounded-[12px] p-2.5 hover:bg-canvas">
-        <input type="checkbox" name="email_enabled" defaultChecked={emailEnabled} className="mt-0.5 size-6 shrink-0 accent-[#2f6feb]" />
-        <span>
-          <span className="block font-semibold">Recibir los avisos importantes por correo</span>
-          <span className="block text-sm text-muted">Útil si usas iPhone sin instalar la aplicación.</span>
-        </span>
-      </label>
       <Button type="submit" loading={pending} className="self-start">Guardar avisos</Button>
     </form>
   );

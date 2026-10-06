@@ -3,9 +3,9 @@ import { cache } from 'react';
 import { createAnonClient } from '@/lib/supabase/anon';
 
 export interface Catalogs {
-  trafficTypes: { code: string; name: string; default_severity: number }[];
-  requestCategories: { code: string; kind: 'incident' | 'inquiry'; name: string }[];
-  businessCategories: { id: string; slug: string; name: string }[];
+  trafficTypes: { code: string; name: string; icon: string; default_severity: number }[];
+  requestCategories: { code: string; kind: 'incident' | 'inquiry'; name: string; icon: string }[];
+  businessCategories: { id: string; slug: string; name: string; icon: string }[];
   municipalities: { id: string; code: string; name: string }[];
 }
 
@@ -13,9 +13,9 @@ export interface Catalogs {
 export const getCatalogs = cache(async (): Promise<Catalogs> => {
   const supabase = createAnonClient();
   const [t, r, b, m] = await Promise.all([
-    supabase.from('traffic_report_types').select('code, name, default_severity').eq('active', true).order('sort'),
-    supabase.from('request_categories').select('code, kind, name').eq('active', true).order('sort'),
-    supabase.from('business_categories').select('id, slug, name').eq('active', true).order('sort'),
+    supabase.from('traffic_report_types').select('code, name, icon, default_severity').eq('active', true).order('sort'),
+    supabase.from('request_categories').select('code, kind, name, icon').eq('active', true).order('sort'),
+    supabase.from('business_categories').select('id, slug, name, icon').eq('active', true).order('sort'),
     supabase.from('municipalities').select('id, code, name').order('name'),
   ]);
   return {

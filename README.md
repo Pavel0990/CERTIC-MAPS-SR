@@ -84,7 +84,7 @@ Quita el reenvío al terminar: cualquiera con la URL ve la app.
 
 ```bash
 npm run check     # lint (con la regla de fronteras), tipos, pruebas unitarias y de fronteras
-npm run test:db   # 142 pruebas de la base de datos (PostgreSQL 18 + PostGIS, sin Docker)
+npm run test:db   # 150 pruebas de la base de datos (PostgreSQL 18 + PostGIS, sin Docker)
 ```
 
 El CI de GitHub ejecuta ambas en cada pull request.
@@ -107,7 +107,7 @@ Nunca pegues claves en un chat ni las subas a git: van en `.env.local` (y en Ver
 | 6 | Notificaciones push | Avisos en el teléfono | Claves VAPID: `npx web-push generate-vapid-keys` | ✅ En `.env.local` local · ⏳ en Vercel al publicar |
 | 7 | **Supabase de producción** | Separar la demo de los datos reales | Segundo proyecto en la misma organización | Después de la demo |
 
-Ya listos: **GitHub** (con CI) y **Supabase `staging`**, con las 23 migraciones aplicadas, los límites reales de los municipios y datos de demostración. Paso a paso para publicar: [DEPLOYMENT.md](DEPLOYMENT.md).
+Ya listos: **GitHub** (con CI) y **Supabase `staging`**, con las 24 migraciones aplicadas, los límites reales de los municipios y datos de demostración. Paso a paso para publicar: [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ### 2. Construir lo que falta
 
@@ -115,7 +115,7 @@ El reparto entre las dos personas del equipo, con qué carpetas toca cada una, e
 
 | Qué | Estado |
 |---|---|
-| Panel municipal: bandeja, validaciones, KPIs, informes, equipo, auditoría | ✅ |
+| Panel municipal: bandeja, validaciones, KPIs, informes, equipo, auditoría y catálogos editables | ✅ |
 | Worker de la cola: fotos, avisos al personal, alertas a vecinos, push | ✅ |
 | PDF semanal: cron diario y "Generar ahora" | ✅ |
 | PWA: *service worker*, página sin conexión, envío de la cola al volver la red, push por dispositivo | ✅ |
@@ -162,8 +162,8 @@ El reparto entre las dos personas del equipo, con qué carpetas toca cada una, e
 | `src/app/` | Páginas y API (`/api/v1`) |
 | `src/modules/` | Un módulo por dominio (mapa, tránsito, consultas, fotos, notificaciones…). Solo se comunican por su `index.ts` o `server.ts`, y el lint lo exige |
 | `src/components/`, `src/lib/`, `src/hooks/` | Interfaz compartida, clientes de Supabase, utilidades |
-| `supabase/migrations/` | 23 migraciones SQL: la fuente de verdad del modelo |
-| `supabase/tests/` | 142 pruebas de la base de datos |
+| `supabase/migrations/` | 24 migraciones SQL: la fuente de verdad del modelo |
+| `supabase/tests/` | 150 pruebas de la base de datos |
 | `supabase/ops/` | Scripts de operación: límites de municipios, datos de demostración, prueba de humo, administrador provincial |
 | `scripts/` | Utilidades (cuentas de prueba, copia del worker del mapa) |
 | `data/` | Datos geográficos (OpenStreetMap, ODbL) e importador |

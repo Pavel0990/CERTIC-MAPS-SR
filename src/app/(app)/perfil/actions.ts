@@ -37,7 +37,7 @@ export async function savePreferences(_prev: FormState, form: FormData): Promise
   if (!uid) return { error: 'Tu sesión venció. Entra de nuevo.' };
   const { error } = await supabase
     .from('notification_preferences')
-    .upsert({ user_id: uid, topics, municipalities, email_enabled: form.get('email_enabled') === 'on' }, { onConflict: 'user_id' });
+    .upsert({ user_id: uid, topics, municipalities }, { onConflict: 'user_id' }); // el canal email llega en Fase 2 (ADR-013)
   if (error) return { error: 'No pudimos guardar tus avisos. Inténtalo otra vez.' };
   revalidatePath('/perfil');
   return { ok: true };

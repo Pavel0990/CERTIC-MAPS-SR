@@ -1492,6 +1492,7 @@ export type Database = {
         Returns: Json
       }
       authorize_report_download: { Args: { p_run_id: string }; Returns: Json }
+      catalog_admin_list: { Args: never; Returns: Json }
       change_request_status: {
         Args: {
           p_expected_status: string
@@ -1620,6 +1621,10 @@ export type Database = {
       }
       revoke_role: {
         Args: { p_municipality_id: string; p_role: string; p_user_id: string }
+        Returns: Json
+      }
+      save_catalog_item: {
+        Args: { p_catalog: string; p_changes: Json; p_code: string }
         Returns: Json
       }
       search_all: {

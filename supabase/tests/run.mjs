@@ -640,6 +640,45 @@ ok('R6 al quitar el último dispositivo se apaga el push de la cuenta',
    && (await one(`select push_enabled from public.notification_preferences where user_id = $1`, [U.admMon])).push_enabled === false);
 
 // ---------------------------------------------------------------------------------------------
+// T. Catálogos editables desde el panel (administración provincial)
+// ---------------------------------------------------------------------------------------------
+ok('T1 solo la administración provincial ve y edita los catálogos',
+   (await rpc(U.admMon, `public.catalog_admin_list()`)).reason === 'forbidden'
+   && (await rpc(U.modSab, `public.save_catalog_item('traffic_types', 'bache', '{"name":"Hoyo"}')`)).reason === 'forbidden');
+const newType = await rpc(U.admProv, `public.save_catalog_item('traffic_types', null, '{"name":"Animal en la vía","icon":"dog","default_severity":2,"default_ttl_hours":4}')`);
+const typeRow = await one(`select code, default_ttl::text ttl, active from public.traffic_report_types where code = $1`, [newType.code]);
+ok('T2 alta de un tipo de tránsito: código derivado del nombre, duración en horas',
+   newType.status === 'ok' && newType.code === 'animal_en_la_via' && typeRow.ttl === '04:00:00' && typeRow.active, JSON.stringify({ newType, typeRow }));
+const dupe = await rpc(U.admProv, `public.save_catalog_item('traffic_types', null, '{"name":"Animal en la vía","icon":"dog"}')`);
+ok('T3 un nombre repetido recibe otro código, sin chocar', dupe.status === 'ok' && dupe.code !== newType.code && /^[a-z_]{2,30}$/.test(dupe.code), dupe.code);
+await rpc(U.admProv, `public.save_catalog_item('traffic_types', $1, '{"active":false}')`, [dupe.code]);
+const anonTypes = (await as(db, null, `select code from public.traffic_report_types`)).rows.map((r) => r.code);
+const listed = await rpc(U.admProv, `public.catalog_admin_list()`);
+ok('T4 lo desactivado desaparece para el público pero la administración lo sigue viendo, con su uso',
+   !anonTypes.includes(dupe.code) && anonTypes.includes(newType.code)
+   && listed.traffic_types.some((t) => t.code === dupe.code && t.active === false)
+   && listed.traffic_types.find((t) => t.code === 'bache').in_use >= 0, JSON.stringify(anonTypes));
+const newCat = await rpc(U.admProv, `public.save_catalog_item('request_categories', null, '{"name":"Ruido","icon":"volume","kind":"incident"}')`);
+ok('T5 las categorías de reporte piden el tipo al crearlas y no lo cambian después',
+   newCat.status === 'ok'
+   && (await rpc(U.admProv, `public.save_catalog_item('request_categories', $1, '{"kind":"inquiry"}')`, [newCat.code])).reason === 'not_editable'
+   && (await rpc(U.admProv, `public.save_catalog_item('request_categories', null, '{"name":"Sin tipo","icon":"alert"}')`)).reason === 'invalid_type');
+ok('T6 campos fuera de la lista blanca y valores inválidos se rechazan',
+   (await rpc(U.admProv, `public.save_catalog_item('traffic_types', 'bache', '{"code":"hack"}')`)).reason === 'unknown_field'
+   && (await rpc(U.admProv, `public.save_catalog_item('traffic_types', 'bache', '{"default_severity":9}')`)).reason === 'invalid_field'
+   && (await rpc(U.admProv, `public.save_catalog_item('traffic_types', 'bache', '{"default_ttl_hours":5000}')`)).reason === 'invalid_field');
+const inquiries = await q(`select code from public.request_categories where kind = 'inquiry' and active`);
+for (const c of inquiries.slice(1)) await rpc(U.admProv, `public.save_catalog_item('request_categories', $1, '{"active":false}')`, [c.code]);
+const lastOne = await rpc(U.admProv, `public.save_catalog_item('request_categories', $1, '{"active":false}')`, [inquiries[0].code]);
+ok('T7 no se puede desactivar la última categoría activa de un tipo',
+   lastOne.reason === 'last_active' && (await one(`select active from public.request_categories where code = $1`, [inquiries[0].code])).active === true);
+for (const c of inquiries.slice(1)) await rpc(U.admProv, `public.save_catalog_item('request_categories', $1, '{"active":true}')`, [c.code]);
+const bizCat = await rpc(U.admProv, `public.save_catalog_item('business_categories', null, '{"name":"Peluquería y barbería","icon":"scissors"}')`);
+const audits = await one(`select count(*)::int n from public.audit_logs where action in ('catalog.create', 'catalog.update') and actor_id = $1`, [U.admProv]);
+ok('T8 categorías de negocio con slug y todo queda en la auditoría',
+   bizCat.code === 'peluqueria-y-barberia' && audits.n >= 6, JSON.stringify({ bizCat, audits }));
+
+// ---------------------------------------------------------------------------------------------
 // L. Mantenimiento y privacidad
 // ---------------------------------------------------------------------------------------------
 await db.query(`update public.traffic_reports set expires_at = created_at + interval '1 second' where id = $1`, [t1.id]);
