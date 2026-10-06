@@ -1,0 +1,44 @@
+# Copia de seguridad diaria de la base (no hay PITR en el plan gratuito de Supabase).
+# pg_dump completo (esquema + datos) → cifrado AES-256 con BACKUP_PASSPHRASE → artefacto de 30 días.
+# CIFRADO OBLIGATORIO: en un repositorio público cualquiera puede descargar los artefactos, y la base
+# tiene datos personales. Sin la frase no se puede leer.
+# Se activa con la variable BACKUP_ENABLED=true y los secretos SUPABASE_DB_URL y BACKUP_PASSPHRASE
+# (Settings → Secrets and variables → Actions). Restaurar: DEPLOYMENT.md §8.1.
+name: backup
+
+on:
+  schedule:
+    - cron: '0 8 * * *' # 04:00 en República Dominicana
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dump:
+    if: vars.BACKUP_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: pg_dump cifrado
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_DB_URL" && test -n "$BACKUP_PASSPHRASE"
+          name="sr-conecta-$(date -u +%Y%m%d-%H%M).dump"
+          # La imagen oficial de PostgreSQL 17 trae un pg_dump de la misma versión que Supabase
+          docker run --rm -e PGURL="$SUPABASE_DB_URL" postgres:17 \
+            sh -c 'pg_dump "$PGURL" --format=custom --no-owner --no-privileges \
+                   --schema=public --schema=private --schema=auth --schema=storage' > "$name"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:BACKUP_PASSPHRASE -in "$name" -out "$name.enc"
+          rm "$name"
+          echo "BACKUP_FILE=$name.enc" >> "$GITHUB_ENV"
+          ls -la "$name.enc"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BACKUP_FILE }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 30
+          if-no-files-found: error

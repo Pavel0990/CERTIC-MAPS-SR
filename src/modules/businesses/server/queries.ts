@@ -1,6 +1,6 @@
 import 'server-only';
 import type { ServerSupabase } from '@/lib/supabase/server';
-import { localToday, type HourRange } from '../hours';
+import { isOpenNow, localToday, type HourRange } from '../hours';
 
 export interface Promotion { id: string; title: string; description: string | null; valid_from: string; valid_until: string; status: string }
 
@@ -124,4 +124,66 @@ export async function getBusinessStats(supabase: ServerSupabase, businessId: str
   const stats: BusinessStats = { days, view: 0, directions: 0, whatsapp: 0 };
   for (const r of data ?? []) if (r.metric === 'view' || r.metric === 'directions' || r.metric === 'whatsapp') stats[r.metric] += r.count;
   return stats;
+}
+
+export interface BusinessListItem {
+  id: string;
+  name: string;
+  category: { slug: string; name: string; icon: string } | null;
+  municipality: string;
+  phone: string | null;
+  whatsapp: string | null;
+  openNow: boolean | null; // null = sin horario cargado
+}
+
+/**
+ * Listado público de negocios aprobados (para quien prefiere una lista a un mapa).
+ * Filtros opcionales por municipio, categoría y nombre. Máximo 200, ordenados por nombre.
+ */
+export async function listBusinesses(
+  supabase: ServerSupabase,
+  filters: { municipalityId?: string; categorySlug?: string; q?: string } = {},
+): Promise<BusinessListItem[]> {
+  const [{ data: cats }, { data: munis }] = await Promise.all([
+    supabase.from('business_categories').select('id, slug, name, icon'),
+    supabase.from('municipalities').select('id, name'),
+  ]);
+  const catById = new Map((cats ?? []).map((c) => [c.id, c]));
+  let query = supabase
+    .from('businesses')
+    .select('id, name, phone, whatsapp, municipality_id, category_id')
+    .eq('status', 'approved')
+    .is('deleted_at', null)
+    .order('name')
+    .limit(500);
+  if (filters.municipalityId) query = query.eq('municipality_id', filters.municipalityId);
+  if (filters.categorySlug) {
+    const cat = (cats ?? []).find((c) => c.slug === filters.categorySlug);
+    if (!cat) return [];
+    query = query.eq('category_id', cat.id);
+  }
+  const { data: rows } = await query;
+  // Búsqueda sin tildes ni mayúsculas ("moncion" encuentra "Monción"): quien escribe con dificultad no pone tildes
+  const fold = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const term = filters.q ? fold(filters.q.trim()).slice(0, 60) : '';
+  const list = (rows ?? []).filter((b) => !term || fold(b.name).includes(term)).slice(0, 200);
+  const { data: hours } = list.length
+    ? await supabase.from('business_hours').select('business_id, weekday, opens, closes').in('business_id', list.map((b) => b.id))
+    : { data: [] };
+  const hoursBy = new Map<string, HourRange[]>();
+  for (const h of hours ?? []) hoursBy.set(h.business_id, [...(hoursBy.get(h.business_id) ?? []), { weekday: h.weekday, opens: hhmm(h.opens), closes: hhmm(h.closes) }]);
+  const muniName = new Map((munis ?? []).map((m) => [m.id, m.name]));
+  return list.map((b) => {
+    const c = catById.get(b.category_id);
+    const h = hoursBy.get(b.id);
+    return {
+      id: b.id,
+      name: b.name,
+      category: c ? { slug: c.slug, name: c.name, icon: c.icon } : null,
+      municipality: muniName.get(b.municipality_id) ?? '',
+      phone: b.phone,
+      whatsapp: b.whatsapp,
+      openNow: h?.length ? isOpenNow(h) : null,
+    };
+  });
 }

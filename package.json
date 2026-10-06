@@ -2,6 +2,7 @@
   "name": "sr-conecta",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "Plataforma geográfica de la provincia Santiago Rodríguez (TechEmprende SR Conecta 2026)",
   "type": "module",
   "engines": {
@@ -18,7 +19,10 @@
     "test": "vitest run",
     "test:boundaries": "node --test tests/boundaries/boundaries.test.mjs",
     "test:db": "npm --prefix supabase/tests test",
+    "test:e2e": "playwright test",
     "db:types": "supabase gen types typescript --linked --schema public > src/types/database.ts",
+    "backup": "node --no-deprecation scripts/backup-snapshot.mjs",
+    "data:osm": "node data/fetch-osm-routes.mjs && node data/import-osm-content.mjs",
     "check": "npm run lint && npm run typecheck && npm test && npm run test:boundaries"
   },
   "dependencies": {
@@ -38,6 +42,7 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "26.6.3",
     "@types/react": "19.3.0",

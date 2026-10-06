@@ -29,3 +29,10 @@ public/vendor/
 .vercel
 .env*
 !.env.example
+
+# Copias de seguridad locales de la base (datos personales: nunca a git)
+backups/
+
+# Playwright
+test-results/
+playwright-report/

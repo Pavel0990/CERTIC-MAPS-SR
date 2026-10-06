@@ -1,6 +1,6 @@
 import {
   Baby, Ban, Bike, Bus, Car, CarFront, Church, CircleAlert, CircleHelp, Coffee, Construction, Dog, Droplets, Dumbbell,
-  Flame, Fuel, Hammer, HardHat, HeartPulse, Hotel, Lightbulb, MessageCircleQuestion, MessageSquareWarning, Mountain, Music,
+  Flame, Fuel, Hammer, HardHat, HeartPulse, Hotel, Landmark, Lightbulb, MessageCircleQuestion, MessageSquareWarning, Mountain, Music,
   Palette, PawPrint, Pill, School, Scissors, Shirt, ShieldAlert, ShoppingBasket, Signpost, Sparkles, Sprout, Store, Tractor,
   TrafficCone, Trash2, TreePine, UtensilsCrossed, Volume2, Waves, Wifi, Wrench, Zap, type LucideIcon,
 } from 'lucide-react';
@@ -52,6 +52,7 @@ export const CATALOG_ICONS: Record<string, { icon: LucideIcon; label: string }> 
   leaf: { icon: Sprout, label: 'Campo' },
   palette: { icon: Palette, label: 'Artesanía' },
   wrench: { icon: Wrench, label: 'Servicios' },
+  landmark: { icon: Landmark, label: 'Banco' },
   pill: { icon: Pill, label: 'Farmacia' },
   heart: { icon: HeartPulse, label: 'Salud' },
   scissors: { icon: Scissors, label: 'Peluquería' },

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { registerServiceWorker } from '@/lib/pwa';
@@ -10,13 +10,16 @@ import { registerServiceWorker } from '@/lib/pwa';
  */
 export function ServiceWorker() {
   const [waiting, setWaiting] = useState<ServiceWorker | null>(null);
+  const updateRequested = useRef(false);
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
-    let reloading = false;
+    // Solo se recarga cuando la persona pidió actualizar. En la primera visita el service worker
+    // también toma el control (clients.claim) y dispara controllerchange: recargar ahí cortaría
+    // la navegación y borraría lo que se está escribiendo.
     const onControllerChange = () => {
-      if (reloading) return;
-      reloading = true;
+      if (!updateRequested.current) return;
+      updateRequested.current = false;
       window.location.reload();
     };
     navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
@@ -40,7 +43,7 @@ export function ServiceWorker() {
     <div role="status" className="fixed inset-x-3 bottom-[calc(80px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-md items-center gap-3 rounded-[16px] bg-ink p-3 pl-4 text-white shadow-lg md:bottom-6">
       <Sparkles className="size-5 shrink-0 text-warn-bright" aria-hidden />
       <span className="flex-1 text-[15px]">Hay una versión nueva de SR Conecta.</span>
-      <Button size="sm" variant="soft" onClick={() => waiting.postMessage({ type: 'SKIP_WAITING' })}>
+      <Button size="sm" variant="soft" onClick={() => { updateRequested.current = true; waiting.postMessage({ type: 'SKIP_WAITING' }); }}>
         Actualizar
       </Button>
     </div>

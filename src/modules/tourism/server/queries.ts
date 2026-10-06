@@ -47,3 +47,15 @@ export async function getPlaceDetail(supabase: ServerSupabase, id: string): Prom
     point: { lng: g.coordinates[0], lat: g.coordinates[1] },
   };
 }
+
+export interface PlaceListItem { id: string; name: string; kind: string; municipality: string }
+
+/** Listado público de lugares turísticos publicados, con filtros por municipio y tipo. */
+export async function listPlaces(supabase: ServerSupabase, filters: { municipalityId?: string; kind?: string } = {}): Promise<PlaceListItem[]> {
+  let query = supabase.from('tourism_places').select('id, name, kind, municipality_id').eq('status', 'published').is('deleted_at', null).order('name').limit(200);
+  if (filters.municipalityId) query = query.eq('municipality_id', filters.municipalityId);
+  if (filters.kind) query = query.eq('kind', filters.kind);
+  const [{ data: rows }, { data: munis }] = await Promise.all([query, supabase.from('municipalities').select('id, name')]);
+  const muniName = new Map((munis ?? []).map((m) => [m.id, m.name]));
+  return (rows ?? []).map((p) => ({ id: p.id, name: p.name, kind: p.kind, municipality: muniName.get(p.municipality_id) ?? '' }));
+}

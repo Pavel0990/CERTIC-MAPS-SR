@@ -31,6 +31,20 @@ export function Discover({ items, alerts }: { items: DiscoverItem[]; alerts: num
           <ChevronRight className="ml-auto size-4" aria-hidden />
         </Link>
       )}
+      {/* Accesos en lista: para quien prefiere no usar el mapa */}
+      <nav aria-label="Ver en lista" className="mt-3 grid grid-cols-3 gap-2">
+        {([['business', '/negocios', 'Negocios'], ['tourism', '/turismo', 'Lugares'], ['route', '/rutas', 'Rutas']] as const).map(([layer, href, label]) => {
+          const L = LAYER_BY_ID[layer];
+          return (
+            <Link key={href} href={href} className="flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-[14px] border border-line px-2 py-2 text-center text-[15px] font-semibold hover:bg-canvas">
+              <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke={L.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d={L.icon} />
+              </svg>
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
       <ul className="-mx-4 mt-3 flex snap-x gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
         {items.map((it) => {
           const L = LAYER_BY_ID[it.layer];
