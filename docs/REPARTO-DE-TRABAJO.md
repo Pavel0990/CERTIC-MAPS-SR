@@ -141,6 +141,17 @@ docs/**, ARCHITECTURE.md, DATABASE.md, README.md, .env.example
 
 ---
 
+## Publicación automática (Vercel)
+
+Vercel está conectado al repositorio:
+
+| Cuando se sube a… | Vercel hace… |
+|---|---|
+| `feat/app-mvp` | Publica en **https://sr-conecta.vercel.app** (producción) |
+| cualquier otra rama (`feat/contenido`, `Veneno`, `feat/plataforma`…) | Crea una **vista previa** con su propia URL. El enlace aparece en el PR |
+
+**Regla:** si un cambio trae una migración nueva, se aplica primero a la base (`npx supabase db push`) y **después** se sube el código a `feat/app-mvp`. Si no, la web nueva llamaría a funciones que la base todavía no tiene.
+
 ## Archivos compartidos: reglas para no chocar
 
 | Archivo | Regla |

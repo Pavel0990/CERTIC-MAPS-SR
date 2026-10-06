@@ -117,6 +117,14 @@ Hazlo en un proyecto **separado** de `staging`, para que la demo y los datos rea
 
    Crea además el *environment* `production` en *Settings → Environments*. Ahí puedes exigir una aprobación antes de cada despliegue.
 
+### 4.1 Estado actual (05/10/2026)
+
+- **Proyecto:** `sr-conecta`, en el equipo CERTIC SR MAPS de Vercel, conectado al repositorio de GitHub.
+- **Producción:** cada push a `feat/app-mvp` publica en https://sr-conecta.vercel.app (rama de producción provisional hasta fusionar el PR #1 en `main`).
+- **Base de datos:** la de **staging**.
+- **Vistas previas:** las demás ramas generan una vista previa cada una.
+- **Pendiente:** el workflow `deploy.yml` (migrar y luego publicar) se activa cuando exista el Supabase de producción. Entonces la rama de producción pasa a `main` y se quita el despliegue automático de Vercel.
+
 ## 5. Primer arranque
 
 1. Despliega: *Actions → deploy → Run workflow*, o un merge a `main`.
