@@ -1,0 +1,938 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-10-06T02:41:34Z",
+    "timestamp_areas_base": "2026-10-04T21:27:58Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "node",
+  "id": 615636348,
+  "lat": 19.4108792,
+  "lon": -71.1503631,
+  "tags": {
+    "capital": "5",
+    "name": "Monción",
+    "place": "town",
+    "population": "15695",
+    "wikidata": "Q3307947",
+    "wikimedia_commons": "Category:Monción (Santiago Rodríguez)",
+    "wikipedia": "en:Monción"
+  }
+},
+{
+  "type": "node",
+  "id": 1336188781,
+  "lat": 19.5318658,
+  "lon": -71.3988190,
+  "tags": {
+    "name": "El Rincón",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 1336188783,
+  "lat": 19.5070909,
+  "lon": -71.3606225,
+  "tags": {
+    "name": "Los Bombones",
+    "place": "village"
+  }
+},
+{
+  "type": "node",
+  "id": 1336188784,
+  "lat": 19.5208237,
+  "lon": -71.3681971,
+  "tags": {
+    "name": "San José",
+    "place": "village"
+  }
+},
+{
+  "type": "node",
+  "id": 1336240159,
+  "lat": 19.5314996,
+  "lon": -71.4185125,
+  "tags": {
+    "name": "Baboso",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 1341894655,
+  "lat": 19.5478805,
+  "lon": -71.4095897,
+  "tags": {
+    "name": "El Guayabito",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 1379499598,
+  "lat": 19.4288767,
+  "lon": -71.4057274,
+  "tags": {
+    "name": "Arroyo Blanco",
+    "place": "village"
+  }
+},
+{
+  "type": "node",
+  "id": 1379499599,
+  "lat": 19.4088036,
+  "lon": -71.4420305,
+  "tags": {
+    "capital": "6",
+    "name": "Villa Los Almácigos",
+    "place": "town",
+    "population": "10687"
+  }
+},
+{
+  "type": "node",
+  "id": 1379516806,
+  "lat": 19.5110331,
+  "lon": -71.4035695,
+  "tags": {
+    "name": "Pastor",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 1379518110,
+  "lat": 19.4685843,
+  "lon": -71.4216262,
+  "tags": {
+    "name": "Estancia Vieja",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 1379518111,
+  "lat": 19.4890066,
+  "lon": -71.4374834,
+  "tags": {
+    "name": "Cordero",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 3701235717,
+  "lat": 19.4617668,
+  "lon": -71.1473524,
+  "tags": {
+    "name": "Cacique",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 3712926555,
+  "lat": 19.5082105,
+  "lon": -71.3718876,
+  "tags": {
+    "name": "Los Tocones",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 3715435586,
+  "lat": 19.3871853,
+  "lon": -71.2647374,
+  "tags": {
+    "name": "Cruce Palmarejo",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6463005408,
+  "lat": 19.4174657,
+  "lon": -71.4294157,
+  "tags": {
+    "name": "Bohío Viejo",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6463104770,
+  "lat": 19.4006696,
+  "lon": -71.4444627,
+  "tags": {
+    "name": "La Ceyba",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6463104771,
+  "lat": 19.4007910,
+  "lon": -71.4630666,
+  "tags": {
+    "name": "La Lana",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6463104772,
+  "lat": 19.4201588,
+  "lon": -71.4209022,
+  "tags": {
+    "name": "El Caimital",
+    "place": "village"
+  }
+},
+{
+  "type": "node",
+  "id": 6463104773,
+  "lat": 19.4450078,
+  "lon": -71.3683309,
+  "tags": {
+    "name": "El Guanal",
+    "place": "village"
+  }
+},
+{
+  "type": "node",
+  "id": 6463105193,
+  "lat": 19.4807702,
+  "lon": -71.3502851,
+  "tags": {
+    "name": "La Manicera",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6463105242,
+  "lat": 19.4797335,
+  "lon": -71.3465273,
+  "tags": {
+    "name": "La Sábana",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6465650673,
+  "lat": 19.4759463,
+  "lon": -71.3452070,
+  "tags": {
+    "name": "Cambelén",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6465650674,
+  "lat": 19.4737513,
+  "lon": -71.3439088,
+  "tags": {
+    "name": "La Joya",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6465654746,
+  "lat": 19.4728161,
+  "lon": -71.3338811,
+  "tags": {
+    "name": "Alejandro Bueno",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6465654780,
+  "lat": 19.4750920,
+  "lon": -71.3378963,
+  "tags": {
+    "name": "El Tamarindo",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6465654781,
+  "lat": 19.4775600,
+  "lon": -71.3371775,
+  "tags": {
+    "name": "Los Maestros",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6465655037,
+  "lat": 19.4840804,
+  "lon": -71.3444053,
+  "tags": {
+    "name": "Las Espinas",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6465655038,
+  "lat": 19.4828464,
+  "lon": -71.3397061,
+  "tags": {
+    "name": "Las Flores",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6465785270,
+  "lat": 19.4809804,
+  "lon": -71.3381078,
+  "tags": {
+    "name": "Francisco Simé",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6465785272,
+  "lat": 19.4828920,
+  "lon": -71.3318850,
+  "tags": {
+    "name": "Villa Polín",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6465785281,
+  "lat": 19.4803533,
+  "lon": -71.3275586,
+  "tags": {
+    "name": "Los Tomines",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6465785282,
+  "lat": 19.4814355,
+  "lon": -71.3213252,
+  "tags": {
+    "name": "Invi",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6465785491,
+  "lat": 19.4802041,
+  "lon": -71.3253954,
+  "tags": {
+    "name": "Los Multis",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 6465785501,
+  "lat": 19.4998585,
+  "lon": -71.2235706,
+  "tags": {
+    "name": "Las Caobas",
+    "place": "village"
+  }
+},
+{
+  "type": "node",
+  "id": 6465915273,
+  "lat": 19.4785368,
+  "lon": -71.1567430,
+  "tags": {
+    "name": "Cacique",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100098236,
+  "lat": 19.3324258,
+  "lon": -71.4540947,
+  "tags": {
+    "name": "La Vereda",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100106063,
+  "lat": 19.4778699,
+  "lon": -71.2060234,
+  "tags": {
+    "name": "Los Caimonies",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100110168,
+  "lat": 19.2620863,
+  "lon": -71.3195450,
+  "tags": {
+    "name": "La Cidra de Toma",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100122921,
+  "lat": 19.4540987,
+  "lon": -71.3106901,
+  "tags": {
+    "name": "Mata del Jobo",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100124417,
+  "lat": 19.4038269,
+  "lon": -71.1773284,
+  "tags": {
+    "name": "Durán",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100125181,
+  "lat": 19.2962220,
+  "lon": -71.4721017,
+  "tags": {
+    "name": "La Peonia",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100125182,
+  "lat": 19.3643758,
+  "lon": -71.4800925,
+  "tags": {
+    "name": "La Luisa",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100125983,
+  "lat": 19.2796866,
+  "lon": -71.2628266,
+  "tags": {
+    "name": "Cabirma",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100126326,
+  "lat": 19.3361163,
+  "lon": -71.3040312,
+  "tags": {
+    "name": "Rancho Quemado",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100128138,
+  "lat": 19.5441457,
+  "lon": -71.3254039,
+  "tags": {
+    "name": "Zamba",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100135225,
+  "lat": 19.4165964,
+  "lon": -71.1876972,
+  "tags": {
+    "name": "Gurabo",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100135226,
+  "lat": 19.3401501,
+  "lon": -71.2849651,
+  "tags": {
+    "name": "La Leonor de Toma",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100135251,
+  "lat": 19.2813383,
+  "lon": -71.4990521,
+  "tags": {
+    "name": "El Naranjito",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100139567,
+  "lat": 19.4948705,
+  "lon": -71.2833000,
+  "tags": {
+    "name": "Caimito",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100139569,
+  "lat": 19.4314684,
+  "lon": -71.0919451,
+  "tags": {
+    "name": "Hato Viejo",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100143306,
+  "lat": 19.4262102,
+  "lon": -71.1172145,
+  "tags": {
+    "name": "Veladero",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100149313,
+  "lat": 19.4288791,
+  "lon": -71.2843055,
+  "tags": {
+    "name": "Cruce Alto de Cana",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100149314,
+  "lat": 19.4166242,
+  "lon": -71.2649579,
+  "tags": {
+    "name": "Maguana",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100153635,
+  "lat": 19.3904192,
+  "lon": -71.2142551,
+  "tags": {
+    "name": "La Meseta",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100153636,
+  "lat": 19.2507127,
+  "lon": -71.3408112,
+  "tags": {
+    "name": "Loma de Copey",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100154125,
+  "lat": 19.3529029,
+  "lon": -71.2617973,
+  "tags": {
+    "name": "Sector Tomás",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100154147,
+  "lat": 19.2452263,
+  "lon": -71.2838690,
+  "tags": {
+    "name": "Laguna de Cenoví",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100154718,
+  "lat": 19.2699235,
+  "lon": -71.2538743,
+  "tags": {
+    "name": "El Palero",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100157919,
+  "lat": 19.3028990,
+  "lon": -71.2986806,
+  "tags": {
+    "name": "El Aguacate",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100160557,
+  "lat": 19.3465179,
+  "lon": -71.3579423,
+  "tags": {
+    "name": "El Vallecito",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100163151,
+  "lat": 19.3467023,
+  "lon": -71.4540898,
+  "tags": {
+    "name": "La Piña",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100163618,
+  "lat": 19.3178330,
+  "lon": -71.4234330,
+  "tags": {
+    "name": "El Dajou",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100163619,
+  "lat": 19.4200026,
+  "lon": -71.3958838,
+  "tags": {
+    "name": "Arroyo Blanco Arriba",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "node",
+  "id": 14100164270,
+  "lat": 19.3679995,
+  "lon": -71.4385820,
+  "tags": {
+    "name": "El Resbaloso",
+    "place": "hamlet"
+  }
+},
+{
+  "type": "way",
+  "id": 48456295,
+  "center": {
+    "lat": 19.4366486,
+    "lon": -71.0947873
+  },
+  "tags": {
+    "boat": "no",
+    "name": "Río Mao",
+    "source": "digitalglobe",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 48456439,
+  "center": {
+    "lat": 19.5229293,
+    "lon": -71.0704708
+  },
+  "tags": {
+    "boat": "no",
+    "name": "Río Mao",
+    "source": "Bing",
+    "waterway": "river",
+    "wikidata": "Q23765189"
+  }
+},
+{
+  "type": "way",
+  "id": 48478657,
+  "center": {
+    "lat": 19.3544818,
+    "lon": -71.1889360
+  },
+  "tags": {
+    "boat": "no",
+    "name": "Rio Mao",
+    "source": "digitalglobe",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 48657584,
+  "center": {
+    "lat": 19.4113038,
+    "lon": -71.3356216
+  },
+  "tags": {
+    "name": "Río Yaguajal",
+    "source": "DigitalGlobe",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 49190186,
+  "center": {
+    "lat": 19.4056983,
+    "lon": -71.1190648
+  },
+  "tags": {
+    "building": "yes",
+    "name": "Presa de Monción",
+    "source": "digitalglobe",
+    "waterway": "dam"
+  }
+},
+{
+  "type": "way",
+  "id": 179682232,
+  "center": {
+    "lat": 19.3812317,
+    "lon": -71.1341737
+  },
+  "tags": {
+    "name": "Presa de Monción",
+    "natural": "water"
+  }
+},
+{
+  "type": "way",
+  "id": 221554043,
+  "center": {
+    "lat": 19.5885202,
+    "lon": -71.4022600
+  },
+  "tags": {
+    "boat": "no",
+    "name": "Río Guayubín",
+    "source": "DigitalGlobe",
+    "waterway": "river",
+    "wikidata": "Q23773529"
+  }
+},
+{
+  "type": "way",
+  "id": 274561962,
+  "center": {
+    "lat": 19.5014568,
+    "lon": -71.3718980
+  },
+  "tags": {
+    "name": "Río Yaguajal",
+    "source": "DigitalGlobe",
+    "waterway": "river",
+    "wikidata": "Q23756849"
+  }
+},
+{
+  "type": "way",
+  "id": 291502845,
+  "center": {
+    "lat": 19.3913142,
+    "lon": -71.1674325
+  },
+  "tags": {
+    "highway": "track",
+    "name": "Camino Los Cacaos",
+    "surface": "ground"
+  }
+},
+{
+  "type": "way",
+  "id": 366125649,
+  "center": {
+    "lat": 19.4665411,
+    "lon": -71.0804595
+  },
+  "tags": {
+    "name": "Contraembalse Moncion",
+    "waterway": "dam"
+  }
+},
+{
+  "type": "way",
+  "id": 367879349,
+  "center": {
+    "lat": 19.5003491,
+    "lon": -71.2776071
+  },
+  "tags": {
+    "name": "Río Cana",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 672883133,
+  "center": {
+    "lat": 19.3542473,
+    "lon": -71.2784529
+  },
+  "tags": {
+    "natural": "water",
+    "water": "reservoir"
+  }
+},
+{
+  "type": "way",
+  "id": 1020964904,
+  "center": {
+    "lat": 19.3508923,
+    "lon": -71.2622425
+  },
+  "tags": {
+    "access": "no",
+    "bicycle": "no",
+    "foot": "yes",
+    "highway": "track",
+    "horse": "yes",
+    "motor_vehicle": "yes",
+    "name": "Calle Tomás",
+    "smoothness": "horrible",
+    "surface": "unpaved",
+    "tracktype": "grade3"
+  }
+},
+{
+  "type": "way",
+  "id": 1107584557,
+  "center": {
+    "lat": 19.3435260,
+    "lon": -71.2622239
+  },
+  "tags": {
+    "highway": "track",
+    "name": "Calle Duerte"
+  }
+},
+{
+  "type": "way",
+  "id": 1300872086,
+  "center": {
+    "lat": 19.5641241,
+    "lon": -71.3300749
+  },
+  "tags": {
+    "natural": "water",
+    "water": "reservoir"
+  }
+},
+{
+  "type": "way",
+  "id": 1300880185,
+  "center": {
+    "lat": 19.5511524,
+    "lon": -71.3317471
+  },
+  "tags": {
+    "natural": "water",
+    "water": "reservoir"
+  }
+},
+{
+  "type": "way",
+  "id": 1300880209,
+  "center": {
+    "lat": 19.5532883,
+    "lon": -71.3632928
+  },
+  "tags": {
+    "natural": "water",
+    "water": "reservoir"
+  }
+},
+{
+  "type": "way",
+  "id": 1300880214,
+  "center": {
+    "lat": 19.5538096,
+    "lon": -71.3636838
+  },
+  "tags": {
+    "natural": "water",
+    "water": "reservoir"
+  }
+},
+{
+  "type": "way",
+  "id": 1300880215,
+  "center": {
+    "lat": 19.5534790,
+    "lon": -71.3639526
+  },
+  "tags": {
+    "natural": "water",
+    "water": "reservoir"
+  }
+},
+{
+  "type": "way",
+  "id": 1303035954,
+  "center": {
+    "lat": 19.5257439,
+    "lon": -71.2935195
+  },
+  "tags": {
+    "natural": "water",
+    "water": "reservoir"
+  }
+},
+{
+  "type": "way",
+  "id": 1366663797,
+  "center": {
+    "lat": 19.3982155,
+    "lon": -71.1209815
+  },
+  "tags": {
+    "boat": "no",
+    "name": "Río Mao",
+    "source": "digitalglobe",
+    "waterway": "river"
+  }
+}
+
+  ]
+}
