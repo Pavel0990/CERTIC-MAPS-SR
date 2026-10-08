@@ -27,7 +27,7 @@ export default function OfflinePage() {
       </ul>
       <div className="flex w-full flex-col gap-2 sm:flex-row">
         <RetryButton />
-        <Link href="/reportar" className="inline-flex h-11 flex-1 items-center justify-center rounded-[12px] border border-line-strong bg-surface px-4 text-[15px] font-semibold hover:bg-canvas">
+        <Link href="/reportar" className="inline-flex h-11 items-center sm:flex-1 justify-center rounded-[12px] border border-line-strong bg-surface px-4 text-[15px] font-semibold hover:bg-canvas">
           Hacer un reporte
         </Link>
       </div>

@@ -20,7 +20,7 @@ export function Discover({ items, alerts }: { items: DiscoverItem[]; alerts: num
           <Eyebrow>Santiago Rodríguez</Eyebrow>
           <h2 id="descubre" className="text-xl font-bold">Descubre la provincia</h2>
         </div>
-        <Link href="/mapa" className="flex items-center text-[15px] font-semibold text-brand hover:underline">
+        <Link href="/mapa" className="-mr-2 flex min-h-11 items-center px-2 text-[15px] font-semibold text-brand hover:underline">
           Ver mapa <ChevronRight className="size-4" aria-hidden />
         </Link>
       </div>
