@@ -1,196 +1,148 @@
-# Reparto del trabajo pendiente
+# Reparto del trabajo: del 7 al 27 de octubre
 
-Este documento divide lo que falta de SR Conecta en dos frentes que se pueden trabajar en paralelo sin pisarse. Cada frente es dueño de sus carpetas. Los archivos compartidos tienen reglas claras.
+El código está prácticamente terminado: las seis funcionalidades del reto funcionan en https://sr-conecta.vercel.app. Lo que falta para ganar es **contenido, prueba con personas reales y una demo ensayada**. Este plan reparte ese trabajo entre tres personas para avanzar en paralelo.
 
-**Fecha límite de entrega: 27/10/2026.**
+**Regla de oro: el código queda congelado.** Solo se cambia código para corregir lo que salga de la prueba con vecinos o un error real. Cada función nueva ahora es un riesgo para la demo.
 
-| Frente | Quién | Resumen |
-| --- | --- | --- |
-| **A. Contenido** | Compañero | Negocios, turismo, rutas y propuestas: las pantallas que hoy dan 404 |
-| **B. Plataforma** | Pavel | Worker de la cola, PDF semanal, PWA y push, Google Maps, despliegue y documentación |
+| Persona | Frente | En una frase | ¿Programa? |
+|---|---|---|---|
+| **1** · ________ | **Contenido** | Que el mapa muestre la provincia de verdad: fotos, descripciones y rutas validadas | No: todo desde el panel |
+| **2** · ________ | **Vecinos y UX** | Probar con personas reales y conseguir que lo que salga se corrija | Poco: anota y corrige textos |
+| **3** · ________ | **Plataforma y demo** | Que nada se caiga el día de la demo y que la presentación salga perfecta | Sí: correcciones, cuentas y despliegue |
 
-¿Por qué este reparto? El frente A es casi todo interfaz y usa funciones de base de datos que **ya existen y están probadas**, así que no depende de cuentas externas. El frente B necesita las cuentas (Vercel, dominio, Resend, Google, Sentry) y toca la configuración global de la app.
+Fechas comunes:
 
----
-
-## Antes de empezar (los dos)
-
-1. Instalar y correr el proyecto siguiendo el [README](../README.md): `.env.local`, `npm install`, `npm run dev`.
-2. Para entrar con cuentas de prueba (ciudadano, moderador, admin), usar `node scripts/staging-test-users.mjs`. Ver el README.
-3. Leer, en este orden:
-   - [ARCHITECTURE.md](../ARCHITECTURE.md): módulos y fronteras.
-   - [DATABASE.md](../DATABASE.md): tablas, RPC y reglas.
-   - [ADR-008](decisions/ADR-008-monolito-modular.md): monolito modular.
-   - [ADR-018](decisions/ADR-018-base-de-datos-barrera.md): la base de datos es la barrera.
-4. **Fuera de alcance, no reintroducir:** misiones y recompensas ([ADR-010](decisions/ADR-010-misiones.md) y [ADR-011](decisions/ADR-011-recompensas.md)), y el rol `super_admin` ([ADR-020](decisions/ADR-020-sin-super-admin.md)).
-5. **Este proyecto usa Next.js 16.** Antes de escribir código, leer la guía que corresponda en `node_modules/next/dist/docs/` (ver [AGENTS.md](../AGENTS.md)). Algunos cambios: `proxy.ts` en vez de `middleware.ts`, y `params` y `searchParams` son `Promise`.
+| Semana | Hito |
+|---|---|
+| **Domingo 12/10** | Contenido principal cargado · Ronda 1 con vecinos hecha · Copias de seguridad activas |
+| **Domingo 19/10** | Correcciones de la ronda 1 publicadas · Rutas validadas · Ronda 2 hecha |
+| **Viernes 24/10** | Ensayos de la demo · Recorridos completos en teléfonos reales |
+| **Lunes 27/10** | **Código congelado** · Video grabado · Revisión final |
 
 ---
 
-## Ramas y flujo de Git
+## Persona 1 · Contenido
 
-```
-main   ← rama principal y de producción (desde el 05/10/2026; antes era feat/app-mvp)
- ├─ Veneno / feat/contenido   ← frente A (compañero)
- └─ feat/plataforma           ← frente B (Pavel)
-```
+**Objetivo:** que un jurado de Santiago Rodríguez abra cualquier ficha y vea la provincia que conoce, no una lista sin fotos.
 
-Para empezar, cada uno crea su rama:
+**Herramientas:**
+- Cuenta de **administración** en la app: **Panel → Validaciones**, las fichas de **Lugares** y **Rutas** (botón **Editar**), y **Panel → Catálogos**.
+- Teléfono con cámara.
+- [Manual administrativo](manual-administrativo.md).
+
+| # | Tarea | Hecho cuando… | Fecha |
+|---|---|---|---|
+| 1.1 | Elegir los **15 lugares más importantes** de la provincia: Presa de Monción, parques centrales, reservas, miradores, balnearios… Los que falten en la app se agregan con **Proponer un lugar** y se aprueban en el panel | Hay una lista de 15, todos en la app | 09/10 |
+| 1.2 | Completar esos 15 lugares: **descripción** de 2–4 frases en lenguaje sencillo, **qué hay** (servicios, accesibilidad), **horario** si aplica y **al menos 1 foto propia** (no de internet: derechos de autor) | Ninguno dice "la descripción la completa el municipio" | 12/10 |
+| 1.3 | Revisar los **84 negocios**: quitar o corregir los que ya no existen o están mal ubicados. Completar teléfono y horario de los **20 más conocidos** (colmados, farmacias, restaurantes del centro) | Ningún negocio cerrado aparece en el mapa | 15/10 |
+| 1.4 | **Validar las 3 rutas** con alguien que las conozca o recorriéndolas. Corregir el trazado (**Editar**) o archivar las que no tengan sentido. Agregar **1 o 2 rutas reales** (senderos conocidos) con **Proponer una ruta**, dibujándolas o con un GPX del teléfono | Las rutas publicadas existen y se pueden hacer | 19/10 |
+| 1.5 | Revisar los **catálogos** (**Panel → Catálogos**): ¿faltan tipos de alerta o de negocio que usen en la zona? | Los tipos coinciden con cómo habla la gente de allí | 19/10 |
+| 1.6 | Preparar el **contenido de la demo**: 2–3 negocios con promoción activa y fotos, y un reporte real en la bandeja | Persona 3 lo confirma en el ensayo | 22/10 |
+
+**No hace falta:** cargar los 84 negocios completos ni escribir textos largos. Mejor 15 fichas excelentes que 100 a medias.
+
+---
+
+## Persona 2 · Vecinos y UX
+
+**Objetivo:** demostrar con datos que gente con poca experiencia digital puede usar la app (criterio de 20 puntos), y corregir lo que no entiendan.
+
+**Herramientas:** la [guía de prueba con vecinos](prueba-con-vecinos.md) impresa, la URL pública y el teléfono **de cada vecino**.
+
+| # | Tarea | Hecho cuando… | Fecha |
+|---|---|---|---|
+| 2.1 | Conseguir **5–6 vecinos variados**: una persona mayor, alguien que casi solo usa WhatsApp, un comerciante, un joven, alguien de Monción o Villa Los Almácigos | Agenda cerrada | 08/10 |
+| 2.2 | **Ronda 1** siguiendo la guía: no ayudar, tomar tiempos y anotar palabras que no entienden | 5 hojas llenas | 11/10 |
+| 2.3 | Pasar las hojas a la tabla de **Resultados** de la guía y hacer la **lista de problemas** ordenada por cuántas personas los tuvieron. Cada problema: qué vio, qué esperaba, qué hizo | Lista entregada a Persona 3 como *issues* de GitHub (uno por problema, etiqueta `ux`) | 12/10 |
+| 2.4 | **Textos:** proponer el texto nuevo de cada palabra que confundió (botones, avisos, estados) | Cada *issue* de texto trae su texto propuesto | 13/10 |
+| 2.5 | Probar los recorridos en **teléfonos reales**: un Android barato con datos móviles y un iPhone con la app instalada (push y modo sin conexión). Sigue la tabla "Prueba completa a mano" del [guion de la demo](guion-demo.md#prueba-completa-a-mano-teléfono-real) | Tabla con ✅ o el problema encontrado | 17/10 |
+| 2.6 | **Ronda 2** con 3–5 personas **distintas**, después de las correcciones | Comparación ronda 1 vs. ronda 2 (p. ej. "de 22/35 a 31/35 tareas sin ayuda") | 19/10 |
+| 2.7 | Preparar para la demo **2–3 citas** de vecinos y fotos de la prueba, con su permiso | Persona 3 las incluye en la presentación | 22/10 |
+
+**Esto es lo que más puntos da:** decir en la demo "lo probamos con 10 vecinos y corregimos esto" pesa mucho más que cualquier función nueva.
+
+---
+
+## Persona 3 · Plataforma y demo
+
+**Objetivo:** que la plataforma sea estable y esté a nombre de la organización, que lo de Persona 2 se corrija rápido y que la demo salga sin sorpresas.
+
+**Herramientas:**
+- El repositorio y la carpeta del proyecto;
+- acceso a GitHub, Vercel y Supabase;
+- [DEPLOYMENT.md](../DEPLOYMENT.md) y el [guion de la demo](guion-demo.md).
+
+| # | Tarea | Hecho cuando… | Fecha |
+|---|---|---|---|
+| 3.1 | **Unificar cuentas.** Una sola cuenta de Vercel (la del equipo CERTIC SR MAPS), borrar los proyectos sobrantes y que **nadie publique a mano** (`vercel deploy --prod`). Solo publica `main` desde GitHub | `npx vercel whoami` muestra la cuenta correcta en todas las computadoras | 09/10 |
+| 3.2 | **Activar las copias de seguridad:** secretos `SUPABASE_DB_URL` y `BACKUP_PASSPHRASE`, y la variable `BACKUP_ENABLED=true` en GitHub. Guardar la frase en un lugar seguro. Ejecutarlo una vez a mano | Hay un artefacto cifrado en *Actions → backup* | 10/10 |
+| 3.3 | **Pasar las cuentas a la organización** (DEPLOYMENT §9): GitHub, Supabase, Vercel, correo. Si no hay tiempo para todo, al menos invitar a una segunda persona como dueña en cada una | Ningún servicio depende de una sola persona | 15/10 |
+| 3.4 | **Corregir los *issues* `ux`** de Persona 2, por orden de gravedad. Si un cambio trae migración: primero `db push`, después `main`. Antes de cada push: `npm run check`, `npm run test:db` y, con la app corriendo, `npm run test:e2e` | *Issues* cerrados con su commit | 17/10 |
+| 3.5 | **Mantener Supabase despierto.** El plan gratuito se pausa tras unos 7 días sin uso. Revisar `/api/v1/health` 2 veces por semana, o pasar a Pro (25 US$) solo para octubre | La web nunca amanece pausada | Continuo |
+| 3.6 | **Presentación:** 5–6 diapositivas de apoyo (problema, solución, arquitectura en un dibujo, costos, datos abiertos, resultados de la prueba con vecinos). El resto es la app en vivo | Diapositivas listas | 21/10 |
+| 3.7 | **Dos ensayos** completos de 25 minutos con cronómetro, siguiendo el [guion](guion-demo.md), con Persona 1 y Persona 2 de público. Ajustar el guion | Cabe en 25 min con margen | 22/10 y 24/10 |
+| 3.8 | **Grabar el video de respaldo** (unos 12 min) con la versión final. Subirlo como no listado y guardarlo en una memoria USB | Video en dos lugares | 26/10 |
+| 3.9 | **Congelar y revisar** el 27/10: `main` en verde, copia de seguridad del día, salud "ok", sesiones iniciadas en los teléfonos de la demo | Lista "Antes de empezar" del guion completa | 27/10 |
+
+**Opcional, solo si sobra tiempo:**
+- dominio propio + Resend para el correo;
+- captcha en el inicio de sesión ([SECURITY.md](../SECURITY.md)).
+
+---
+
+## Cómo nos coordinamos
+
+- **Un solo lugar para las tareas:** los *issues* de GitHub, con etiquetas `contenido`, `ux` y `plataforma`. Cada persona cierra los suyos.
+- **Reunión de 15 minutos** los lunes y jueves: qué terminé, qué sigue y qué me bloquea.
+- **Dependencias:**
+  - Persona 2 entrega problemas → Persona 3 los corrige → Persona 2 los vuelve a probar en la ronda 2.
+  - Persona 1 deja listo el contenido de la demo → Persona 3 lo usa en el guion.
+- **Nadie toca la base de datos a mano** (SQL Editor) ni publica en Vercel desde su computadora. El contenido se edita desde el panel de la app; el código entra por `main`.
+- **Antes de cambios grandes de datos:** `npm run backup`, lo hace Persona 3.
+
+---
+
+## Reglas técnicas (para quien toque código)
+
+**Ramas:** `main` es la rama principal y la de producción. Cada persona trabaja en su rama y entra por pull request:
 
 ```bash
 git fetch origin
-git switch -c feat/contenido origin/main     # compañero
-git switch -c feat/plataforma origin/main    # Pavel
+git switch -c fix/<tema> origin/main
+# … cambios …
+git fetch origin && git rebase origin/main
+npm run check          # lint + tipos + unitarias + fronteras de módulos
+npm run test:db        # si tocaste migraciones
+npm run test:e2e       # con npm run dev corriendo
 ```
 
-- **Pull requests pequeños y frecuentes** hacia `main`: idealmente uno por pantalla o funcionalidad, no uno gigante al final.
-- **Antes de cada PR:**
-  ```bash
-  git fetch origin && git rebase origin/main
-  npm run check          # lint + tipos + unit + fronteras de módulos
-  npm run test:db        # si tocaste migraciones
-  ```
-- **Nunca** hacer `push --force` a `main` ni a las ramas de otra persona. En tu propia rama sí se puede, después de un rebase.
-- **Secretos:** las claves van solo en `.env.local`. No van en el chat, en el código ni en los commits.
+- **Pull requests pequeños:** uno por problema. Nunca `push --force` a `main` ni a la rama de otra persona.
+- **Secretos:** solo en `.env.local`. Nunca en el chat, el código ni los commits.
 
----
-
-## Frente A: Contenido 
-
-### Carpetas tuyas (solo tú las editas)
-
-```
-src/app/(app)/negocios/**        ← /negocios/[id], /negocios/registrar
-src/app/(app)/negocio/**         ← panel del dueño ("Mi negocio")
-src/app/(app)/turismo/**         ← /turismo/[id]
-src/app/(app)/rutas/**           ← /rutas/[id]
-src/app/(app)/proponer/**        ← /proponer y /proponer?que=ruta
-src/modules/businesses/**
-src/modules/tourism/**
-src/modules/routes/**
-src/app/api/v1/businesses/**     ← solo si hace falta una API (preferir Server Actions)
-src/app/api/v1/places/**
-src/app/api/v1/routes/**
-```
-
-### Tareas, en orden de prioridad
-
-| # | Tarea | Ruta | Qué usa (ya existe) |
-| --- | --- | --- | --- |
-| A1 | Ficha de lugar turístico: fotos, descripción, mapa, "cómo llegar" | `/turismo/[id]` | `select` sobre `tourism_places` (RLS: solo publicados), `track_engagement` |
-| A2 | Ficha de ruta: trazado en el mapa, punto de inicio, distancia y dificultad | `/rutas/[id]` | `select` sobre `eco_routes`, componente `MapCanvas` |
-| A3 | Ficha de negocio: horario ("abierto ahora"), contacto, promociones vigentes | `/negocios/[id]` | `select` sobre `businesses`, `business_hours` y `promotions` |
-| A4 | Registro de negocio: asistente por pasos como `/reportar` | `/negocios/registrar` | RPC `submit_business`, fotos con `media` (subida firmada) |
-| A5 | Panel del dueño: editar datos, horario, promociones y ver el estado de revisión | `/negocio` | RPC `update_business`, `set_business_hours`, `create_promotion` |
-| A6 | Proponer un lugar o una ruta | `/proponer` | RPC `propose_place`, `propose_route` |
-| A7 | Edición de lugares y rutas por el personal (si da tiempo) | dentro de las fichas, solo staff | RPC `update_place`, `update_route` |
-
-**Moderación:** lo que se registra o propone cae en **`/admin/validaciones`**, que ya funciona. Ahí el moderador aprueba o rechaza con `review_content`. No hace falta construir la moderación.
-
-### Cómo hacerlo bien (seguir el patrón existente)
-
-- **Plantillas para copiar:**
-  - `src/modules/citizen-reports/` (`schemas.ts`, `server/commands.ts`, `server/queries.ts`, `index.ts` y `server.ts`);
-  - `src/app/(app)/reportar/` (asistente con `useActionState`);
-  - `src/app/(app)/consultas/[id]/` (ficha de detalle).
-- **Entradas de cada módulo:**
-  - `index.ts`: tipos y esquemas `zod`, seguros para el cliente.
-  - `server.ts`: consultas y comandos, solo servidor.
-  - Las páginas importan **solo** desde esos dos archivos. Lo vigila `npm run test:boundaries`.
-- **Errores:** los RPC devuelven un `reason`. Para mostrarlo al usuario se usa `reasonMessage()` de `src/lib/vocabulary.ts`.
-- **Componentes de interfaz:** `src/components/ui/` (`Button`, `Card`, `Field`, `Select`, `Badge`, `Sheet`, `Toast`). No crear estilos nuevos si ya existe uno.
-- **Accesibilidad:** cada campo con su etiqueta, foco visible y zonas táctiles de 44 px o más. Probarlo en el celular con el túnel del README.
-
-### Lo que dependes del frente B
-
-- **Fotos procesadas (B1): ✅ listo desde el 02/10.** Al subir una foto, el worker la limpia y la convierte a WebP en segundos. Cuando el moderador la aprueba, la copia al bucket público. Usa `listPhotos()` de `@/modules/media/server`: ya devuelve la URL correcta según el estado.
-- **Aviso al dueño cuando aprueban su negocio: ✅ listo.** La notificación in-app la crea la base de datos y el push lo envía el worker. Tampoco tienes que hacer nada.
-- **Aviso al personal cuando llega algo nuevo: ✅ listo.** Cada negocio, lugar, ruta o promoción que se registre avisa a los moderadores del municipio, con enlace a `/admin/validaciones`.
-
----
-
-## Frente B: Plataforma ()
-
-### Carpetas tuyas
-
-```
-src/modules/jobs/**              ← worker de la cola
-src/modules/reports/**           ← PDF semanal
-src/modules/analytics/**
-src/modules/notifications/**     ← push (VAPID)
-src/modules/map/provider/**      ← proveedor Google Maps
-src/app/api/v1/internal/**       ← endpoints del worker y del cron
-public/sw.js, src/app/manifest.ts
-next.config.ts, src/proxy.ts, vercel.json
-docs/**, ARCHITECTURE.md, DATABASE.md, README.md, .env.example
-```
-
-### Tareas, en orden de prioridad
-
-**Estado (02/10/2026):** B1, B2, B3, B4 y B7 terminados (falta el `LICENSE`, que hay que elegir). Quedan B5 y B6, que necesitan las cuentas de Google, Vercel, el dominio y Resend.
-
-| # | Tarea | Qué usa (ya existe) |
-| --- | --- | --- |
-| B1 | Worker de la cola en `/api/v1/internal/jobs/run`: procesar imágenes, *fan-out* de alertas y borrar archivos de Storage | `worker_claim_jobs`, `worker_finish_job`, `worker_attachment_processed` y `published`, `worker_run_fanout_alert`, `worker_queue_health` ([ADR-016](decisions/ADR-016-cola-trabajos.md)) |
-| B2 | PDF semanal y cron del lunes; botón "Generar ahora" en `/admin/informes` | `weekly_report_begin` y `weekly_report_finish` ([ADR-014](decisions/ADR-014-pdf.md), [ADR-021](decisions/ADR-021-descarga-pdf-auditada.md)) |
-| B3 | PWA completa: service worker, página offline, instalación | [ADR-009](decisions/ADR-009-pwa.md), *outbox* existente en `src/lib/outbox.ts` |
-| B4 | Push con claves VAPID: suscripción en `/perfil` y envío desde el worker | [ADR-013](decisions/ADR-013-notificaciones.md) |
-| B5 | Proveedor Google Maps detrás de la interfaz actual del mapa | [ADR-004](decisions/ADR-004-google-maps.md); necesita la clave y el Map ID |
-| B6 | Despliegue: Vercel, dominio, Resend (correo), Sentry, Supabase de producción | [ADR-015](decisions/ADR-015-vercel-supabase.md), [ADR-019](decisions/ADR-019-orden-despliegue.md) |
-| B7 | Documentación final: actualizar ARCHITECTURE y DATABASE (ahora son 19 migraciones), escribir DEPLOYMENT.md, el manual administrativo y LICENSE | — |
-
----
-
-## Publicación automática (Vercel)
-
-Vercel está conectado al repositorio:
+**Publicación (Vercel):**
 
 | Cuando se sube a… | Vercel hace… |
 |---|---|
-| `main` | Publica en **https://sr-conecta.vercel.app** (producción) |
-| cualquier otra rama (`Veneno`, `feat/plataforma`, `feat/app-mvp`…) | Crea una **vista previa** con su propia URL. El enlace aparece en el PR |
+| `main` | Publica en **https://sr-conecta.vercel.app** |
+| cualquier otra rama | Crea una **vista previa** privada; el enlace aparece en el PR |
 
-**No publiques a mano en producción** con `npx vercel deploy --prod` desde tu computadora: sube a GitHub y Vercel publica solo. El 05/10 una publicación manual desde una copia vieja de `main` dejó la web sin app unos minutos.
+- **No publiques a mano** con `npx vercel deploy --prod`: sube a GitHub y Vercel publica solo.
+- **Migraciones:** se aplican primero a la base (`npx supabase db push`, antes con `--dry-run`) y **después** se sube el código a `main`.
 
-**Regla:** si un cambio trae una migración nueva, se aplica primero a la base (`npx supabase db push`) y **después** se sube el código a `main`. Si no, la web nueva llamaría a funciones que la base todavía no tiene.
-
-## Archivos compartidos: reglas para no chocar
+**Archivos compartidos:**
 
 | Archivo | Regla |
-| --- | --- |
-| `supabase/migrations/*` | **Nunca editar una migración existente.** Para cambios, crear una nueva con `npx supabase migration new <nombre>`; el nombre lleva la hora, así que no choca. Avisar al otro antes de `db push` a staging y agregar su prueba en `supabase/tests/run.mjs` (cada uno usa una sección nueva, sin reutilizar letras). |
-| `src/types/database.ts` | **No editar a mano.** Si hay conflicto, quédate con cualquiera de las dos versiones y corre `npm run db:types`. |
-| `package.json` / `package-lock.json` | Avisar antes de agregar una dependencia. Si hay conflicto en el *lock*, quédate con `package.json` resuelto y corre `npm install`. |
-| `src/lib/vocabulary.ts` | Solo **agregar** líneas al final de cada mapa; no reordenar ni renombrar. |
-| `src/components/shared/app-nav.tsx` | Lo toca solo A, si hace falta un enlace nuevo. Los enlaces a `/negocio` ya existen. |
-| `src/app/(app)/_components/discover.tsx` y `src/modules/map/layers.ts` | Lo toca solo A, para enlazar las fichas desde el inicio y desde el mapa. |
-| `src/app/(app)/perfil/**` | Los enlaces a negocio y proponer ya existen. B agrega la sección de push. Avisar si alguien más lo toca. |
-| `src/app/(app)/admin/**` | Ya está terminado. B solo toca `informes/`. Para cualquier otro cambio, avisar. |
-
-**Regla de oro:** si tienes que tocar un archivo que no es tuyo, avisa por el chat del equipo **antes** y haz un commit pequeño solo con ese cambio.
+|---|---|
+| `supabase/migrations/*` | Nunca editar una ya aplicada. Se crea una nueva con `npx supabase migration new <nombre>`, con su prueba en `supabase/tests/run.mjs` |
+| `src/types/database.ts` | No editar a mano: `npm run db:types` |
+| `package.json` / `package-lock.json` | Avisar antes de agregar una dependencia |
+| `src/lib/vocabulary.ts` | Solo **agregar** líneas al final de cada lista |
 
 ---
 
-## Calendario sugerido
+## Historial
 
-| Semana | Frente A (compañero) | Frente B (Pavel) |
-| --- | --- | --- |
-| 5–11 oct | A1, A2, A3 (fichas de detalle) | B1 (worker), B6 (Vercel y dominio) |
-| 12–18 oct | A4, A5 (registro y panel de negocio) | B2 (PDF), B4 (push), B5 (Google Maps) |
-| 19–24 oct | A6, A7, pulido de la interfaz | B3 (PWA), B7 (docs), Supabase de producción |
-| 25–27 oct | **Congelar código.** Probar juntos el recorrido completo en el celular, fusionar en `main`, hacer el repo público y entregar. | |
+- **Frente A, contenido (A1–A7):** fichas, alta y panel de negocio, propuestas y edición. Completado el 02/10/2026.
+- **Frente B, plataforma (B1–B7):** worker, PDF, PWA, push, despliegue y documentación. Completado entre el 02/10 y el 05/10/2026. Con él quedaron también los catálogos editables, los datos reales de OpenStreetMap, los listados, las pruebas E2E y las copias de seguridad.
 
-### Lista de cierre (entre los dos)
-
-- [ ] `npm run check` y `npm run test:db` en verde, y CI en verde
-- [ ] Ninguna ruta enlazada da 404
-- [ ] Recorrido de prueba completo:
-  1. el ciudadano reporta;
-  2. el moderador publica;
-  3. el admin asigna;
-  4. el dueño registra un negocio;
-  5. el moderador lo aprueba;
-  6. aparece en el mapa.
-- [ ] Probado en Android y en iPhone, con el modo sin conexión
-- [ ] README y documentación al día; sin secretos en el repositorio
-- [ ] Repositorio público antes del 27/10/2026
+El detalle de ese reparto está en el historial de git de este archivo.

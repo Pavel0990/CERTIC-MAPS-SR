@@ -13,7 +13,7 @@ Plataforma geográfica para la provincia **Santiago Rodríguez** (República Dom
 > - el informe semanal en PDF;
 > - el uso sin conexión.
 >
-> **Plan hasta la entrega, repartido entre tres personas: [docs/PLAN-FINAL.md](docs/PLAN-FINAL.md).**
+> **Plan hasta la entrega, repartido entre tres personas: [docs/REPARTO-DE-TRABAJO.md](docs/REPARTO-DE-TRABAJO.md).**
 >
 > Lo que falta ya no es código: [probar con vecinos](docs/prueba-con-vecinos.md), [ensayar la demo](docs/guion-demo.md), el dominio y el correo propio, y [pasar las cuentas a la organización](DEPLOYMENT.md#9-traspaso-a-cuentas-de-la-organización).
 
