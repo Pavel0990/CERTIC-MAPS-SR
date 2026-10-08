@@ -1,4 +1,4 @@
-const TZ = 'America/Santo_Domingo';
+import { APP_TIMEZONE as TZ } from './locale';
 
 const dateFmt = new Intl.DateTimeFormat('es-DO', { timeZone: TZ, day: 'numeric', month: 'short' });
 const dateTimeFmt = new Intl.DateTimeFormat('es-DO', { timeZone: TZ, day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });

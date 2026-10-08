@@ -2,7 +2,7 @@
 // Utilidades del service worker (public/sw.js) para el cliente. Sin dependencias de dominio.
 
 /** En desarrollo el service worker no guarda nada (rompería la recarga en caliente); push sí funciona. */
-export const SW_URL = process.env.NODE_ENV === 'production' ? '/sw.js' : '/sw.js?dev=1';
+const SW_URL = process.env.NODE_ENV === 'production' ? '/sw.js' : '/sw.js?dev=1';
 
 export function registerServiceWorker() {
   return navigator.serviceWorker.register(SW_URL, { scope: '/', updateViaCache: 'none' });

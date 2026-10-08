@@ -71,7 +71,7 @@ export const DIFFICULTY: Record<string, { label: string; tone: Tone }> = {
 export const WEEKDAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'] as const;
 
 /** Mensaje para las razones de rechazo de las RPC (DATABASE.md §2.2), en lenguaje simple. */
-export const REASON_MESSAGE: Record<string, string> = {
+const REASON_MESSAGE: Record<string, string> = {
   not_authenticated: 'Tienes que entrar a tu cuenta para hacer esto.',
   forbidden: 'No tienes permiso para hacer esto.',
   own_request: 'No puedes votar por tu propio reporte.',

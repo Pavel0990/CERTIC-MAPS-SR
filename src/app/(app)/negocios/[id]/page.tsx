@@ -12,6 +12,7 @@ import { getViewer } from '@/lib/auth';
 import { WEEKDAYS } from '@/lib/vocabulary';
 import { createClient } from '@/lib/supabase/server';
 import { formatDate } from '@/utils/format';
+import { APP_TIMEZONE } from '@/utils/locale';
 import { DirectionsButton, HeaderActions, InfoRow, RejectedNotice, SecondaryLink, StatusLine, UUID } from '../../_contenido/detail';
 import { PhotoGallery } from '../../_contenido/photo-gallery';
 
@@ -39,7 +40,7 @@ export default async function BusinessPage({ params }: { params: Promise<{ id: s
   const approved = b.status === 'approved';
   const open = isOpenNow(b.hours);
   const byDay = hoursByDay(b.hours);
-  const today = new Date().toLocaleDateString('en-US', { timeZone: 'America/Santo_Domingo', weekday: 'short' });
+  const today = new Date().toLocaleDateString('en-US', { timeZone: APP_TIMEZONE, weekday: 'short' });
   const todayIdx = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(today);
   const pin: MapFeatureCollection = {
     type: 'FeatureCollection',

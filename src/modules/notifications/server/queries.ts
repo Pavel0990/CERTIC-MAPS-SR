@@ -2,7 +2,6 @@ import 'server-only';
 import type { ServerSupabase } from '@/lib/supabase/server';
 import { notificationHref, type NotificationPayload } from '../href';
 
-export { notificationHref };
 
 export interface NotificationView {
   id: string;

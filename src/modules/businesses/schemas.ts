@@ -1,6 +1,5 @@
 import { z } from 'zod';
-
-const idempotencyKey = z.string().regex(/^[A-Za-z0-9_-]{8,64}$/, 'Clave de idempotencia inválida');
+import { idempotencyKey } from '@/lib/schemas';
 
 /** Campo opcional: vacío = sin valor. Los formatos coinciden con los CHECK de businesses (supabase/migrations). */
 const optional = <T extends z.ZodType<string>>(schema: T) => z.union([z.literal(''), schema]).optional().transform((v) => v || undefined);

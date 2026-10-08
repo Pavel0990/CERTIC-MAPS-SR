@@ -1,4 +1,5 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
+import { APP_TIMEZONE } from '@/utils/locale';
 import type { WeeklyReportData, WeeklyKpis } from '../index';
 
 // Colores de la marca (src/app/globals.css). Helvetica estándar: cubre tildes y eñes sin incrustar fuentes.
@@ -83,7 +84,7 @@ export function WeeklyReportDocument({ data, generatedAt }: { data: WeeklyReport
   const munis = data.snapshots.filter((x) => x.municipality_id !== null);
   if (!province) throw new Error('falta el snapshot provincial');
   const period = periodLabel(data.period_start, data.period_end);
-  const stamp = new Intl.DateTimeFormat('es-DO', { dateStyle: 'long', timeStyle: 'short', timeZone: 'America/Santo_Domingo' }).format(generatedAt);
+  const stamp = new Intl.DateTimeFormat('es-DO', { dateStyle: 'long', timeStyle: 'short', timeZone: APP_TIMEZONE }).format(generatedAt);
   const k = province;
 
   return (

@@ -40,7 +40,7 @@ export function pushConfigured() {
 }
 
 /** Lo que recibe el service worker (public/sw.js). Solo título, texto y enlace interno: nada privado más allá de eso. */
-export function pushBody(m: PushMessage) {
+function pushBody(m: PushMessage) {
   return JSON.stringify({
     title: m.title,
     body: m.body ?? '',

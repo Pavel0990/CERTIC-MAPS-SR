@@ -9,7 +9,7 @@ export const MAX_ROUTE_POINTS = 5000;
 
 const position = z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]);
 
-export const lineGeometry = z.object({
+const lineGeometry = z.object({
   type: z.literal('LineString'),
   coordinates: z.array(position).min(2, 'Marca al menos 2 puntos del recorrido.').max(MAX_ROUTE_POINTS, 'El trazado tiene demasiados puntos.'),
 });

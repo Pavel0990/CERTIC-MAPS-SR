@@ -1,6 +1,7 @@
 // API pública del módulo "reports". Otros módulos y las páginas solo importan desde aquí (ADR-008).
 // Informe semanal en PDF: generación, historial y descarga auditada (F6).
 import type { KpiSummary } from '@/types/kpi';
+import { APP_TIMEZONE } from '@/utils/locale';
 
 /** Salida de kpi_summary guardada en weekly_kpi_snapshots (misma forma que el panel). */
 export type WeeklyKpis = KpiSummary;
@@ -36,7 +37,7 @@ export function isoWeek(date: string) {
 
 /** Lunes de las últimas semanas cerradas (hora de RD), la más reciente primero: opciones de "Generar ahora". */
 export function closedWeeks(now: Date, count = 8) {
-  const local = new Date(now.toLocaleString('en-US', { timeZone: 'America/Santo_Domingo' }));
+  const local = new Date(now.toLocaleString('en-US', { timeZone: APP_TIMEZONE }));
   const monday = new Date(Date.UTC(local.getFullYear(), local.getMonth(), local.getDate()));
   monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() || 7) - 1) - 7);
   return Array.from({ length: count }, (_, i) => {

@@ -1,19 +1,20 @@
 'use client';
-import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronLeft, CircleAlert, CloudOff, ImagePlus, LocateFixed, MessageCircleQuestion, Siren, X, type LucideIcon } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Check, CircleAlert, LocateFixed, MessageCircleQuestion, Siren, type LucideIcon } from 'lucide-react';
 import { MapCanvas, type LatLng } from '@/modules/map';
-import { compressImage, uploadPhotos } from '@/modules/media';
+import { uploadPhotos } from '@/modules/media';
 import { catalogIcon } from '@/components/shared/catalog-icon';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select, Textarea } from '@/components/ui/form';
-import { ErrorNote, Notice } from '@/components/ui/primitives';
+import { ErrorNote } from '@/components/ui/primitives';
 import { useToast } from '@/components/ui/toast';
 import { GEO_MESSAGE, useGeolocation } from '@/hooks/use-geolocation';
 import { PROVINCE_VIEW } from '@/config/env';
 import { sendOrQueue, type SendResult } from '@/lib/outbox';
 import { SEVERITY, reasonMessage } from '@/lib/vocabulary';
 import { cn } from '@/utils/cn';
+import { PhotoPicker, usePhotos } from '../_contenido/photo-picker';
+import { DoneScreen, StepTitle, WizardHeader } from '../_contenido/wizard';
 
 export interface ReportCatalogs {
   trafficTypes: { code: string; name: string; icon: string; default_severity: number }[];
@@ -39,13 +40,12 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
   const [severity, setSeverity] = useState(2);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [photos, setPhotos] = useState<{ blob: Blob; url: string }[]>([]);
+  const photos = usePhotos(MAX_PHOTOS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<SendResult | null>(null);
   const [focus, setFocus] = useState<{ center: LatLng; zoom?: number; key: number } | null>(null);
   const [key] = useState(newKey); // misma clave en todos los reintentos de este reporte
-  const fileInput = useRef<HTMLInputElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
 
   // Tipo preseleccionado desde un enlace (p. ej. /reportar?tipo=bache)
@@ -59,13 +59,6 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
 
   // Llevar el foco al título de cada paso (lectores de pantalla y teclado)
   useEffect(() => heading.current?.focus(), [step, result]);
-
-  // Liberar las vistas previas al salir de la pantalla (al quitar una foto se libera en el momento)
-  const photosRef = useRef(photos);
-  useEffect(() => {
-    photosRef.current = photos;
-  }, [photos]);
-  useEffect(() => () => photosRef.current.forEach((p) => URL.revokeObjectURL(p.url)), []);
 
   const traffic = catalogs.trafficTypes;
   const incidents = catalogs.requestCategories.filter((c) => c.kind === 'incident');
@@ -87,22 +80,6 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
     } else if (s.status !== 'idle' && s.status !== 'locating') toast.show(GEO_MESSAGE[s.status], 'error');
   }
 
-  async function addPhotos(files: FileList | null) {
-    if (!files) return;
-    const room = MAX_PHOTOS - photos.length;
-    const next: { blob: Blob; url: string }[] = [];
-    for (const f of Array.from(files).slice(0, room)) {
-      try {
-        const blob = await compressImage(f);
-        next.push({ blob, url: URL.createObjectURL(blob) });
-      } catch {
-        toast.show('Esa imagen no se pudo usar. Prueba con otra foto.', 'error');
-      }
-    }
-    setPhotos((p) => [...p, ...next]);
-    if (fileInput.current) fileInput.current.value = '';
-  }
-
   const locationOk = noPlace ? !!municipalityId : !!point;
   const detailsOk = choice?.flow === 'traffic' || (title.trim().length >= 3 && description.trim().length >= 10);
 
@@ -118,7 +95,7 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
             ...(noPlace ? { municipalityId } : { lat: point!.lat, lng: point!.lng }),
           };
     const r = await sendOrQueue(
-      { id: key, kind: choice.flow, payload, photos: photos.map((p) => p.blob) },
+      { id: key, kind: choice.flow, payload, photos: photos.photos.map((p) => p.blob) },
       (entity, id, blobs) => uploadPhotos(entity, id, blobs),
     );
     setBusy(false);
@@ -135,28 +112,11 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
   return (
     <div className="mx-auto flex max-w-2xl flex-col">
       {/* Progreso: 3 pasos, una decisión por pantalla (§6.2) */}
-      <div className="flex items-center gap-3 px-4 pt-4">
-        {step > 1 ? (
-          <button type="button" onClick={() => setStep((s) => (s - 1) as 1 | 2)} aria-label="Volver al paso anterior" className="flex size-11 items-center justify-center rounded-full bg-surface shadow-[var(--shadow-card)]">
-            <ChevronLeft className="size-5" />
-          </button>
-        ) : (
-          <Link href="/" aria-label="Cancelar y volver al inicio" className="flex size-11 items-center justify-center rounded-full bg-surface shadow-[var(--shadow-card)]">
-            <X className="size-5" />
-          </Link>
-        )}
-        <ol className="flex flex-1 gap-1.5" aria-label={`Paso ${step} de 3`}>
-          {[1, 2, 3].map((n) => (
-            <li key={n} className={cn('h-1.5 flex-1 rounded-full', n <= step ? 'bg-brand' : 'bg-line-strong')} />
-          ))}
-        </ol>
-        <span className="text-sm font-semibold text-muted">{step} de 3</span>
-      </div>
+      <WizardHeader step={step} total={3} onBack={() => setStep((s) => (s - 1) as 1 | 2)} cancelHref="/" cancelLabel="Cancelar y volver al inicio" />
 
       {step === 1 && (
         <section className="px-4 pb-8 pt-5">
-          <h1 ref={heading} tabIndex={-1} className="text-[28px] font-extrabold outline-none">¿Qué pasó?</h1>
-          <p className="mt-1 text-[17px] text-muted">Toca lo que más se parece.</p>
+          <StepTitle headingRef={heading} title="¿Qué pasó?" hint="Toca lo que más se parece." />
           <Group title="En la calle o la carretera" hint="Sale en el mapa para avisar a todos y se quita sola cuando vence.">
             {traffic.map((t) => (
               <Tile key={t.code} icon={catalogIcon(t.icon, Siren)} label={t.name} tone="danger" onClick={() => pick({ flow: 'traffic', code: t.code, name: t.name, severity: t.default_severity })} />
@@ -177,8 +137,7 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
 
       {step === 2 && choice && (
         <section className="flex flex-col px-4 pb-8 pt-5">
-          <h1 ref={heading} tabIndex={-1} className="text-[28px] font-extrabold outline-none">¿Dónde es?</h1>
-          <p className="mt-1 text-[17px] text-muted">Mueve el mapa hasta que el pin rojo quede sobre el lugar.</p>
+          <StepTitle headingRef={heading} title="¿Dónde es?" hint="Mueve el mapa hasta que el pin rojo quede sobre el lugar." />
           {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
           {isInquiry && (
             <label className="mt-4 flex items-center gap-3 rounded-[14px] bg-surface p-4 shadow-[var(--shadow-card)]">
@@ -226,10 +185,7 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
 
       {step === 3 && choice && (
         <section className="flex flex-col gap-5 px-4 pb-8 pt-5">
-          <div>
-            <h1 ref={heading} tabIndex={-1} className="text-[28px] font-extrabold outline-none">Cuéntanos más</h1>
-            <p className="mt-1 text-[17px] text-muted">{choice.name}{choice.flow === 'traffic' ? ' · alerta vial' : ''}</p>
-          </div>
+          <StepTitle headingRef={heading} title="Cuéntanos más" hint={`${choice.name}${choice.flow === 'traffic' ? ' · alerta vial' : ''}`} />
           {error && <ErrorNote>{error}</ErrorNote>}
 
           {choice.flow === 'traffic' ? (
@@ -265,28 +221,7 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
             {(a) => <Textarea {...a} value={description} maxLength={choice.flow === 'traffic' ? 500 : 2000} onChange={(e) => setDescription(e.target.value)} />}
           </Field>
 
-          <div>
-            <p className="text-[15px] font-semibold">Fotos <span className="font-normal text-subtle">(opcional, hasta {MAX_PHOTOS})</span></p>
-            <p className="text-sm text-muted">Ayudan a entender el problema. Quitamos la ubicación y los datos del teléfono de cada foto.</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {photos.map((p, i) => (
-                <div key={p.url} className="relative size-24 overflow-hidden rounded-[14px] bg-canvas">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- vista previa local (blob:) */}
-                  <img src={p.url} alt={`Foto ${i + 1}`} className="size-full object-cover" />
-                  <button type="button" onClick={() => { URL.revokeObjectURL(p.url); setPhotos((ps) => ps.filter((x) => x !== p)); }} aria-label={`Quitar foto ${i + 1}`} className="absolute right-1 top-1 flex size-8 items-center justify-center rounded-full bg-ink/70 text-white">
-                    <X className="size-4" />
-                  </button>
-                </div>
-              ))}
-              {photos.length < MAX_PHOTOS && (
-                <label className="flex size-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-[14px] border-2 border-dashed border-line-strong bg-surface text-sm font-semibold text-muted hover:border-brand hover:text-brand">
-                  <ImagePlus className="size-6" aria-hidden />
-                  Agregar
-                  <input ref={fileInput} type="file" accept="image/*" capture="environment" multiple className="sr-only" onChange={(e) => void addPhotos(e.target.files)} />
-                </label>
-              )}
-            </div>
-          </div>
+          <PhotoPicker state={photos} hint="Ayudan a entender el problema." capture="environment" />
 
           <Button size="lg" onClick={submit} loading={busy} disabled={!detailsOk}>
             Enviar reporte
@@ -324,34 +259,24 @@ function Done({ result, flow, headingRef }: { result: SendResult; flow: 'traffic
   const queued = result.outcome === 'queued' || result.outcome === 'needs_login';
   const sent = result.outcome === 'sent' ? result : null;
   const published = sent?.response.report_status === 'active';
-  const message = useMemo(() => {
-    if (result.outcome === 'queued') return 'Lo guardamos en tu teléfono. Se enviará solo cuando vuelva la señal.';
-    if (result.outcome === 'needs_login') return 'Tu sesión venció. Entra de nuevo y lo enviaremos.';
-    if (flow === 'traffic') return published ? 'Ya aparece en el mapa para avisar a todos.' : 'Un moderador lo confirmará pronto y aparecerá en el mapa.';
-    return 'El municipio lo recibió. Te avisaremos cada vez que cambie su estado.';
-  }, [result, flow, published]);
+  const message =
+    result.outcome === 'queued' ? 'Lo guardamos en tu teléfono. Se enviará solo cuando vuelva la señal.'
+    : result.outcome === 'needs_login' ? 'Tu sesión venció. Entra de nuevo y lo enviaremos.'
+    : flow === 'traffic' ? (published ? 'Ya aparece en el mapa para avisar a todos.' : 'Un moderador lo confirmará pronto y aparecerá en el mapa.')
+    : 'El municipio lo recibió. Te avisaremos cada vez que cambie su estado.';
+  const primary =
+    result.outcome === 'needs_login' ? { href: '/entrar?next=/actividad', label: 'Entrar' }
+    : sent && flow === 'request' ? { href: `/consultas/${sent.entityId}`, label: 'Ver cómo va' }
+    : { href: '/actividad', label: 'Ver mis reportes' };
   return (
-    <section className="mx-auto flex max-w-md flex-col items-center px-6 py-16 text-center">
-      <div className={cn('flex size-20 items-center justify-center rounded-full', queued ? 'bg-warn-soft text-warn' : 'bg-ok-soft text-ok')}>
-        {queued ? <CloudOff className="size-10" aria-hidden /> : <Check className="size-10" aria-hidden />}
-      </div>
-      <h1 ref={headingRef} tabIndex={-1} className="mt-6 text-[28px] font-extrabold outline-none">
-        {queued ? 'Reporte guardado' : '¡Gracias! Reporte enviado'}
-      </h1>
-      <p className="mt-2 text-[17px] text-muted">{message}</p>
-      {sent && sent.photoErrors.length > 0 && (
-        <div className="mt-4 w-full"><Notice tone="warn">Algunas fotos no se pudieron subir: {reasonMessage(sent.photoErrors[0])}</Notice></div>
-      )}
-      <div className="mt-8 flex w-full flex-col gap-2">
-        {result.outcome === 'needs_login' ? (
-          <Link href="/entrar?next=/actividad" className="inline-flex h-13 min-h-[52px] items-center justify-center rounded-[14px] bg-ink font-semibold text-white">Entrar</Link>
-        ) : sent && flow === 'request' ? (
-          <Link href={`/consultas/${sent.entityId}`} className="inline-flex h-13 min-h-[52px] items-center justify-center rounded-[14px] bg-ink font-semibold text-white">Ver cómo va</Link>
-        ) : (
-          <Link href="/actividad" className="inline-flex h-13 min-h-[52px] items-center justify-center rounded-[14px] bg-ink font-semibold text-white">Ver mis reportes</Link>
-        )}
-        <Link href="/" className="inline-flex h-12 items-center justify-center rounded-[14px] font-semibold text-ink hover:bg-surface">Volver al mapa</Link>
-      </div>
-    </section>
+    <DoneScreen
+      headingRef={headingRef}
+      queued={queued}
+      title={queued ? 'Reporte guardado' : '¡Gracias! Reporte enviado'}
+      message={message}
+      photoError={sent && sent.photoErrors.length > 0 ? reasonMessage(sent.photoErrors[0]) : null}
+      primary={primary}
+      secondary={{ href: '/', label: 'Volver al mapa' }}
+    />
   );
 }

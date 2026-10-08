@@ -1,12 +1,12 @@
 'use client';
 import Link from 'next/link';
 import type { ReactNode, RefObject } from 'react';
-import { Check, ChevronLeft, X } from 'lucide-react';
+import { Check, ChevronLeft, CloudOff, X } from 'lucide-react';
 import { Notice } from '@/components/ui/primitives';
 import { cn } from '@/utils/cn';
 
 /** Barra de progreso de un asistente por pasos (mismo diseño que /reportar). */
-export function WizardHeader({ step, total, onBack, cancelHref = '/perfil' }: { step: number; total: number; onBack: () => void; cancelHref?: string }) {
+export function WizardHeader({ step, total, onBack, cancelHref = '/perfil', cancelLabel = 'Cancelar' }: { step: number; total: number; onBack: () => void; cancelHref?: string; cancelLabel?: string }) {
   return (
     <div className="flex items-center gap-3 px-4 pt-4">
       {step > 1 ? (
@@ -14,7 +14,7 @@ export function WizardHeader({ step, total, onBack, cancelHref = '/perfil' }: { 
           <ChevronLeft className="size-5" />
         </button>
       ) : (
-        <Link href={cancelHref} aria-label="Cancelar" className="flex size-11 items-center justify-center rounded-full bg-surface shadow-[var(--shadow-card)]">
+        <Link href={cancelHref} aria-label={cancelLabel} className="flex size-11 items-center justify-center rounded-full bg-surface shadow-[var(--shadow-card)]">
           <X className="size-5" />
         </Link>
       )}
@@ -38,9 +38,9 @@ export function StepTitle({ headingRef, title, hint }: { headingRef: RefObject<H
   );
 }
 
-/** Pantalla final de un envío. */
+/** Pantalla final de un envío. `queued`: quedó guardado en el teléfono y se enviará al volver la señal. */
 export function DoneScreen({
-  headingRef, title, message, photoError, primary, secondary,
+  headingRef, title, message, photoError, primary, secondary, queued = false,
 }: {
   headingRef: RefObject<HTMLHeadingElement | null>;
   title: string;
@@ -48,11 +48,12 @@ export function DoneScreen({
   photoError?: string | null;
   primary: { href: string; label: string };
   secondary?: { href: string; label: string };
+  queued?: boolean;
 }) {
   return (
     <section className="mx-auto flex max-w-md flex-col items-center px-6 py-16 text-center">
-      <div className="flex size-20 items-center justify-center rounded-full bg-ok-soft text-ok">
-        <Check className="size-10" aria-hidden />
+      <div className={cn('flex size-20 items-center justify-center rounded-full', queued ? 'bg-warn-soft text-warn' : 'bg-ok-soft text-ok')}>
+        {queued ? <CloudOff className="size-10" aria-hidden /> : <Check className="size-10" aria-hidden />}
       </div>
       <h1 ref={headingRef} tabIndex={-1} className="mt-6 text-[28px] font-extrabold outline-none">{title}</h1>
       <div className="mt-2 text-[17px] text-muted">{message}</div>

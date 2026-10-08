@@ -1290,11 +1290,13 @@ sr-conecta/
 ├─ scripts/                     cuentas de prueba, copia de seguridad, copia del worker del mapa
 ├─ tests/boundaries/  tests/e2e/
 ├─ public/                      sw.js, íconos, vendor/ (worker de MapLibre)
-├─ .github/workflows/           ci.yml · deploy.yml (apagado) · backup.yml (apagado)
+├─ .github/workflows/           ci.yml · backup.yml (diario, cifrado) · uptime.yml (cada hora) · deploy.yml (apagado)
 ├─ vercel.json                  cron diario del informe
 └─ src/
    ├─ app/
-   │  ├─ (app)/                 páginas con su layout (§6.1); _components/ y _contenido/ son piezas de página
+   │  ├─ (app)/                 páginas con su layout (§6.1)
+   │  │  ├─ _components/        piezas de la portada y el mapa (explorer/: datos, búsqueda, capas, lista, ficha)
+   │  │  └─ _contenido/         piezas compartidas entre páginas: asistentes, fotos, fichas, listados
    │  ├─ api/v1/                Route Handlers (§12.2)
    │  ├─ auth/callback/  offline/  manifest.ts  layout.tsx
    ├─ modules/                  admin · businesses · citizen-reports · jobs · map · media
@@ -1302,8 +1304,10 @@ sr-conecta/
    │                            cada uno: index.ts (seguro para el cliente) + server.ts (solo servidor)
    │                            + server/ (queries, commands) + schemas.ts
    ├─ components/               ui/ (primitivas) · shared/ (navegación, íconos de catálogo, service worker)
-   ├─ lib/                      supabase/ (server · client · anon · admin), auth, catálogos, outbox, vocabulario
-   ├─ hooks/  config/  types/  utils/
+   ├─ lib/                      supabase/ (server · client · anon · admin), auth, catálogos, outbox, vocabulario,
+   │                            schemas (validaciones comunes a varios módulos)
+   ├─ hooks/  config/  types/
+   ├─ utils/                    formato, cn, locale (zona horaria única de la app)
    └─ proxy.ts                  sesión + CSP con nonce
 ```
 
@@ -1315,6 +1319,9 @@ sr-conecta/
 - Las páginas leen y escriben **solo a través de los módulos** (o de `lib/auth` para el propio perfil); ninguna página consulta tablas directamente.
 - `admin` es el backend del panel: reúne lo que el personal necesita de varios dominios, pero cada cambio de estado lo valida la RPC del dominio en la base.
 - `server/queries.ts` y `server/commands.ts` son la frontera con la base; no hay capa "repositorio" adicional.
+- **Dónde va cada cosa:** los módulos guardan datos, reglas y validaciones (sin componentes de React, salvo el mapa y los *hooks* de cliente); las pantallas viven en `src/app`. Una pieza visual que usan varias páginas va en `(app)/_contenido/`; si no depende de ningún módulo, en `components/`.
+- **Una sola fuente para lo repetido:** la zona horaria (`utils/locale.ts`), la clave de idempotencia (`lib/schemas.ts`) y los textos para personas (`lib/vocabulary.ts`). No se escriben a mano en otro lugar.
+- **Excepción documentada:** `POST /api/v1/engagement` llama a `track_engagement` directamente: es una métrica de negocios, lugares y rutas a la vez, sin módulo dueño, y la RPC hace toda la validación.
 
 ---
 

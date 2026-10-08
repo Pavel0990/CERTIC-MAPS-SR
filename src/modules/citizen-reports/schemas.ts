@@ -1,6 +1,5 @@
 import { z } from 'zod';
-
-const idempotencyKey = z.string().regex(/^[A-Za-z0-9_-]{8,64}$/, 'Clave de idempotencia inválida');
+import { idempotencyKey } from '@/lib/schemas';
 
 /** Incidencia o consulta municipal (F5). La RPC exige punto para `incident` (§9.2). */
 export const citizenRequestInput = z

@@ -1,5 +1,5 @@
 // Horario de un negocio: "abierto ahora" y texto legible. La hora es la de República Dominicana.
-const TZ = 'America/Santo_Domingo';
+import { APP_TIMEZONE as TZ } from '@/utils/locale';
 
 export interface HourRange { weekday: number; opens: string; closes: string }
 

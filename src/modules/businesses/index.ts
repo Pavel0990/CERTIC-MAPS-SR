@@ -4,4 +4,4 @@ export {
   businessInput, businessUpdateInput, hoursInput, promotionInput,
   type BusinessInput, type BusinessUpdateInput, type HoursInput, type PromotionInput,
 } from './schemas';
-export { formatTime, hoursByDay, isOpenNow, localToday, promotionStartMin, type HourRange } from './hours';
+export { formatTime, hoursByDay, isOpenNow, promotionStartMin, type HourRange } from './hours';

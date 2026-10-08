@@ -8,12 +8,13 @@ import { getCatalogs, getLabelMaps } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
 import { cn } from '@/utils/cn';
 import { formatDate, formatNumber } from '@/utils/format';
+import { APP_TIMEZONE } from '@/utils/locale';
 
 export const metadata: Metadata = { title: 'Panel municipal' };
 
 /** Fechas locales de República Dominicana (los KPIs se calculan en America/Santo_Domingo). */
 function lastDays(n: number) {
-  const fmt = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santo_Domingo' }).format(d);
+  const fmt = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: APP_TIMEZONE }).format(d);
   const to = new Date();
   const from = new Date(to.getTime() - (n - 1) * 86_400_000);
   return { from: fmt(from), to: fmt(to) };

@@ -16,8 +16,6 @@ export const publicEnv = publicSchema.parse({
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || undefined,
 });
 
-export const APP_TIMEZONE = 'America/Santo_Domingo';
-
 /** Centro y encuadre por defecto del mapa: provincia Santiago Rodríguez. */
 export const PROVINCE_VIEW = {
   center: { lat: 19.43, lng: -71.3 },

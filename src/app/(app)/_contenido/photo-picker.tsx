@@ -43,7 +43,8 @@ export function usePhotos(max: number) {
   return { photos, add, remove, upload, max };
 }
 
-export function PhotoPicker({ state, hint }: { state: ReturnType<typeof usePhotos>; hint: string }) {
+/** `capture` abre la cámara directamente en el teléfono (útil para reportar algo que se tiene delante). */
+export function PhotoPicker({ state, hint, capture }: { state: ReturnType<typeof usePhotos>; hint: string; capture?: 'environment' }) {
   const input = useRef<HTMLInputElement>(null);
   return (
     <div>
@@ -67,6 +68,7 @@ export function PhotoPicker({ state, hint }: { state: ReturnType<typeof usePhoto
               ref={input}
               type="file"
               accept="image/*"
+              capture={capture}
               multiple
               className="sr-only"
               onChange={async (e) => {

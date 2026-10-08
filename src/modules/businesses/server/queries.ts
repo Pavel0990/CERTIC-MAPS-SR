@@ -2,6 +2,7 @@ import 'server-only';
 import type { ServerSupabase } from '@/lib/supabase/server';
 import { municipalityNames } from '@/lib/catalogs';
 import { isOpenNow, localToday, type HourRange } from '../hours';
+import { normalize } from '@/utils/format';
 
 export interface Promotion { id: string; title: string; description: string | null; valid_from: string; valid_until: string; status: string }
 
@@ -165,9 +166,8 @@ export async function listBusinesses(
   }
   const { data: rows } = await query;
   // Búsqueda sin tildes ni mayúsculas ("moncion" encuentra "Monción"): quien escribe con dificultad no pone tildes
-  const fold = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-  const term = filters.q ? fold(filters.q.trim()).slice(0, 60) : '';
-  const list = (rows ?? []).filter((b) => !term || fold(b.name).includes(term)).slice(0, 200);
+  const term = filters.q ? normalize(filters.q.trim()).slice(0, 60) : '';
+  const list = (rows ?? []).filter((b) => !term || normalize(b.name).includes(term)).slice(0, 200);
   const { data: hours } = list.length
     ? await supabase.from('business_hours').select('business_id, weekday, opens, closes').in('business_id', list.map((b) => b.id))
     : { data: [] };
