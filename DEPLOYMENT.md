@@ -205,6 +205,8 @@ El plan gratuito de Supabase **no tiene restauración a un punto en el tiempo**.
 node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 ```
 
+`SUPABASE_DB_URL` es la URL **completa** (`postgresql://postgres.<ref>:<contraseña>@aws-0-us-east-1.pooler.supabase.com:5432/postgres`), no solo la contraseña. Si la contraseña tiene `@ # / : ?` u otros símbolos, hay que codificarlos (`@` → `%40`, `#` → `%23`…) o cambiarla por una solo de letras y números. Se guarda con `gh secret set SUPABASE_DB_URL`, que pide el valor sin mostrarlo.
+
 **Restaurar** (en un proyecto nuevo o después de un desastre):
 
 ```bash

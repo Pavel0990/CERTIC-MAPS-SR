@@ -29,6 +29,27 @@ const tidy = (name) => {
   if (n !== n.toUpperCase() || !/[A-ZÁÉÍÓÚÑ]{4}/.test(n)) return n;
   return n.toLowerCase().split(' ').map((w, i) => (i > 0 && SMALL.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1))).join(' ');
 };
+// Ortografía de nombres de OSM (tildes, mayúsculas, comillas). Solo cambia lo que se muestra:
+// el slug se calcula con el nombre original, así una nueva importación actualiza la misma fila.
+const NAME_FIXES = {
+  'Monumento Moncion': 'Monumento Monción',
+  'Contraembalse Moncion': 'Contraembalse Monción',
+  'Farmacia Moncion': 'Farmacia Monción',
+  'El Mediterraneo': 'El Mediterráneo',
+  'Asociacion la Nacional': 'Asociación La Nacional',
+  'Centro Medico Gran Poder de Dios': 'Centro Médico Gran Poder de Dios',
+  'El Pollo Comida Rapida': 'El Pollo Comida Rápida',
+  'Heladeia Cafeteria Uvis': 'Heladería Cafetería Uvis',
+  'Heladeria Bon': 'Heladería Bon',
+  'Comedor peralta': 'Comedor Peralta',
+  'Banco AGRICOLA': 'Banco Agrícola',
+  'Bodega Rodrigue ¨Tulo¨': 'Bodega Rodrigue "Tulo"',
+  'Ferreteria Las Heneas': 'Ferretería Las Heneas',
+  'Repuestos Ivan': 'Repuestos Iván',
+  'Repuesto Estevez': 'Repuesto Estévez',
+  chao: 'Chao',
+};
+const display = (name) => NAME_FIXES[name] ?? name;
 const phone = (t) => {
   const raw = (t.phone ?? t['contact:phone'] ?? '').split(/[;,]/)[0].replace(/[^\d+]/g, '');
   const d = raw.replace(/^\+?1/, '');
@@ -62,8 +83,9 @@ for (const e of pois) {
   const cat = BUSINESS(t);
   if (!cat || !t.name || GENERIC.test(t.name.trim())) continue;
   const p = point(e);
-  const name = tidy(t.name);
-  const key = slugify(name);
+  const raw = tidy(t.name);
+  const key = slugify(raw);
+  const name = display(raw);
   // duplicado: mismo lugar (≤ 40 m) con nombre igual o casi igual (p. ej. "Club" / "Clud")
   if (businesses.some((b) => meters(b.p, p) <= 40 && (b.key === key || b.key.slice(4) === key.slice(4)))) continue;
   businesses.push({ key, p, name, cat, osm: `${e.type[0]}${e.id}`, phone: phone(t), website: website(t), opening: t.opening_hours ?? null });
@@ -85,9 +107,9 @@ for (const e of [...pois, ...geo]) {
   const kind = PLACE(t);
   if (!kind || !t.name || GENERIC.test(t.name.trim())) continue;
   const p = point(e);
-  const name = tidy(t.name);
-  if (places.some((x) => x.key === slugify(name))) continue; // la presa aparece como presa y como embalse
-  places.push({ key: slugify(name), p, name, kind: kind[0], label: kind[1], osm: `${e.type[0]}${e.id}`, opening: t.opening_hours ?? null });
+  const raw = tidy(t.name);
+  if (places.some((x) => x.key === slugify(raw))) continue; // la presa aparece como presa y como embalse
+  places.push({ key: slugify(raw), p, name: display(raw), kind: kind[0], label: kind[1], osm: `${e.type[0]}${e.id}`, opening: t.opening_hours ?? null });
 }
 
 // --- SQL ------------------------------------------------------------------------------------
