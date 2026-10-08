@@ -61,3 +61,10 @@ export async function requireStaff(next = '/admin') {
   if (!viewer.isStaff) redirect('/sin-permiso');
   return viewer;
 }
+
+/** Nombre y municipio de residencia del propio perfil (grant por columna: solo esas columnas). */
+export async function updateOwnProfile(userId: string, data: { display_name: string; home_municipality_id: string | null }) {
+  const supabase = await createClient();
+  const { error } = await supabase.from('profiles').update(data).eq('id', userId);
+  return !error;
+}

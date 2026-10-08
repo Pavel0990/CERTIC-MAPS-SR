@@ -3,7 +3,8 @@ import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
-import { registerPushDevice, TOPICS, unregisterPushDevice } from '@/modules/notifications/server';
+import { registerPushDevice, savePreferences as storePreferences, TOPICS, unregisterPushDevice } from '@/modules/notifications/server';
+import { updateOwnProfile } from '@/lib/auth';
 
 export type FormState = { ok?: boolean; error?: string };
 
@@ -19,8 +20,7 @@ export async function saveProfile(_prev: FormState, form: FormData): Promise<For
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
   if (!claims?.claims.sub) return { error: 'Tu sesión venció. Entra de nuevo.' };
-  const { error } = await supabase.from('profiles').update(parsed.data).eq('id', claims.claims.sub);
-  if (error) return { error: 'No pudimos guardar. Inténtalo otra vez.' };
+  if (!(await updateOwnProfile(claims.claims.sub, parsed.data))) return { error: 'No pudimos guardar. Inténtalo otra vez.' };
   revalidatePath('/perfil');
   return { ok: true };
 }
@@ -35,10 +35,7 @@ export async function savePreferences(_prev: FormState, form: FormData): Promise
   const { data: claims } = await supabase.auth.getClaims();
   const uid = claims?.claims.sub;
   if (!uid) return { error: 'Tu sesión venció. Entra de nuevo.' };
-  const { error } = await supabase
-    .from('notification_preferences')
-    .upsert({ user_id: uid, topics, municipalities }, { onConflict: 'user_id' }); // el canal email llega en Fase 2 (ADR-013)
-  if (error) return { error: 'No pudimos guardar tus avisos. Inténtalo otra vez.' };
+  if (!(await storePreferences(supabase, uid, topics, municipalities))) return { error: 'No pudimos guardar tus avisos. Inténtalo otra vez.' };
   revalidatePath('/perfil');
   return { ok: true };
 }

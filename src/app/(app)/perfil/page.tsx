@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Bell, ChevronRight, LayoutDashboard, MapPinPlus, Route, Store } from 'lucide-react';
-import { getPreferences, TOPICS } from '@/modules/notifications/server';
+import { countUnread, getPreferences, TOPICS } from '@/modules/notifications/server';
 import { PageShell } from '@/components/shared/page';
 import { Card, Eyebrow } from '@/components/ui/primitives';
 import { requireViewer } from '@/lib/auth';
@@ -20,7 +20,7 @@ export default async function ProfilePage() {
   const [catalogs, prefs, unread] = await Promise.all([
     getCatalogs(),
     getPreferences(supabase, viewer.id),
-    supabase.from('notifications').select('id', { count: 'exact', head: true }).is('read_at', null),
+    countUnread(supabase),
   ]);
   const roleLabel = viewer.isProvincialAdmin ? 'Administración provincial' : viewer.isAdmin ? 'Administración municipal' : viewer.isStaff ? 'Moderación' : viewer.isEntrepreneur ? 'Emprendedor' : 'Ciudadano';
 
@@ -50,7 +50,7 @@ export default async function ProfilePage() {
         </div>
         <div className="flex flex-col gap-4">
           <Card className="overflow-hidden">
-            <MenuLink href="/notificaciones" icon={<Bell className="size-5" />} label="Notificaciones" badge={unread.count ?? 0} />
+            <MenuLink href="/notificaciones" icon={<Bell className="size-5" />} label="Notificaciones" badge={unread} />
             {viewer.isStaff && <MenuLink href="/admin" icon={<LayoutDashboard className="size-5" />} label="Panel municipal" />}
             {viewer.isEntrepreneur && <MenuLink href="/negocio" icon={<Store className="size-5" />} label="Mi negocio" />}
             <MenuLink href="/negocios/registrar" icon={<Store className="size-5" />} label="Registrar un negocio" />

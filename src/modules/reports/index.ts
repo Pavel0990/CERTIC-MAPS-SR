@@ -1,22 +1,9 @@
 // API pública del módulo "reports". Otros módulos y las páginas solo importan desde aquí (ADR-008).
 // Informe semanal en PDF: generación, historial y descarga auditada (F6).
+import type { KpiSummary } from '@/types/kpi';
 
 /** Salida de kpi_summary guardada en weekly_kpi_snapshots (misma forma que el panel). */
-export interface WeeklyKpis {
-  traffic: { received: number; published: number; rejected: number; out_of_area: number; by_type: Record<string, number> };
-  requests: {
-    received: number;
-    resolved: number;
-    rejected: number;
-    open_now: number;
-    avg_resolution_hours: number | null;
-    top_supported: { id: string; title: string; support_count: number }[];
-  };
-  businesses: { approved_total: number; submitted: number; pending_now: number };
-  tourism: { places_published: number; routes_published: number; proposals_pending: number };
-  users: { new: number };
-  engagement: { views: number };
-}
+export type WeeklyKpis = KpiSummary;
 
 /** Lo que devuelve worker_report_run: todo lo que necesita el PDF de una ejecución. */
 export interface WeeklyReportData {

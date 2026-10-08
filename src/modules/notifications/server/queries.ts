@@ -44,3 +44,15 @@ export async function getPreferences(supabase: ServerSupabase, userId: string) {
   // Mismos valores por defecto que la tabla (supabase/migrations/…070_notifications_system.sql)
   return data ?? { push_enabled: false, email_enabled: true, topics: ['request_status', 'traffic_status', 'content_status', 'traffic_nearby'], municipalities: [] as string[] };
 }
+
+/** Cuántas notificaciones sin leer tiene quien llama (RLS: solo las propias). */
+export async function countUnread(supabase: ServerSupabase) {
+  const { count } = await supabase.from('notifications').select('id', { count: 'exact', head: true }).is('read_at', null);
+  return count ?? 0;
+}
+
+/** Temas y municipios de interés (§9.5). El canal email llega en Fase 2 (ADR-013). */
+export async function savePreferences(supabase: ServerSupabase, userId: string, topics: string[], municipalities: string[]) {
+  const { error } = await supabase.from('notification_preferences').upsert({ user_id: userId, topics, municipalities }, { onConflict: 'user_id' });
+  return !error;
+}

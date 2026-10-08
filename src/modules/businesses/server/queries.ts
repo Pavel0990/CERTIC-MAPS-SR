@@ -1,5 +1,6 @@
 import 'server-only';
 import type { ServerSupabase } from '@/lib/supabase/server';
+import { municipalityNames } from '@/lib/catalogs';
 import { isOpenNow, localToday, type HourRange } from '../hours';
 
 export interface Promotion { id: string; title: string; description: string | null; valid_from: string; valid_until: string; status: string }
@@ -41,9 +42,9 @@ export async function getBusinessDetail(supabase: ServerSupabase, id: string): P
   const g = b.geom as { coordinates?: [number, number] } | null;
   if (!g?.coordinates) return null;
   const today = localToday();
-  const [{ data: cat }, { data: muni }, { data: hours }, { data: promos }] = await Promise.all([
+  const [{ data: cat }, muniNames, { data: hours }, { data: promos }] = await Promise.all([
     supabase.from('business_categories').select('slug, name').eq('id', b.category_id).maybeSingle(),
-    supabase.from('municipalities').select('name').eq('id', b.municipality_id).maybeSingle(),
+    municipalityNames(),
     supabase.from('business_hours').select('weekday, opens, closes').eq('business_id', id),
     supabase
       .from('promotions')
@@ -70,7 +71,7 @@ export async function getBusinessDetail(supabase: ServerSupabase, id: string): P
     version: b.version,
     updated_at: b.updated_at,
     municipality_id: b.municipality_id,
-    municipality: muni?.name ?? null,
+    municipality: muniNames.get(b.municipality_id) ?? null,
     point: { lng: g.coordinates[0], lat: g.coordinates[1] },
     hours: (hours ?? []).map((h) => ({ weekday: h.weekday, opens: hhmm(h.opens), closes: hhmm(h.closes) })),
     promotions: promos ?? [],
@@ -144,9 +145,9 @@ export async function listBusinesses(
   supabase: ServerSupabase,
   filters: { municipalityId?: string; categorySlug?: string; q?: string } = {},
 ): Promise<BusinessListItem[]> {
-  const [{ data: cats }, { data: munis }] = await Promise.all([
+  const [{ data: cats }, muniName] = await Promise.all([
     supabase.from('business_categories').select('id, slug, name, icon'),
-    supabase.from('municipalities').select('id, name'),
+    municipalityNames(),
   ]);
   const catById = new Map((cats ?? []).map((c) => [c.id, c]));
   let query = supabase
@@ -172,7 +173,6 @@ export async function listBusinesses(
     : { data: [] };
   const hoursBy = new Map<string, HourRange[]>();
   for (const h of hours ?? []) hoursBy.set(h.business_id, [...(hoursBy.get(h.business_id) ?? []), { weekday: h.weekday, opens: hhmm(h.opens), closes: hhmm(h.closes) }]);
-  const muniName = new Map((munis ?? []).map((m) => [m.id, m.name]));
   return list.map((b) => {
     const c = catById.get(b.category_id);
     const h = hoursBy.get(b.id);

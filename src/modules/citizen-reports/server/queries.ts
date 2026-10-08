@@ -1,5 +1,6 @@
 import 'server-only';
 import type { ServerSupabase } from '@/lib/supabase/server';
+import { municipalityNames } from '@/lib/catalogs';
 
 export interface MyActivity {
   requests: { id: string; kind: string; category: string; title: string; status: string; support_count: number; rejection_reason: string | null; resolution_note: string | null; created_at: string }[];
@@ -41,14 +42,14 @@ export async function getRequestDetail(supabase: ServerSupabase, id: string): Pr
     .eq('id', id)
     .maybeSingle();
   if (!r) return null;
-  const [{ data: history }, { data: muni }] = await Promise.all([
+  const [{ data: history }, muniNames] = await Promise.all([
     supabase.from('request_status_history').select('id, from_status, to_status, note, created_at').eq('request_id', id).order('created_at'),
-    supabase.from('municipalities').select('name').eq('id', r.municipality_id).maybeSingle(),
+    municipalityNames(),
   ]);
   const g = r.geom as { coordinates?: [number, number] } | null;
   return {
     ...r,
-    municipality: muni?.name ?? null,
+    municipality: muniNames.get(r.municipality_id) ?? null,
     point: g?.coordinates ? { lng: g.coordinates[0], lat: g.coordinates[1] } : null,
     history: history ?? [],
   } as RequestDetail;

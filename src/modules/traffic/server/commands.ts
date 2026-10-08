@@ -28,3 +28,13 @@ export async function escalateTrafficReport(supabase: ServerSupabase, id: string
   if (error) throw new Error(`escalate_traffic_report: ${error.message}`);
   return data as unknown as RpcResult;
 }
+
+/** Alertas de tránsito vigentes en el mapa público (para el aviso de la portada). */
+export async function countActiveAlerts(supabase: ServerSupabase) {
+  const { count } = await supabase
+    .from('traffic_reports')
+    .select('id', { count: 'exact', head: true })
+    .in('status', ['active', 'verified'])
+    .gt('expires_at', new Date().toISOString());
+  return count ?? 0;
+}

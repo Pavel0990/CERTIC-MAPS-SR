@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, ThumbsUp } from 'lucide-react';
-import { getKpis, scopeMunicipalities, type Kpis } from '@/modules/admin/server';
+import { getKpis, getPanelCounts, scopeMunicipalities, type Kpis } from '@/modules/admin/server';
 import { Card, Eyebrow, Notice } from '@/components/ui/primitives';
 import { requireStaff } from '@/lib/auth';
 import { getCatalogs, getLabelMaps } from '@/lib/catalogs';
@@ -33,16 +33,13 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 
   if (!viewer.isAdmin) {
     // Moderación: sin KPIs (solo administración, §9.6); se muestra el trabajo pendiente
-    const [t, r] = await Promise.all([
-      supabase.from('traffic_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-      supabase.from('citizen_requests').select('id', { count: 'exact', head: true }).in('status', ['pending', 'under_review']),
-    ]);
+    const c = await getPanelCounts(supabase);
     return (
       <>
         <Header title="Tu trabajo hoy" subtitle={scope.map((m) => m.name).join(' · ')} />
         <div className="grid gap-4 sm:grid-cols-2">
-          <BigLink href="/admin/bandeja" label="Alertas de tránsito por confirmar" value={t.count ?? 0} tone="danger" />
-          <BigLink href="/admin/bandeja?ver=consultas" label="Reportes de vecinos por revisar" value={r.count ?? 0} tone="brand" />
+          <BigLink href="/admin/bandeja" label="Alertas de tránsito por confirmar" value={c.trafficPending} tone="danger" />
+          <BigLink href="/admin/bandeja?ver=consultas" label="Reportes de vecinos por revisar" value={c.requestsPending + c.requestsInReview} tone="brand" />
         </div>
       </>
     );

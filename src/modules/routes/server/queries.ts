@@ -1,5 +1,6 @@
 import 'server-only';
 import type { ServerSupabase } from '@/lib/supabase/server';
+import { municipalityNames } from '@/lib/catalogs';
 
 type Position = [number, number];
 
@@ -38,8 +39,7 @@ export async function getRouteDetail(supabase: ServerSupabase, id: string): Prom
   if (!lines.length || !start) return null;
 
   const ids = r.municipality_ids?.length ? r.municipality_ids : [r.municipality_id];
-  const { data: munis } = await supabase.from('municipalities').select('id, name').in('id', ids);
-  const names = new Map((munis ?? []).map((m) => [m.id, m.name]));
+  const names = await municipalityNames();
 
   const all = lines.flat();
   return {
@@ -74,8 +74,7 @@ export interface RouteListItem { id: string; name: string; kind: string; difficu
 export async function listRoutes(supabase: ServerSupabase, filters: { municipalityId?: string } = {}): Promise<RouteListItem[]> {
   let query = supabase.from('eco_routes').select('id, name, kind, difficulty, duration_min, distance_km, municipality_id').eq('status', 'published').is('deleted_at', null).order('distance_km').limit(200);
   if (filters.municipalityId) query = query.contains('municipality_ids', [filters.municipalityId]);
-  const [{ data: rows }, { data: munis }] = await Promise.all([query, supabase.from('municipalities').select('id, name')]);
-  const muniName = new Map((munis ?? []).map((m) => [m.id, m.name]));
+  const [{ data: rows }, muniName] = await Promise.all([query, municipalityNames()]);
   return (rows ?? []).map((r) => ({
     id: r.id, name: r.name, kind: r.kind, difficulty: r.difficulty, duration_min: r.duration_min,
     distance_km: r.distance_km === null ? null : Number(r.distance_km), municipality: muniName.get(r.municipality_id) ?? '',

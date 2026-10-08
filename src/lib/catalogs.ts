@@ -41,3 +41,9 @@ export async function getLabelMaps() {
     },
   };
 }
+
+/** id → nombre de municipio, desde el catálogo cacheado (una sola consulta por request). */
+export async function municipalityNames(): Promise<Map<string, string>> {
+  const { municipalities } = await getCatalogs();
+  return new Map(municipalities.map((m) => [m.id, m.name]));
+}

@@ -1,5 +1,6 @@
 import 'server-only';
 import type { ServerSupabase } from '@/lib/supabase/server';
+import { municipalityNames } from '@/lib/catalogs';
 
 export interface PlaceDetail {
   id: string;
@@ -27,7 +28,6 @@ export async function getPlaceDetail(supabase: ServerSupabase, id: string): Prom
     .is('deleted_at', null)
     .maybeSingle();
   if (!p) return null;
-  const { data: muni } = await supabase.from('municipalities').select('name').eq('id', p.municipality_id).maybeSingle();
   const g = p.geom as { coordinates?: [number, number] } | null;
   if (!g?.coordinates) return null;
   return {
@@ -43,7 +43,7 @@ export async function getPlaceDetail(supabase: ServerSupabase, id: string): Prom
     updated_at: p.updated_at,
     version: p.version,
     municipality_id: p.municipality_id,
-    municipality: muni?.name ?? null,
+    municipality: (await municipalityNames()).get(p.municipality_id) ?? null,
     point: { lng: g.coordinates[0], lat: g.coordinates[1] },
   };
 }
@@ -55,7 +55,6 @@ export async function listPlaces(supabase: ServerSupabase, filters: { municipali
   let query = supabase.from('tourism_places').select('id, name, kind, municipality_id').eq('status', 'published').is('deleted_at', null).order('name').limit(200);
   if (filters.municipalityId) query = query.eq('municipality_id', filters.municipalityId);
   if (filters.kind) query = query.eq('kind', filters.kind);
-  const [{ data: rows }, { data: munis }] = await Promise.all([query, supabase.from('municipalities').select('id, name')]);
-  const muniName = new Map((munis ?? []).map((m) => [m.id, m.name]));
+  const [{ data: rows }, muniName] = await Promise.all([query, municipalityNames()]);
   return (rows ?? []).map((p) => ({ id: p.id, name: p.name, kind: p.kind, municipality: muniName.get(p.municipality_id) ?? '' }));
 }

@@ -1,5 +1,6 @@
 import 'server-only';
 import type { ServerSupabase } from '@/lib/supabase/server';
+import type { KpiSummary } from '@/types/kpi';
 
 // Lecturas del panel municipal (§9.7). Todas usan el JWT del personal: RLS limita a su alcance.
 
@@ -92,14 +93,7 @@ export async function getKpis(supabase: ServerSupabase, from: string, to: string
   return data as unknown as Kpis | { status: 'rejected'; reason: string };
 }
 
-export interface Kpis {
-  traffic: { received: number; published: number; rejected: number; out_of_area: number; by_type: Record<string, number> };
-  requests: { received: number; resolved: number; rejected: number; open_now: number; avg_resolution_hours: number | null; top_supported: { id: string; title: string; support_count: number }[] };
-  businesses: { approved_total: number; submitted: number; pending_now: number };
-  tourism: { places_published: number; routes_published: number; proposals_pending: number };
-  users: { new: number };
-  engagement: { views: number };
-}
+export type Kpis = KpiSummary;
 
 export async function listReportRuns(supabase: ServerSupabase) {
   const { data } = await supabase.from('report_runs').select('id, period_start, period_end, version, status, trigger, attempts, storage_path, error, started_at, finished_at').order('period_start', { ascending: false }).order('version', { ascending: false }).limit(30);
@@ -153,4 +147,32 @@ export async function listCatalogs(supabase: ServerSupabase): Promise<CatalogLis
   if (error) throw new Error(`catalog_admin_list: ${error.message}`);
   const r = data as unknown as ({ status: 'ok' } & CatalogLists) | { status: 'rejected' };
   return r.status === 'ok' ? { traffic_types: r.traffic_types, request_categories: r.request_categories, business_categories: r.business_categories } : null;
+}
+
+export interface PanelCounts {
+  trafficPending: number;
+  requestsPending: number;
+  requestsInReview: number;
+  /** Negocios, lugares, rutas y promociones esperando revisión */
+  validations: number;
+}
+
+/** Trabajo pendiente del personal (menú del panel y resumen de moderación). RLS limita a su alcance. */
+export async function getPanelCounts(supabase: ServerSupabase): Promise<PanelCounts> {
+  const head = { count: 'exact', head: true } as const;
+  const [traffic, reqPending, reqReview, biz, places, routes, promos] = await Promise.all([
+    supabase.from('traffic_reports').select('id', head).eq('status', 'pending'),
+    supabase.from('citizen_requests').select('id', head).eq('status', 'pending'),
+    supabase.from('citizen_requests').select('id', head).eq('status', 'under_review'),
+    supabase.from('businesses').select('id', head).in('status', ['pending', 'under_review']),
+    supabase.from('tourism_places').select('id', head).eq('status', 'pending'),
+    supabase.from('eco_routes').select('id', head).eq('status', 'pending'),
+    supabase.from('promotions').select('id', head).eq('status', 'pending'),
+  ]);
+  return {
+    trafficPending: traffic.count ?? 0,
+    requestsPending: reqPending.count ?? 0,
+    requestsInReview: reqReview.count ?? 0,
+    validations: (biz.count ?? 0) + (places.count ?? 0) + (routes.count ?? 0) + (promos.count ?? 0),
+  };
 }

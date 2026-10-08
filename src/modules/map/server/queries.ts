@@ -1,4 +1,5 @@
 import 'server-only';
+import { municipalityNames } from '@/lib/catalogs';
 import { createAnonClient } from '@/lib/supabase/anon';
 import { ALL_LAYERS, clampBBox } from '../layers';
 import type { BBox, LayerId, MapFeatureCollection, MunicipalityAggregate, StaticLayers } from '../types';
@@ -67,18 +68,17 @@ export async function searchPlaces(q: string, limit = 12): Promise<SearchHit[]> 
   if (!hits.length) return [];
   const ids = (entity: string) => hits.filter((h) => h.entity === entity).map((h) => h.id);
   type Geo = { id: string; geom?: unknown; start_point?: unknown };
-  const [biz, places, routes, munis] = await Promise.all([
+  const [biz, places, routes, muniName] = await Promise.all([
     ids('business').length ? supabase.from('businesses').select('id, geom').in('id', ids('business')) : { data: [] as Geo[] },
     ids('tourism_place').length ? supabase.from('tourism_places').select('id, geom').in('id', ids('tourism_place')) : { data: [] as Geo[] },
     ids('eco_route').length ? supabase.from('eco_routes').select('id, start_point').in('id', ids('eco_route')) : { data: [] as Geo[] },
-    supabase.from('municipalities').select('id, name'),
+    municipalityNames(),
   ]);
   const coords = new Map<string, { lat: number; lng: number }>();
   for (const row of [...(biz.data ?? []), ...(places.data ?? []), ...(routes.data ?? [])] as Geo[]) {
     const g = (row.geom ?? row.start_point) as { coordinates?: [number, number] } | undefined;
     if (g?.coordinates) coords.set(row.id, { lng: g.coordinates[0], lat: g.coordinates[1] });
   }
-  const muniName = new Map((munis.data ?? []).map((m) => [m.id, m.name]));
   return hits.map((h) => ({
     layer: ENTITY_LAYER[h.entity as keyof typeof ENTITY_LAYER] ?? 'business',
     id: h.id,
