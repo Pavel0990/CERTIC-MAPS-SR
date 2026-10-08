@@ -26,3 +26,14 @@ export async function signIn(page: Page, email: string) {
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();
   await expect(page.getByRole('link', { name: /Perfil/ }).first()).toBeVisible();
 }
+
+/**
+ * Deja la reputación de una cuenta de prueba en 0. Cada alerta publicada suma reputación, y con 5 o más
+ * las alertas se publican sin moderación (regla de create_traffic_report): sin esto, la prueba de
+ * moderación dejaría de probar la moderación después de unas cuantas ejecuciones.
+ */
+export async function resetReputation(email: string) {
+  const { data, error } = await admin().auth.admin.generateLink({ type: 'magiclink', email });
+  if (error) throw error;
+  await admin().from('profiles').update({ reputation: 0 }).eq('id', data.user.id);
+}

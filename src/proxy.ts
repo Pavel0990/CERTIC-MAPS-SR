@@ -15,9 +15,9 @@ function contentSecurityPolicy(nonce: string) {
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
     // React serializa atributos style en el HTML; un nonce no los cubre. No ejecutan código.
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: https://${supabase} https://tiles.openfreemap.org https://*.googleapis.com https://*.gstatic.com`,
+    `img-src 'self' data: blob: https://${supabase} https://tiles.openfreemap.org`,
     "font-src 'self' data:",
-    `connect-src 'self' https://${supabase} wss://${supabase} https://tiles.openfreemap.org https://*.googleapis.com`,
+    `connect-src 'self' https://${supabase} wss://${supabase} https://tiles.openfreemap.org`,
     "worker-src 'self' blob:",
     "object-src 'none'",
     "frame-ancestors 'none'",

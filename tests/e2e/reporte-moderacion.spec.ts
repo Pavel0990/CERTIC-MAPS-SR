@@ -1,8 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { ACCOUNTS, admin, signIn } from './helpers';
+import { ACCOUNTS, admin, resetReputation, signIn } from './helpers';
 
 // El recorrido central: un vecino reporta una alerta, el moderador la publica y aparece en el mapa público.
 const mark = `Prueba E2E ${Date.now()}`;
+
+test.beforeAll(async () => {
+  await resetReputation(ACCOUNTS.vecino);
+});
 
 test.afterAll(async () => {
   await admin().from('traffic_reports').delete().eq('description', mark);
