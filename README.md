@@ -141,7 +141,8 @@ El reparto entre las tres personas del equipo hasta la entrega (contenido, vecin
 - [ ] Probar la app con al menos **5 vecinos reales**: criterio de baja alfabetización digital, 20 puntos → [guía](docs/prueba-con-vecinos.md).
 - [ ] Completar desde el panel las descripciones y fotos de los lugares, y validar las 3 rutas con el municipio.
 - [ ] Ensayar la demo de 25 minutos y grabar el video de respaldo → [guion](docs/guion-demo.md).
-- [ ] Activar la copia de seguridad diaria (`BACKUP_ENABLED`) y pasar las cuentas a la organización → [DEPLOYMENT.md §8.1 y §9](DEPLOYMENT.md#81-copias-de-seguridad).
+- [x] Copia de seguridad diaria activa y verificada (cifrada, se descifra con `BACKUP_PASSPHRASE`) → [DEPLOYMENT.md §8.1](DEPLOYMENT.md#81-copias-de-seguridad).
+- [ ] Pasar las cuentas (Supabase, Vercel, correo) a la organización → [DEPLOYMENT.md §9](DEPLOYMENT.md).
 
 ---
 
