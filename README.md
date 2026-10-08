@@ -115,7 +115,7 @@ Ya listos: **GitHub** (con CI y copia de seguridad diaria cifrada, a activar), *
 
 ### 2. Construir lo que falta
 
-El reparto entre las dos personas del equipo, con qué carpetas toca cada una, está en [docs/REPARTO-DE-TRABAJO.md](docs/REPARTO-DE-TRABAJO.md).
+El reparto entre las tres personas del equipo hasta la entrega (contenido, vecinos y UX, plataforma y demo) está en [docs/REPARTO-DE-TRABAJO.md](docs/REPARTO-DE-TRABAJO.md).
 
 | Qué | Estado |
 |---|---|
