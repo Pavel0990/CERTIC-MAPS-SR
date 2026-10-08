@@ -1,0 +1,28 @@
+# Monitor de disponibilidad (ARCHITECTURE.md §13.6): consulta /api/v1/health cada hora.
+# Dos funciones:
+# - Mantiene activo el proyecto de Supabase: el plan gratuito se pausa tras ~7 días sin actividad,
+#   y /health consulta la base en cada llamada.
+# - Avisa si algo falla: /health responde 503 si la base no responde o la cola está atascada,
+#   y GitHub manda un correo cuando el workflow falla.
+# Reintenta antes de fallar, para no alertar por un corte de red de unos segundos.
+name: uptime
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: GET /api/v1/health
+        env:
+          HEALTH_URL: ${{ vars.HEALTH_URL || 'https://sr-conecta.vercel.app/api/v1/health' }}
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 30 \
+               --retry 3 --retry-delay 20 --retry-all-errors "$HEALTH_URL"

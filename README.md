@@ -126,6 +126,7 @@ El reparto entre las dos personas del equipo, con qué carpetas toca cada una, e
 | Listados `/negocios`, `/turismo` y `/rutas` con filtros grandes, búsqueda sin tildes y "Llamar" | ✅ |
 | Datos reales de la provincia (OpenStreetMap) en lugar de la demo | ✅ [data/README.md](data/README.md) |
 | Pruebas de punta a punta (Playwright) y copias de seguridad | ✅ `npm run test:e2e` · [DEPLOYMENT.md §8.1](DEPLOYMENT.md#81-copias-de-seguridad) |
+| Monitor cada hora sobre `/api/v1/health`: mantiene activo Supabase Free y avisa por correo si falla | ✅ [`uptime.yml`](.github/workflows/uptime.yml) |
 | Mapa base definitivo: MapLibre + OpenFreeMap | ✅ [ADR-022](docs/decisions/ADR-022-maplibre-openfreemap.md) |
 | Dominio, Resend, Supabase de producción, captcha | ⏳ Necesitan cuentas ([DEPLOYMENT.md](DEPLOYMENT.md), [SECURITY.md](SECURITY.md)) |
 | `LICENSE` | ✅ MIT |

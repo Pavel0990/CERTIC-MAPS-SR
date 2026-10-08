@@ -178,6 +178,12 @@ El mapa usa **MapLibre + OpenFreeMap**: gratis, sin cuenta ni claves ([ADR-022](
 | Ver la cola | `/api/v1/health`, o `select * from private.jobs where status in ('failed', 'dead')` en el SQL Editor |
 | Datos reales de OpenStreetMap | `npm run data:osm` regenera `supabase/ops/load_osm_content.sql` desde `data/osm/`. Se aplica con `npx supabase db query --linked -f supabase/ops/load_osm_content.sql`; es idempotente |
 
+### 8.0 Monitor de disponibilidad
+
+El workflow [`uptime.yml`](.github/workflows/uptime.yml) llama a `/api/v1/health` cada hora. Así el proyecto de Supabase Free no se pausa por inactividad (~7 días), y si la base o la cola fallan, el workflow falla y GitHub manda un correo. Para otra URL: variable de repositorio `HEALTH_URL`.
+
+GitHub desactiva los workflows programados de un repositorio público tras 60 días sin commits; antes de eso, reactivarlo desde *Actions → uptime*.
+
 ### 8.1 Copias de seguridad
 
 El plan gratuito de Supabase **no tiene restauración a un punto en el tiempo**. Hay dos copias complementarias:
