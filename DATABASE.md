@@ -1,10 +1,22 @@
 # SR Conecta — Backend y base de datos
 
-> **Versión 1.3 · 2 de octubre de 2026.** Complementa [ARCHITECTURE.md](ARCHITECTURE.md) (v2.1) y las decisiones de [`docs/decisions/`](docs/decisions).
+> **Versión 1.4 · 7 de octubre de 2026.** Complementa [ARCHITECTURE.md](ARCHITECTURE.md) (v3.0) y las decisiones de [`docs/decisions/`](docs/decisions).
 >
 > **La fuente de verdad es el SQL** de [`supabase/migrations/`](supabase/migrations). Este documento explica sus decisiones; si discrepan, manda el SQL.
 >
-> **Estado verificado:** las 24 migraciones se aplican desde cero en PostgreSQL 18.3 + PostGIS 3.6.2, y pasan las **150 pruebas** ([`supabase/tests/`](supabase/tests)). Cubren seguridad, integridad, concurrencia, PostGIS, fotos, alertas, KPIs, descarga auditada del PDF, entrega del worker, push y mantenimiento. Las 24 están aplicadas también en el Supabase de staging. Lo que no se puede verificar fuera de Supabase está en §14.
+
+## Estado verificado
+
+**Este es el único lugar del repositorio con estas cifras.** Los demás documentos enlazan aquí para no desincronizarse. Se actualiza en el mismo commit que añade una migración o una prueba.
+
+| Qué | Cifra | Cómo se comprueba |
+|---|---|---|
+| Migraciones | **24**, todas aplicadas en el Supabase de staging | `ls supabase/migrations` · `npx supabase migration list` |
+| Funciones en `public` | **47** (§6) | `grep -ohE "function public\.[a-z_]+" supabase/migrations/*.sql \| sort -u \| wc -l` |
+| Pruebas de la base | **150**, en 20 secciones (A–T), todas pasan en cada push (CI) | `npm run test:db` |
+| Motor de las pruebas | PostgreSQL 18.3 + PostGIS 3.6.2 en PGlite. Staging: PostgreSQL 17 + PostGIS 3.3 | — |
+
+Las pruebas cubren seguridad (con ataques directos), integridad, concurrencia, PostGIS, fotos, alertas, KPIs, descarga auditada del PDF, entrega del worker, push, catálogos y mantenimiento. Lo que no se puede verificar fuera de Supabase está en §14 y en [ARCHITECTURE.md §20](ARCHITECTURE.md#20-verificaciones-en-el-servicio-real).
 
 ---
 
@@ -332,7 +344,7 @@ No se borra nada: desactivar quita la opción de los formularios y del mapa (la 
 
 ## 6. Catálogo de RPC
 
-47 funciones en `public`. Todas son `SECURITY DEFINER` salvo las marcadas como **invoker**.
+Todas las funciones de `public` (cifra en [Estado verificado](#estado-verificado)) son `SECURITY DEFINER`, salvo las marcadas como **invoker**.
 
 | RPC | Quién | Rate limit | Idempotencia / concurrencia |
 |---|---|---|---|

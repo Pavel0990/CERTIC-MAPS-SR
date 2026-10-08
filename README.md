@@ -41,7 +41,7 @@ Plataforma geográfica para la provincia **Santiago Rodríguez** (República Dom
 - **Datos y seguridad:** Supabase (PostgreSQL + PostGIS). La base de datos decide permisos y estados, aunque alguien intente saltarse la app.
 - **Mapa:** MapLibre con teselas de OpenFreeMap: gratis, sin claves y usable sin conexión ([ADR-022](docs/decisions/ADR-022-maplibre-openfreemap.md)).
 
-Todo el detalle está en [ARCHITECTURE.md](ARCHITECTURE.md).
+Todo el detalle está en [ARCHITECTURE.md](ARCHITECTURE.md). **¿Qué leer según quién eres?** → [docs/README.md](docs/README.md).
 
 ---
 
@@ -86,7 +86,7 @@ Quita el reenvío al terminar: cualquiera con la URL ve la app.
 
 ```bash
 npm run check     # lint (con la regla de fronteras), tipos, pruebas unitarias y de fronteras
-npm run test:db   # 150 pruebas de la base de datos (PostgreSQL 18 + PostGIS, sin Docker)
+npm run test:db   # pruebas de la base de datos (PostgreSQL + PostGIS en memoria, sin Docker)
 npm run test:e2e  # 4 recorridos en un navegador real contra staging (con npm run dev corriendo)
 npm run backup    # copia de los datos de staging en backups/ (antes de cambios grandes)
 ```
@@ -107,11 +107,11 @@ Nunca pegues claves en un chat ni las subas a git: van en `.env.local` (y en Ver
 | 2 | **Dominio** | Correo verificado y dirección propia | Comprarlo (`.com` o `.do`) a nombre de la organización | ⏳ Pendiente |
 | 3 | **Resend** (correo) | Hoy Supabase envía como máximo 2 correos por hora y sin código | Verificar el dominio (SPF y DKIM), crear la API key → `RESEND_API_KEY`. Luego activar las plantillas de `supabase/config.toml` | ⏳ Pendiente (requiere dominio). Mientras tanto, staging envía con **Gmail SMTP** (sin límite de 2 por hora) y las plantillas en español ya están activas |
 | 4 | ~~Google Maps~~ | — | Descartado: el mapa usa MapLibre + OpenFreeMap, gratis, sin claves y usable sin conexión ([ADR-022](docs/decisions/ADR-022-maplibre-openfreemap.md)) | ✅ No hace falta |
-| 5 | **Sentry** | Ver los errores en producción | Proyecto Next.js → `SENTRY_DSN` | ⏳ Opcional |
+| 5 | **Sentry** | Ver los errores en producción con alertas | Proyecto en Sentry → `SENTRY_DSN` en Vercel. Sin esto, los errores igual quedan en los registros de Vercel (`src/instrumentation.ts`) | ⏳ Opcional |
 | 6 | Notificaciones push | Avisos en el teléfono | Claves VAPID: `npx web-push generate-vapid-keys` | ✅ En Vercel |
 | 7 | **Supabase de producción** | Separar la demo de los datos reales | Segundo proyecto en la misma organización | Después de la demo |
 
-Ya listos: **GitHub** (con CI y copia de seguridad diaria cifrada, a activar), **Vercel** (publica solo desde `main`) y **Supabase `staging`**, con las 24 migraciones aplicadas y datos reales de OpenStreetMap. Paso a paso: [DEPLOYMENT.md](DEPLOYMENT.md).
+Ya listos: **GitHub** (con CI y copia de seguridad diaria cifrada, a activar), **Vercel** (publica solo desde `main`) y **Supabase `staging`**, con todas las migraciones aplicadas y datos reales de OpenStreetMap. Paso a paso: [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ### 2. Construir lo que falta
 
@@ -172,14 +172,14 @@ El reparto entre las tres personas del equipo hasta la entrega (contenido, vecin
 | `src/app/` | Páginas y API (`/api/v1`) |
 | `src/modules/` | Un módulo por dominio (mapa, tránsito, consultas, fotos, notificaciones…). Solo se comunican por su `index.ts` o `server.ts`, y el lint lo exige |
 | `src/components/`, `src/lib/`, `src/hooks/` | Interfaz compartida, clientes de Supabase, utilidades |
-| `supabase/migrations/` | 24 migraciones SQL: la fuente de verdad del modelo |
-| `supabase/tests/` | 150 pruebas de la base de datos |
+| `supabase/migrations/` | Migraciones SQL: la fuente de verdad del modelo |
+| `supabase/tests/` | Pruebas de la base de datos (cuántas y qué cubren: [DATABASE.md](DATABASE.md#estado-verificado)) |
 | `supabase/ops/` | Scripts de operación: límites de municipios, datos reales de OSM, prueba de humo, administrador provincial |
 | `scripts/` | Utilidades: cuentas de prueba, copia de seguridad, copia del worker del mapa |
 | `data/` | Datos geográficos reales (OpenStreetMap, ODbL) y sus importadores ([data/README.md](data/README.md)) |
 | `tests/e2e/` | Pruebas de punta a punta con Playwright |
-| `docs/decisions/` | 22 decisiones de arquitectura (ADR) |
-| `docs/` | Manual administrativo, guía de prueba con vecinos, guion de la demo, reparto del trabajo |
+| `docs/decisions/` | Decisiones de arquitectura (ADR), una por archivo, con índice |
+| `docs/` | Índice por público ([docs/README.md](docs/README.md)), manual administrativo, guía de prueba con vecinos, guion de la demo, reparto del trabajo |
 | `project/` | Prototipo de diseño original (referencia visual) |
 | [ARCHITECTURE.md](ARCHITECTURE.md) · [DATABASE.md](DATABASE.md) · [DEPLOYMENT.md](DEPLOYMENT.md) · [SECURITY.md](SECURITY.md) | Arquitectura, base de datos, despliegue y seguridad |
 

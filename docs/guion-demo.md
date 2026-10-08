@@ -35,7 +35,7 @@ Demo en vivo del 28 al 30/10/2026, con datos reales. Este guion reparte el tiemp
 | 19–21 | **Informes → Descargar PDF**. Auditoría | "Cada lunes se genera solo. Cada descarga queda registrada" | MVP (F6), innovación |
 | 21–22 | **Catálogos:** agregar un tipo de reporte en vivo y mostrarlo en el teléfono | "Si mañana necesitan reportar 'animales en la vía', lo agregan ellos" | Sostenibilidad |
 | 22–23 | Quitar la señal del teléfono A y abrir el mapa y **Reportar** | "Sin señal en la loma, el reporte se guarda y se envía solo al volver" | Innovación, pertinencia |
-| 23–25 | Código abierto en GitHub (MIT), documentación, pruebas, costo | "150 pruebas de la base de datos. Funciona en planes gratuitos. Se lo puede quedar FUNDESER" | Código y documentación |
+| 23–25 | Código abierto en GitHub (MIT), documentación, pruebas, costo | "Más de cien pruebas de la base de datos, con ataques directos incluidos. Funciona en planes gratuitos. Se lo puede quedar FUNDESER" | Código y documentación |
 
 ## Plan B
 

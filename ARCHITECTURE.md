@@ -1,8 +1,8 @@
 # SR Conecta — Arquitectura
 
-> **Versión 2.4 · 5 de octubre de 2026** · mapa base: MapLibre + OpenFreeMap ([ADR-022](docs/decisions/ADR-022-maplibre-openfreemap.md))
+> **Versión 3.0 · 7 de octubre de 2026 · arquitectura tal como está construida.**
 > Plataforma geográfica para la provincia Santiago Rodríguez (República Dominicana), para el reto TechEmprende SR Conecta 2026.
-> Este documento es la referencia única de diseño antes de programar. Reemplaza a las versiones 1.x: el historial de esas versiones está en Git.
+> Describe el sistema que funciona hoy en https://sr-conecta.vercel.app. Las decisiones y sus alternativas están en [`docs/decisions/`](docs/decisions); lo que cambió respecto del diseño inicial, en §18.1. Las cifras verificadas (migraciones, funciones, pruebas) viven solo en [DATABASE.md](DATABASE.md#estado-verificado), para que no se desincronicen.
 
 ---
 
@@ -58,17 +58,18 @@ Este documento no repite columnas ni firmas de funciones: las nombra y remite a 
 
 Si una capacidad no tiene etiqueta, es [MVP].
 
-**Estado del repositorio (02/10/2026):**
+**Otros documentos.** Índice por público (jurado, municipio, desarrollo, operación): [docs/README.md](docs/README.md).
+
+**Estado (07/10/2026):**
 
 | Pieza | Estado |
 |---|---|
-| Base de datos (24 migraciones, 150 pruebas), aplicada en Supabase staging | ✅ Verificada |
-| Decisiones de arquitectura ([`docs/decisions/`](docs/decisions)) | ✅ 21 ADR |
-| Mapa con tránsito en vivo, acceso por código, reportes y seguimiento, perfil | ✅ Funcionando contra staging |
-| Panel municipal: resumen, bandeja, validaciones, informes, equipo, auditoría | ✅ |
-| Worker de la cola, informe semanal en PDF, PWA sin conexión, Web Push | ✅ |
-| Negocios, turismo, rutas y propuestas: fichas, alta, panel del comercio, edición | ✅ |
-| En línea en https://sr-conecta.vercel.app (Vercel + Supabase staging); dominio y correo propio | ✅ / ⏳ dominio |
+| Base de datos aplicada en Supabase staging y verificada ([cifras](DATABASE.md#estado-verificado)) | ✅ |
+| Las 6 funcionalidades del reto (F1–F6), panel municipal y catálogos editables | ✅ En línea |
+| Worker de la cola, informe PDF, PWA sin conexión, Web Push | ✅ |
+| Datos reales de la provincia (OpenStreetMap) y listados para quien no usa el mapa | ✅ |
+| CI en cada push, pruebas E2E, copia de seguridad diaria (por activar) | ✅ / ⏳ activar |
+| Dominio propio, correo con dominio, Supabase de producción, captcha | ⏳ Necesitan cuentas |
 
 ---
 
@@ -81,7 +82,7 @@ Fuente: bases oficiales de conectasr.com (endpoint público `/api/convocatoria`)
 | Hecho | Consecuencia para la arquitectura |
 |---|---|
 | Provincia Santiago Rodríguez, con 3 municipios: San Ignacio de Sabaneta (cabecera), Monción y Villa Los Almácigos | Territorio pequeño: cientos a pocos miles de puntos. No se optimiza para millones. |
-| La organización entrega **datos geográficos abiertos** de la provincia | Se importan a PostGIS. PostGIS es la fuente de verdad territorial, no Google. |
+| La organización entrega **datos geográficos abiertos** de la provincia | Se importan a PostGIS, que es la fuente de verdad territorial. Mientras llegan, se usa OpenStreetMap (ADR-024). |
 | Demo en vivo de **25 minutos con datos reales** | Semilla reproducible, guion de demo y plan B si falla un servicio externo. |
 | El ganador libera el código con **MIT o Apache 2.0** y lo transfiere a FUNDESER | Todas las dependencias deben tener licencia compatible. Cuentas de la organización desde el día uno, nunca personales. |
 | Stack libre; se evalúa el resultado | Se prioriza lo que se demuestra bien y se puede mantener. |
@@ -185,40 +186,35 @@ flowchart LR
 
 ## 4. Stack
 
-Una sola tabla, con la fase en que entra cada pieza.
+Lo que está instalado y en uso. Las versiones exactas están en `package.json`.
 
-| Área | Tecnología | Fase | Nota |
-|---|---|---|---|
-| Framework | Next.js 16.3 (App Router) + React 19.3 + TypeScript 6.0 `strict` | MVP | `proxy.ts` (antes `middleware.ts`) solo refresca la sesión. TypeScript 6.0 y no 7: `typescript-eslint` exige TypeScript < 6.1 |
-| Lint | ESLint 9 + `eslint-config-next` + `typescript-eslint` + `eslint-plugin-boundaries` | MVP | ESLint 9 y no 10: los plugins de `eslint-config-next` (`import`, `jsx-a11y`, `react`) aún no soportan ESLint 10. Actualizar cuando lo soporten |
-| UI | Tailwind CSS + shadcn/ui | MVP | Componentes copiados al repo, sin dependencia en runtime |
-| Formularios | React Hook Form + Zod | MVP | Un esquema Zod por operación, compartido cliente/servidor |
-| Estado | TanStack Query (datos del mapa) + Zustand (UI del mapa) | MVP | Sin Redux |
-| Gráficos | Recharts | MVP | Panel municipal |
-| Mapa | MapLibre GL 6 + estilo `liberty` de OpenFreeMap; clústeres y capas GeoJSON propios | MVP | Detrás del adaptador `modules/map/provider` (ADR-022) |
-| Búsqueda | `search_all` sobre nuestros datos, tolerante a errores (`pg_trgm` + `unaccent`) | MVP | Sin geocodificador externo |
-| Navegación | Enlace `https://www.google.com/maps/dir/?api=1&destination=lat,lng` | MVP | Sin costo de API |
-| Tráfico | Alertas propias de los vecinos en vivo (Realtime) | MVP | Sin capa de tráfico externa |
-| Base de datos | Supabase PostgreSQL + PostGIS + `pg_trgm` + `unaccent` + `pgcrypto` | MVP | Probado en PostgreSQL 18.3 + PostGIS 3.6.2; compatible con 15+ |
-| Lógica crítica | RPC PL/pgSQL + RLS + grants por columna | MVP | ADR-018 |
-| Auth | Supabase Auth: email con contraseña u OTP/magic link; Google OAuth opcional; captcha Turnstile nativo | MVP | SMS postergado por costo |
-| Email | SMTP propio (Resend, Amazon SES o Brevo) configurado en Supabase Auth | MVP | El SMTP por defecto de Supabase es solo para pruebas |
-| Archivos | Supabase Storage: `report-evidence` (privado), `public-media` (público), `reports-pdf` (privado) | MVP | §10.5 |
-| Tiempo real | Supabase Realtime **Broadcast**, solo para alertas de tránsito públicas | MVP | ADR-012 |
-| Cola y planificador | `private.jobs` + `pg_cron` + `pg_net` + Supabase Vault | MVP | ADR-016 |
-| PWA | Web App Manifest + Serwist | MVP | §6.4 |
-| Push | Web Push + VAPID (librería `web-push`) | MVP | Sin Firebase |
-| PDF | `@react-pdf/renderer` en Route Handler (runtime Node) | MVP | Vercel Cron diario |
-| Errores | Sentry | MVP | Plan gratuito de 1 usuario (verificar, §20) |
-| Pruebas | PGlite (base de datos) ✅, regla de fronteras (`node:test`) ✅, Vitest y Playwright ⏳ | MVP | §14 |
-| CI/CD | GitHub Actions + Vercel | MVP | `.github/workflows/ci.yml` ✅ (lint, typecheck, fronteras, base de datos). Producción: migrar → desplegar (ADR-019) ⏳ |
-| Hosting | Vercel (Hobby en demo → Team Pro) + Supabase (Free en demo → Pro) | MVP → Fase 2 | Cuentas de la organización |
-| Por PR | Supabase Branching | Fase 2 | Requiere plan Pro |
-| Protección extra | Vercel Firewall | Fase 2 | |
-| Tiles propios | `ST_AsMVT` | Fase 2/3 | Solo si los negocios superan ~20 000 |
-| Cola dedicada | `pgmq` o Inngest | Fase 3 | Mismo contrato de productores |
-| Routes API | — | Futura | Solo si se exige ruta dibujada dentro de la app |
-| **No usar** | Firebase (FCM, Firestore), Redux, Express/NestJS, microservicios, Kubernetes, Edge Functions en MVP | — | §19 |
+| Área | Tecnología | Nota |
+|---|---|---|
+| Framework | Next.js 16.3 (App Router) + React 19.3 + TypeScript 6.0 `strict` | `proxy.ts` (antes `middleware.ts`) refresca la sesión y aplica la CSP. TypeScript 6.0 y no 7: `typescript-eslint` exige < 6.1 |
+| Lint | ESLint 9 + `eslint-config-next` + `typescript-eslint` + `eslint-plugin-boundaries` | ESLint 9 y no 10: los plugins de `eslint-config-next` aún no soportan ESLint 10 |
+| UI | Tailwind CSS 4 + componentes propios (`src/components/ui`) + `lucide-react` | Sin librería de componentes: pocos componentes, escritos a medida para la UX de §6.2 |
+| Formularios | `useActionState` + Server Actions + Zod 4 | Zod valida la forma; la RPC decide (§3) |
+| Estado del cliente | Estado de React y la URL (filtros, capas) | Sin librería de estado: no hizo falta |
+| Gráficos del panel | HTML y CSS (barras simples) | Sin librería de gráficos |
+| Mapa | MapLibre GL 6 + estilo `liberty` de OpenFreeMap; clústeres en el cliente | Detrás de `modules/map/provider` ([ADR-022](docs/decisions/ADR-022-maplibre-openfreemap.md)) |
+| Búsqueda | `search_all` sobre nuestros datos (FTS + `pg_trgm` + `unaccent`) | Sin geocodificador externo |
+| Navegación | Enlace "Cómo llegar" (`google.com/maps/dir/?api=1&destination=…`) | Abre la app de navegación del teléfono; sin API ni clave |
+| Base de datos | Supabase PostgreSQL 17 + PostGIS + `pg_trgm` + `unaccent` + `pgcrypto` | Las pruebas corren en PGlite (PostgreSQL 18 + PostGIS 3.6) |
+| Lógica crítica | RPC PL/pgSQL + RLS + grants por columna | ADR-018 |
+| Auth | Supabase Auth: código de un solo uso o enlace por correo | Sin contraseñas. Captcha pendiente ([SECURITY.md](SECURITY.md)) |
+| Correo | SMTP propio en Supabase Auth (hoy Gmail; Resend con dominio al publicar) | El SMTP por defecto de Supabase solo envía 2 por hora |
+| Archivos | Supabase Storage: `report-evidence` (privado), `public-media` (público), `reports-pdf` (privado) | §10.5 |
+| Fotos | `sharp` en el worker: WebP, sin EXIF, máximo 4 096 px | §10.5 |
+| Tiempo real | Supabase Realtime **Broadcast**, solo alertas de tránsito públicas | ADR-012 |
+| Cola y planificador | `private.jobs` + `pg_cron` + `pg_net` + Vault | ADR-016 |
+| PWA | Manifest + service worker propio (`public/sw.js`) | ADR-009 (nota de implementación) |
+| Push | Web Push + VAPID (`web-push`) | Sin Firebase |
+| PDF | `@react-pdf/renderer` en el worker y en el cron | ADR-014 |
+| Errores | `instrumentation.ts` (`onRequestError`): registro estructurado en Vercel; Sentry si se configura `SENTRY_DSN` | §13.6 |
+| Pruebas | PGlite (base), Vitest (unitarias), `node:test` (fronteras), Playwright (E2E) | §14 |
+| CI/CD | GitHub Actions (CI en cada push y PR) + integración Git de Vercel (`main` → producción) | `deploy.yml` (migrar → publicar) y `backup.yml` listos, apagados hasta tener producción ([ADR-019](docs/decisions/ADR-019-orden-despliegue.md)) |
+| Hosting | Vercel Hobby + Supabase Free | Pro cuando haya producción municipal (§13.7) |
+| **No usar** | Firebase, Redux, Express/NestJS, microservicios, Kubernetes, Edge Functions | §19 |
 
 ---
 
@@ -249,7 +245,7 @@ Una sola tabla, con la fase en que entra cada pieza.
 │ PostgreSQL + PostGIS + pg_trgm + unaccent                   │
 │ RLS · RPC SECURITY DEFINER · grants por columna · triggers  │
 │ private.jobs · pg_cron · pg_net · Vault                     │
-│ Auth (SMTP propio, Turnstile) · Storage · Realtime Broadcast│
+│ Auth (SMTP propio) · Storage · Realtime Broadcast           │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -285,12 +281,15 @@ No hay un servidor de aplicación separado. Son **cuatro capas con una sola auto
 
 ### 6.1 Organización
 
-- **Dos caras en una app.** El sitio público con SSR (inicio, fichas de negocio, lugar y ruta) y la aplicación de mapa del lado del cliente.
-- **Route groups:** `(public)`, `(app)` (mapa y cuenta), `(business)` (panel del comercio) y `(admin)` (panel municipal). Cada uno tiene su layout, `loading.tsx`, `error.tsx` y `not-found.tsx`.
-- **El mapa se carga con `dynamic(..., { ssr: false })`** detrás de un esqueleto. La primera pintura nunca espera a Google.
-- **Todo lo que está en el mapa tiene equivalente en lista.** Es un requisito de accesibilidad y el plan B si Google falla.
-- **Filtros en la URL** (`?capas=turismo,transito&cat=…`), para poder compartir enlaces.
-- **Idioma:** solo español en el MVP, con los textos centralizados. El inglés para turistas llega en Fase 2, usando la columna `translations` que ya existe.
+- **Un solo grupo de rutas, `(app)/`,** con un layout común (barra inferior en el móvil, lateral en el escritorio):
+  - públicas: inicio, `/mapa`, `/negocios`, `/turismo` y `/rutas` con sus fichas, y `/consultas/[id]`;
+  - con cuenta: `/reportar`, `/actividad`, `/perfil`, `/notificaciones`, `/negocio` (panel del comercio) y `/proponer`;
+  - personal: `/admin/*` (panel municipal).
+- **Fuera del grupo:** `/offline`, que guarda el service worker, y `/auth/callback`.
+- **El mapa se carga solo en el cliente** detrás de un esqueleto; la primera pintura no espera a las teselas.
+- **Todo lo que está en el mapa tiene equivalente en lista:** `/negocios`, `/turismo`, `/rutas` y la lista del explorador. Es un requisito de accesibilidad y el plan B si el mapa falla.
+- **Filtros en la URL** (`?capas=…`, `?municipio=…&tipo=…`), para poder compartir enlaces.
+- **Idioma:** español, con los textos de estados y errores centralizados en `src/lib/vocabulary.ts`. El inglés llega en Fase 2 con la columna `translations`, que ya existe.
 
 ### 6.2 Baja alfabetización digital (criterio de 20 puntos)
 
@@ -319,19 +318,19 @@ No hay un servidor de aplicación separado. Son **cuatro capas con una sola auto
 
 ### 6.4 PWA y modos de conexión
 
-- **Instalación.** Manifest con `display: standalone` y `start_url: /mapa`; service worker con Serwist.
+- **Instalación.** Manifest con `display: standalone` y `start_url: /mapa`; service worker propio en `public/sw.js` (ADR-009).
 - **iPhone.** Se muestran instrucciones para "Añadir a pantalla de inicio". En iOS, Web Push solo funciona con la PWA instalada (iOS 16.4+).
 - **Modos de conexión.** Siempre visibles en la barra superior; nunca se simula un offline que no existe:
 
 | Modo | Cuándo | Funciona | Se bloquea (con explicación) |
 |---|---|---|---|
 | **ONLINE** | Red y API responden | Todo | — |
-| **DEGRADED** | Hay red, pero falla un servicio (Google, API con 5xx, Storage) | Lista en lugar de mapa; caché con aviso "datos de hace X min"; borradores y cola | Lo que dependa del servicio caído |
-| **OFFLINE** | Sin red | Shell, pantallas visitadas, última lista de lugares y rutas, borradores de reporte y consulta con foto comprimida, cola de envío, "mis reportes" (último estado sincronizado) | Mapa base de Google (sus términos no permiten cachear tiles), búsqueda, alta de negocios, panel |
+| **DEGRADED** | Hay red, pero falla un servicio (teselas, API con 5xx, Storage) | Lista en lugar de mapa; caché con aviso "datos de hace X min"; borradores y cola | Lo que dependa del servicio caído |
+| **OFFLINE** | Sin red | Shell, pantallas visitadas, última lista de lugares y rutas, borradores de reporte y consulta con foto comprimida, cola de envío, "mis reportes" (último estado sincronizado) | Teselas del mapa no visitadas, búsqueda, alta de negocios, panel |
 
 **Cola offline:**
 - cada item lleva una `idempotency_key` generada en el cliente;
-- se reintenta con Background Sync donde exista, o al abrir la app en iOS;
+- se envía al abrir la app y al volver la conexión (`OutboxSync`); no se usa Background Sync, que no existe en iPhone;
 - si la sesión expiró, el item queda como "requiere iniciar sesión" y nunca se descarta en silencio.
 
 **Actualizaciones.** Aviso "nueva versión disponible" y recarga, sin `skipWaiting` silencioso durante un formulario.
@@ -340,15 +339,15 @@ No hay un servidor de aplicación separado. Son **cuatro capas con una sola auto
 
 | Tipo de recurso | Estrategia |
 |---|---|
-| Estáticos | `CacheFirst` versionado |
-| Catálogos públicos | `StaleWhileRevalidate` |
-| Datos de usuario | `NetworkOnly` |
+| Estáticos (`/_next/static`, íconos, `vendor`) | `CacheFirst` versionado |
+| Capas públicas del mapa (`/api/v1/map/*`) | `StaleWhileRevalidate`, máximo 80 respuestas |
+| Páginas públicas y `/reportar` | `NetworkFirst`; nunca se guardan redirecciones |
+| Datos de usuario, auth, panel | `NetworkOnly`; al salir de la cuenta se borra lo guardado |
 
 ---
 
 ## 7. Mapa y geografía
 
-> **Cambio de decisión (05/10/2026, [ADR-022](docs/decisions/ADR-022-maplibre-openfreemap.md)):** el mapa base es **MapLibre GL + OpenFreeMap**, no Google Maps. Lo que esta sección y §13 dicen de Google (Map ID, Places, cuotas, CSP de `googleapis`) describe el diseño original de ADR-004, ya sustituido, y se conserva como contexto. El adaptador `modules/map/provider`, los datos en PostGIS y las reglas de privacidad no cambian.
 
 ### 7.1 Capas
 
@@ -369,45 +368,30 @@ No existe un endpoint de mapa autenticado aparte.
 
 ### 7.2 Zoom y viewport
 
-| Zoom de Google | Qué se muestra | Fuente |
+| Vista | Qué se muestra | Fuente |
 |---|---|---|
-| ≤ 10 (provincia) | Municipios con conteos por capa | `map_aggregates()`: conteos públicos por municipio y un punto dentro de cada polígono |
-| 11–14 (municipio) | Clusters | `map_features` + MarkerClusterer en cliente |
-| ≥ 15 (calle) | Todos los puntos, con ícono por categoría | `map_features`; el detalle se pide al tocar un punto |
+| Provincia | Límites de los 3 municipios y rutas simplificadas | `GET /api/v1/map/static-layers` (una vez por sesión, caché CDN) |
+| Cualquier zoom | Puntos agrupados en clústeres hasta el zoom 15; al tocar un clúster, el mapa se acerca | `map_features` + clustering de MapLibre en el cliente |
+| Calle (≥ 15) | Todos los puntos con su ícono | `map_features`; la ficha se pide al tocar un punto |
 
-**Flujo de consulta:**
-1. El mapa emite el evento `idle` (no `bounds_changed`); se espera 300 ms de debounce.
-2. El bbox se redondea hacia afuera a una rejilla de 0.01°, para compartir caché.
-3. No se consulta si el bbox está contenido en uno ya cargado con los mismos filtros.
-4. `map_features` rechaza bbox inválidos o de más de 2° por lado, y devuelve como máximo 500 features con `truncated: true` cuando hay más. El cliente sugiere entonces acercar el mapa.
-5. La respuesta de viewport lleva solo `id`, tipo, categoría, coordenadas y título. Fotos, horario y descripción se piden al abrir la ficha.
+`map_aggregates` (conteos por municipio) está disponible en `/api/v1/map/aggregates` para una vista provincial con cifras; hoy la UI no la usa.
 
-**[Fase 2/3]:** si los negocios superan ~20 000, se pasa a vector tiles propios (`ST_AsMVT`) con caché CDN.
+**Flujo de consulta** (`src/app/(app)/_components/explorer.tsx`):
+1. El mapa avisa al terminar de moverse; se esperan 300 ms (debounce).
+2. El bbox se redondea hacia afuera a una rejilla de 0,01° (`snapBBox`), para compartir caché.
+3. No se consulta si el bbox está contenido en uno ya cargado con las mismas capas (`containsBBox`).
+4. `map_features` rechaza bbox inválidos o de más de 2° por lado, y devuelve como máximo 500 features, con `truncated: true` cuando hay más.
+5. La respuesta lleva solo `id`, capa, categoría, coordenadas y título. Fotos, horario y descripción se piden al abrir la ficha.
 
-### 7.3 Uso de Google Maps
+**[Fase 2/3]:** si los negocios superan ~20 000, vector tiles propios (`ST_AsMVT`) con caché CDN.
 
-| API | Uso | Nunca |
-|---|---|---|
-| Maps JavaScript (Dynamic Maps) | Una carga por apertura de la vista mapa | Recargar el mapa al cambiar de pestaña interna |
-| AdvancedMarkerElement + MarkerClusterer | Marcadores y clusters (requiere Map ID) | Miles de marcadores sin clustering |
-| Places Autocomplete (New) | "Buscar una dirección" cuando la búsqueda propia no encuentra nada; vincular `google_place_id` en el alta de negocio | Una llamada por tecla sin session token; poblar la capa de negocios |
-| Place Details (New) | Al elegir una sugerencia: solo `location` y `formattedAddress` (field mask) | Pedir fotos, reseñas o rating |
-| Navegación | Botón "Cómo llegar" con enlace (sin costo de API) | — |
-| TrafficLayer | Capa opcional que enciende el usuario | Encendida por defecto (la cobertura rural es incierta) |
-| Geocoding inverso | Opcional: dirección legible al reportar | Calcular el municipio (eso lo hace PostGIS) |
+### 7.3 Mapa base y navegación ([ADR-022](docs/decisions/ADR-022-maplibre-openfreemap.md))
 
-**Qué se guarda de Google:**
-- **`google_place_id`:** se puede guardar indefinidamente, en `businesses.google_place_id`.
-- **Coordenadas de Google:** nunca son la coordenada oficial. El dueño o el moderador confirman el pin, y esa coordenada es un dato propio.
-- **Nombre, fotos y reseñas de Google:** no se almacenan.
-
-**Claves:**
-- La clave de navegador se restringe por referrer (dominios de producción y previews) y por API.
-- Proyectos de Google Cloud separados para dev y prod.
-- Cuotas diarias por API y alertas de presupuesto al 50/80/100 %.
-- Facturación a nombre de la organización.
-
-**Plan B: MapLibre GL + tiles OSM.** Toda la app habla con el adaptador (`MapView`, `addLayer(geojson)`, `onFeatureClick`), nunca con `google.maps.*`, y nuestra API devuelve GeoJSON neutral. Como los términos de Google prohíben mostrar su contenido sobre mapas no-Google, solo nuestros datos migrarían.
+- **Teselas:** OpenFreeMap, estilo `liberty`. Gratis, sin clave y sin límite de uso razonable. El worker de MapLibre se sirve desde `public/vendor/` (`scripts/copy-vendor.mjs`) para cumplir la CSP.
+- **Adaptador:** toda la app usa `MapCanvas` (`modules/map`), nunca `maplibregl.*` directamente. Cambiar de proveedor (MapTiler, Stadia, PMTiles propios) toca solo `modules/map/provider`.
+- **Datos:** 100 % propios en PostGIS, devueltos como GeoJSON neutral. El mapa base solo pinta calles y relieve.
+- **"Cómo llegar":** enlace a la app de navegación del teléfono, sin API. Se cuenta como métrica (`track_engagement`).
+- **Atribución:** © OpenStreetMap, visible en el mapa y en los listados ([NOTICE](NOTICE)).
 
 ### 7.4 PostGIS
 
@@ -420,9 +404,9 @@ No existe un endpoint de mapa autenticado aparte.
 | Fuera de la provincia | Un reporte de tránsito queda `out_of_area`, visible solo para el alcance provincial. Una consulta o propuesta se rechaza con `out_of_area`. Una consulta sin ubicación exige que el ciudadano elija el municipio |
 | Rutas | `municipality_id` = municipio del punto de inicio. `municipality_ids` = todos los municipios que cruza (trigger `eco_routes_municipalities`). `distance_km`, `start_point` y `geom_simplified` son columnas generadas. Entre 2 y 5 000 vértices |
 | Provincia | `province_id` en toda tabla territorial, con FK compuesta `(municipality_id, province_id)`: es imposible guardar un municipio de otra provincia |
-| Importación | Datos abiertos con `ogr2ogr` → staging → `ST_IsValid`/`ST_MakeValid` → tablas finales. **Simplificación topológica en la importación** (mapshaper, o `ST_CoverageSimplify` si la versión lo soporta, §20), para que las fronteras compartidas no queden con huecos |
+| Importación | Hoy: OpenStreetMap con scripts propios ([data/README.md](data/README.md)): límites (`ST_MakeValid` en la carga), negocios, lugares y rutas, en SQL idempotente. Cuando lleguen los datos abiertos oficiales: `ogr2ogr` → staging → validación → tablas finales, con simplificación topológica para que las fronteras compartidas no queden con huecos |
 
-`supabase/seed.sql` trae municipios **rectangulares de demostración**, que se reemplazan por los límites oficiales.
+`supabase/seed.sql` trae municipios **rectangulares** solo para las pruebas locales. Staging tiene los límites reales de OpenStreetMap (`supabase/ops/load_osm_boundaries.sql`).
 
 **Consultas espaciales tipo.** Son patrones para funciones nuevas; hoy el SQL usa el viewport y la pertenencia:
 
@@ -570,7 +554,7 @@ En el MVP se editan por migración o SQL de operación. La pantalla de administr
   - Relevancia: el mayor valor entre `ts_rank` sobre `search_vector` (español, sin acentos; nombre con peso A, descripción con peso C) y la similitud por trigramas sobre `f_unaccent(name)`, que tolera errores como "monsion" → Monción.
   - La consulta admite de 2 a 80 caracteres y devuelve como máximo 50 resultados.
   - No ordena por cercanía. Eso queda para **[Fase 2]** si hace falta.
-- **Dirección externa:** si `search_all` no encuentra nada, o si el usuario elige "Buscar una dirección", se usa Autocomplete de Google. El mapa se centra en el resultado, que no se guarda.
+- **Sin geocodificador externo:** la búsqueda cubre solo nuestros datos. Buscar direcciones arbitrarias queda para **[Fase 2]** (ADR-022).
 - **Aportes ciudadanos al mapa:**
   - lugares y rutas (§9.4);
   - negocios (§9.3);
@@ -633,12 +617,12 @@ pending → under_review → approved ⇄ suspended → archived
 | Alta | `submit_business`: idempotente, 3 por día. Pin, categoría y contacto (teléfono, WhatsApp, email y web validados por `CHECK`). Entra como `pending`. El estado `draft` existe en el esquema para un futuro guardado de borradores en el servidor |
 | Revisión | `review_content('business', …)` con compare-and-set. El solicitante queda como `owner` en `business_members` desde el alta; al aprobarse el negocio recibe el rol `entrepreneur`. `rejected` y `suspended` exigen motivo |
 | Suspensión o archivo | El negocio sale del mapa y **sus promociones activas pasan a `paused`** |
-| Edición | `update_business`: lista blanca de campos (incluido `google_place_id`), `p_version` y 30 por hora. Miembros del negocio o personal del municipio |
+| Edición | `update_business`: lista blanca de campos, `p_version` y 30 por hora. Miembros del negocio o personal del municipio |
 | Horario | `set_business_hours`: reemplaza el horario completo, validado |
 | Promociones | `create_promotion`: informativas (texto y vigencia de hasta 90 días), sin stock, códigos ni canje. Entran como `pending` y se moderan: `pending → active / rejected`, `active ⇄ paused` |
 | Fotos | Hasta 10 por negocio (§10.5) |
 | Estadísticas del comercio | `track_engagement(entidad, id, métrica)` suma vistas, clics en "Cómo llegar" y clics en WhatsApp por día en `engagement_daily`. Nunca se guarda una fila por evento ni se identifica al visitante. El comercio ve las de su negocio. No tiene límite por usuario porque la llaman visitantes anónimos: las cifras son orientativas, y el cliente cuenta como máximo una vista por ficha y sesión |
-| Google | Solo los negocios **registrados y aprobados** aparecen en la capa de negocios. Un lugar de Google sin registro solo aparece como resultado de búsqueda de dirección |
+| Origen de los datos | Los negocios importados de OpenStreetMap (ADR-024) entran aprobados y sin dueño; el comercio que se registra completa su ficha. Solo los **aprobados** aparecen en el mapa y en `/negocios` |
 
 ### 9.4 Turismo y rutas (F1 y F3)
 
@@ -649,7 +633,7 @@ pending → under_review → approved ⇄ suspended → archived
 | Proponer | `propose_place` / `propose_route`, 5 por día. Un ciudadano propone (`pending`, `proposed_by`); si lo hace el personal, se publica directamente. La ruta llega como GeoJSON: dibujada en el mapa o convertida desde un GPX en el cliente. Se valida geometría, pertenencia a la provincia y entre 2 y 5 000 vértices |
 | Revisar | `review_content('place' / 'route', …)`: `pending → published / rejected`, `published → archived`. El autor recibe una notificación |
 | Editar | `update_place` / `update_route`: lista blanca, `p_version` y 30 por hora. Puede editar el personal del municipio, o el autor mientras la propuesta siga `pending`. Solo el personal cambia la geometría de una ruta |
-| Cómo llegar | Enlace de Google Maps al `start_point` de la ruta o al punto del lugar |
+| Cómo llegar | Enlace que abre la app de navegación del teléfono hacia el `start_point` de la ruta o el punto del lugar (sin API) |
 | Fotos | Hasta 10 por lugar o ruta (§10.5) |
 | Métricas | Vistas y clics en "Cómo llegar" con `track_engagement` |
 | **[Fase 2]** | Descarga GPX, perfil de elevación, inglés |
@@ -745,8 +729,8 @@ Vercel Cron DIARIO 10:00 UTC (06:00 America/Santo_Domingo)
 ### 10.1 Autenticación
 
 - **Registro e inicio de sesión:**
-  - métodos: email con contraseña u OTP/magic link; Google OAuth opcional;
-  - Turnstile con la integración nativa de Supabase Auth: se valida en el servidor de Auth y no se puede saltar;
+  - método: código de un solo uso o enlace por correo, sin contraseñas. El correo sale por el SMTP propio con plantillas en español;
+  - captcha: **pendiente** antes de abrir al público (Turnstile nativo de Supabase Auth, [SECURITY.md](SECURITY.md));
   - al registrarse, el trigger `on_auth_user_created` crea el perfil y el rol `citizen`. Si falla, el registro falla.
 - **Sesión:**
   - `@supabase/ssr` con cookies `Secure` y `SameSite=Lax`;
@@ -864,7 +848,7 @@ Ventana fija por usuario y acción. Las reglas están en `private.rate_limit_rul
 ### 10.7 Cabeceras y red
 
 - **CSP estricta con nonce:**
-  - permite los dominios de Google Maps, Supabase y Sentry;
+  - permite solo el propio origen, Supabase (API, Storage y Realtime) y las teselas de OpenFreeMap;
   - sin `unsafe-inline` en scripts;
   - `frame-ancestors 'none'`.
 - **Resto de cabeceras:**
@@ -880,8 +864,8 @@ Ventana fija por usuario y acción. Las reglas están en `private.rate_limit_rul
 - **Variables de Vercel** por entorno, validadas al arrancar con Zod (`config/env.ts`):
   - `.env.example` sin valores en el repo;
   - secret scanning de GitHub activado.
-- **Secretos que Postgres necesita en claro:** el URL y el secreto del worker van en **Vault** (`worker_url`, `jobs_secret`), cargados por un script de despliegue.
-- **Clave de Google:** restringida por referrer y por API (§7.3).
+- **Secretos que Postgres necesita en claro:** el URL y el secreto del worker van en **Vault** (`worker_url`, `jobs_secret`), cargados una vez al configurar el proyecto ([DEPLOYMENT.md §3.6](DEPLOYMENT.md)).
+- **Sin claves de mapa:** OpenFreeMap no usa clave (ADR-022).
 
 ### 10.9 Auditoría
 
@@ -1052,66 +1036,52 @@ sequenceDiagram
 - **Rutas:** `/api/v1`, JSON. Las capas de mapa se devuelven en GeoJSON.
 - **Errores:** los de protocolo, autenticación o servidor responden `{ error: { code, message } }`. Los rechazos de negocio responden según §8.3 con `{ status: 'rejected', reason }`.
 - **Idempotencia:** los `POST` que crean reportes, consultas o negocios aceptan la cabecera `Idempotency-Key`.
-- **Listados:** paginación por cursor.
+- **Listados:** máximo 200 a 500 filas por consulta, suficiente para una provincia. Por encima de eso, paginación por cursor.
 - **Compatibilidad:** en `/v1` solo se hacen cambios aditivos. Un cambio incompatible crea `/v2` en paralelo, que convive hasta que la versión mínima de la PWA (cabecera `X-App-Version`) lo permita.
 - **Caché, tres clases que nunca se mezclan en un endpoint:**
 
 | Clase | Ejemplos | Caché |
 |---|---|---|
-| Catálogos públicos estables | Capas estáticas, categorías, fichas públicas | `use cache` + `revalidateTag`; CDN larga |
+| Catálogos públicos estables | Capas estáticas, categorías | `public, s-maxage=3600` en CDN; los catálogos se leen una vez por request (`getCatalogs`) |
 | Capas públicas volátiles | `map/features`, `map/aggregates` | `public, s-maxage=30`; se ejecutan como `anon` e ignoran cookies |
-| Datos de usuario o de rol | `me/*`, panel | `private, no-store` |
+| Datos de usuario o de rol | Server Components con sesión, panel | Sin caché |
 
 ### 12.2 Endpoints HTTP
 
-Los consumen la PWA, la cola offline y los cron.
+Los consumen el mapa, la cola offline, el worker y los cron. Son todos los Route Handlers que existen (`src/app/api`):
 
-| Endpoint | Rol | Implementación |
+| Endpoint | Quién | Implementación |
 |---|---|---|
-| `GET /api/v1/map/features?bbox&layers` | anon | RPC `map_features` |
+| `GET /api/v1/map/features?bbox&layers` | anon | RPC `map_features` (caché 30 s) |
 | `GET /api/v1/map/aggregates` | anon | RPC `map_aggregates` |
-| `GET /api/v1/map/static-layers` | anon | Tablas por RLS: `municipalities.geom_simplified` + rutas publicadas simplificadas |
+| `GET /api/v1/map/static-layers` | anon | Límites simplificados + rutas publicadas |
 | `GET /api/v1/search?q=` | anon | RPC `search_all` |
-| `GET /api/v1/businesses`, `/tourism`, `/routes` y sus fichas `/:slug` | anon | Tablas por RLS (también como Server Components SSR) |
 | `POST /api/v1/engagement` | anon | RPC `track_engagement` |
-| `POST /api/v1/reports` | citizen | RPC `create_traffic_report` (idempotente, cola offline) |
-| `POST /api/v1/requests` | citizen | RPC `create_citizen_request` (idempotente) |
-| `POST /api/v1/requests/:id/vote` | citizen | RPC `toggle_request_vote` |
-| `POST /api/v1/businesses` | citizen | RPC `submit_business` (idempotente) |
-| `POST /api/v1/proposals/places` | citizen | RPC `propose_place` |
-| `POST /api/v1/proposals/routes` | citizen | RPC `propose_route` (GeoJSON; el GPX se convierte en el cliente) |
-| `POST /api/v1/uploads/sign` | citizen | Storage: URL de subida firmada en `incoming/{uid}/` |
-| `POST /api/v1/attachments` | citizen | RPC `register_attachment` |
-| `GET /api/v1/me/activity` | citizen | RPC `my_activity` |
-| `GET /api/v1/me/notifications`, `PATCH …/:id` (leída) | citizen | Tabla `notifications` por RLS (solo `read_at` es editable) |
-| `GET`, `PUT /api/v1/me/notification-preferences` | citizen | Tabla `notification_preferences` por RLS |
-| Activar o desactivar push en este dispositivo (Server Action del perfil) | citizen | RPC `register_push_device` / `unregister_push_device` |
-| `POST /api/v1/internal/jobs/run` | `JOBS_SECRET` | `worker_claim_jobs`, `worker_finish_job`, `worker_attachment_info`, `worker_attachment_processed`, `worker_attachment_published`, `worker_run_fanout_alert`, `worker_notify_moderators`, `worker_push_payload`, `worker_push_result`, `worker_report_run` (con `service_role`) |
-| `GET /api/v1/cron/weekly-report` | `CRON_SECRET` | `weekly_report_begin`, `kpi_summary`, `weekly_report_finish` (con `service_role`) |
-| `GET /api/v1/reports/:id/download` | municipal_admin | RPC `authorize_report_download` + `createSignedUrl` con el JWT del usuario (§9.6) |
-| `GET /api/v1/health` | público | Ping a la base + `worker_queue_health` (sin detalles al público) |
-| Autocomplete de direcciones | — | Directo del cliente a Google con clave restringida; no pasa por nuestro servidor |
+| `POST /api/v1/reports` | ciudadano | RPC `create_traffic_report` (idempotente; lo usa la cola offline) |
+| `POST /api/v1/requests` | ciudadano | RPC `create_citizen_request` (idempotente) |
+| `POST /api/v1/requests/:id/vote` | ciudadano | RPC `toggle_request_vote` |
+| `POST /api/v1/uploads/sign` | ciudadano | URL de subida firmada en `incoming/{uid}/` |
+| `POST /api/v1/attachments` | ciudadano | RPC `register_attachment` |
+| `GET /auth/callback` | — | Cambia el código del enlace por la sesión (PKCE) |
+| `POST /api/v1/internal/jobs/run` | `JOBS_SECRET` | Worker: `worker_*` con `service_role` (§11.3) |
+| `GET /api/v1/cron/weekly-report` | `CRON_SECRET` | `weekly_report_begin` → PDF → `weekly_report_finish` |
+| `GET /api/v1/health` | público | `worker_queue_health`: 503 si la cola lleva más de 10 minutos atascada |
 
-### 12.3 Operaciones de los paneles (Server Actions)
+### 12.3 Server Actions (páginas con sesión)
 
-No son endpoints públicos. Si algún día se necesitan desde fuera, se agrega un Route Handler sobre la misma RPC.
+Lo que solo se hace desde la interfaz es una **Server Action**, no un endpoint público ([ADR-023](docs/decisions/ADR-023-server-actions.md)). Si algún día hace falta desde fuera, se añade un Route Handler sobre la misma RPC.
 
-| Operación | RPC |
-|---|---|
-| Moderar un reporte de tránsito | `moderate_traffic_report` |
-| Escalar tránsito a incidencia | `escalate_traffic_report` |
-| Cambiar estado de una consulta | `change_request_status` |
-| Asignar responsable | `assign_request` |
-| Publicar o despublicar una consulta | `set_request_public` |
-| Revisar negocio, lugar, ruta, promoción o foto | `review_content` |
-| Editar negocio / horario / promoción | `update_business` / `set_business_hours` / `create_promotion` |
-| Editar lugar o ruta | `update_place` / `update_route` |
-| Alta de lugar o ruta por el personal | `propose_place` / `propose_route` (se publican directamente) |
-| Asignar o revocar roles | `assign_role` / `revoke_role` |
-| KPIs del panel | `kpi_summary` |
-| Regenerar el informe (provincial) | `weekly_report_begin(periodo, true)` + generación del PDF |
+| Pantalla | Acciones | RPC o tabla |
+|---|---|---|
+| Entrar (`entrar/actions.ts`) | `requestAccess`, `verifyCode`, `signOut` | Supabase Auth |
+| Perfil (`perfil/actions.ts`) | `saveProfile`, `savePreferences`, `enablePush`, `disablePush` | 4 columnas de `profiles`; `notification_preferences`; `register_push_device` / `unregister_push_device` |
+| Registrar negocio (`negocios/registrar`) | `registerBusiness` | `submit_business` |
+| Panel del comercio (`negocio/[id]`) | `saveBusiness`, `saveHours`, `addPromotion` | `update_business`, `set_business_hours`, `create_promotion` |
+| Proponer (`proponer`) | `submitPlace`, `submitRoute` | `propose_place`, `propose_route` (el GPX se convierte en el cliente) |
+| Editar lugar o ruta | `savePlace`, `saveRoute` | `update_place`, `update_route` |
+| Panel municipal (`admin/actions.ts`) | `moderateTraffic`, `escalateTraffic`, `changeStatus`, `assign`, `makePublic`, `review`, `grantRole`, `removeRole`, `downloadReport`, `generateReport`, `saveCatalog` | `moderate_traffic_report`, `escalate_traffic_report`, `change_request_status`, `assign_request`, `set_request_public`, `review_content`, `assign_role`, `revoke_role`, `authorize_report_download`, `request_weekly_report`, `save_catalog_item` |
 
-**Cobertura:** las 35 funciones de `public` quedan asignadas a un endpoint o a una Server Action. Ninguna queda sin consumidor.
+Las lecturas (actividad, notificaciones, fichas, bandejas, KPIs, catálogos) las hacen los Server Components a través de los módulos (`modules/<dominio>/server.ts`), con el JWT del usuario.
 
 ---
 
@@ -1119,44 +1089,42 @@ No son endpoints públicos. Si algún día se necesitan desde fuera, se agrega u
 
 ### 13.1 Entornos
 
-| Entorno | Next.js | Supabase | Google | Datos |
-|---|---|---|---|---|
-| Desarrollo | `next dev` | Supabase CLI local | Proyecto dev, clave para localhost | `seed.sql` + datos abiertos |
-| CI | `next start` en el runner | Supabase CLI local con las migraciones del PR | Adaptador `MAP_PROVIDER=mock` | Semilla de pruebas |
-| Preview | Vercel Preview por PR | MVP: proyecto `staging` compartido · Fase 2: Supabase Branching | Clave dev con referrer `*.vercel.app` | Semilla de demo |
-| Producción | Vercel Production con dominio propio | Proyecto `production` | Proyecto prod | Reales |
-
-- **Auth en previews:** se agrega `https://*-<equipo>.vercel.app/**` a las Redirect URLs del proyecto `staging`.
+| Entorno | Next.js | Supabase | Datos |
+|---|---|---|---|
+| Desarrollo | `next dev` en la computadora | Proyecto `staging` (vinculado con la CLI) | Datos reales de OSM + cuentas de prueba |
+| Pruebas de base | — | PGlite en memoria (`npm run test:db`) | `seed.sql` + datos de cada prueba |
+| CI | GitHub Actions | PGlite | Ídem |
+| Vista previa | Vercel, una por rama (solo el equipo la ve) | `staging` | Ídem |
+| Producción (hoy) | Vercel, rama `main` → https://sr-conecta.vercel.app | `staging` | Reales (OSM) |
+| Producción municipal | Ídem, con dominio propio | Proyecto `production` aparte ([DEPLOYMENT.md §3](DEPLOYMENT.md)) | Reales |
 
 ### 13.2 Cuentas y planes
 
 | Fase | Supabase | Vercel |
 |---|---|---|
-| Reto y demo | Organización Free de la organización: `staging` + `production` | Hobby en una cuenta creada con **email de la organización**; despliega la Action |
-| Producción municipal | La organización pasa a Pro (cada proyecto paga su cómputo) | Team Pro de la organización; el proyecto se transfiere |
+| Reto y demo | Free | Hobby |
+| Producción municipal | Pro (backups diarios, sin pausa) | Pro |
 
-Ninguna cuenta (Google Cloud, Supabase, Vercel, Sentry, SMTP, dominio) puede ser personal de un integrante.
+**Ninguna cuenta debería ser personal de un integrante.** Hoy lo son; el traspaso está en [DEPLOYMENT.md §9](DEPLOYMENT.md#9-traspaso-a-cuentas-de-la-organización).
 
-### 13.3 CI/CD (ADR-019)
+### 13.3 CI/CD
 
 ```text
-feat/* → Pull Request
-  ├─ lint + formato + reglas de fronteras de módulos
-  ├─ typecheck + tipos de la base regenerados sin diferencias
-  ├─ pruebas de base de datos (supabase/tests: PGlite, sin Docker)
-  ├─ unitarias (Vitest)
-  ├─ build
-  ├─ E2E (Playwright) contra next start + Supabase local con las migraciones del PR
-  └─ Vercel Preview
+rama de trabajo → push / Pull Request
+  CI (.github/workflows/ci.yml): lint (con fronteras) + tipos + unitarias + fronteras + base de datos (PGlite)
+  Vercel: vista previa de la rama
 
-merge a main (squash) → Action "release" (entorno production con aprobación manual):
-  1. supabase db push           (migraciones compatibles con el código anterior)
-  2. vercel deploy --prod       (el código sale SOLO después de migrar)
-  3. prueba de humo contra /api/v1/health
-El auto-deploy de producción de Vercel desde main está desactivado; los previews siguen automáticos.
+push a main
+  CI
+  Vercel: publica en producción (integración Git)
+  Las migraciones se aplican ANTES con `npx supabase db push` (regla del equipo, docs/REPARTO-DE-TRABAJO.md)
+
+cuando exista el Supabase de producción (ADR-019):
+  deploy.yml: comprobaciones → supabase db push → vercel deploy --prod   (DEPLOY_ENABLED=true)
+  y se desactiva la publicación automática de main en vercel.json
 ```
 
-- **Flujo de trabajo:** trunk-based. `main` protegida; ramas cortas `feat/`, `fix/`, `chore/`; Conventional Commits; etiquetas `v0.x` hasta producción.
+Las pruebas E2E (`npm run test:e2e`) se corren a mano contra staging, porque necesitan las cuentas de prueba ([ADR-025](docs/decisions/ADR-025-e2e-contra-staging.md)).
 
 ### 13.4 Migraciones
 
@@ -1169,49 +1137,43 @@ El auto-deploy de producción de Vercel desde main está desactivado; los previe
 
 ### 13.5 Copias de seguridad y recuperación
 
-- **Plan Free:** no tiene backups. Desde el primer dato real, `pg_dump` diario por GitHub Action a almacenamiento de la organización, por el pooler de Supabase en modo sesión (§20).
+- **Plan Free:** sin backups propios de Supabase.
+  - `backup.yml` hace un `pg_dump` diario **cifrado** como artefacto de GitHub (30 días). Está listo; se activa con `BACKUP_ENABLED`.
+  - `npm run backup` saca una copia rápida en JSON antes de cambios grandes de datos.
 - **Plan Pro:** se suman los backups diarios de Supabase.
-- **Restauración:** se prueba una vez por trimestre.
-- **Rollback:** Instant Rollback de Vercel. Para cambios de esquema riesgosos, un script de reversa documentado.
+- **Restauración:** pasos en [DEPLOYMENT.md §8.1](DEPLOYMENT.md#81-copias-de-seguridad).
+- **Rollback de la app:** *Promote to Production* de una publicación anterior en Vercel. Las migraciones son compatibles con el código anterior (ADR-017), así que no se revierte la base.
 
 ### 13.6 Observabilidad
 
 | Necesidad | Herramienta |
 |---|---|
-| Errores (cliente, servidor, cron) | Sentry, con PII eliminada |
-| Logs | Vercel Logs (JSON con `request_id`) |
-| Base de datos | Supabase: rendimiento de consultas y advisors de seguridad y rendimiento (revisión semanal) |
-| Cola | `worker_queue_health`, alerta de Sentry cuando un job pasa a `dead`, `/api/v1/health` |
-| Informe semanal | `report_runs` + alerta de Sentry si falla |
-| Google | Consola de Google Cloud: métricas por SKU, cuotas y presupuesto |
-| Uptime | Monitor externo gratuito sobre `/api/v1/health`. También detecta la pausa de Supabase Free antes de la demo |
-| Rendimiento real | Vercel Speed Insights |
+| Errores del servidor | `instrumentation.ts` → registro JSON en Vercel Logs (`onRequestError`). Si existe `SENTRY_DSN`, también a Sentry |
+| Cola | `worker_queue_health` y `/api/v1/health` (503 si la cola está atascada) |
+| Informe semanal | `report_runs` (estado, intentos, error) en **Panel → Informes** |
+| Base de datos | Supabase: advisors de seguridad y rendimiento |
+| Disponibilidad | Monitor externo gratuito sobre `/api/v1/health` (recomendado: detecta también la pausa de Supabase Free) |
 
 ### 13.7 Costos (consultados el 23/09/2026; verificar antes de presupuestar, §20)
 
 | Servicio | Modelo | Impacto |
 |---|---|---|
-| Google Maps Platform | Desde marzo de 2025, cuota gratuita mensual por SKU (Dynamic Maps: 10 000 cargas) | Dentro de la cuota si no se recarga el mapa y se usan field masks |
+| OpenFreeMap | Gratis | — |
 | Supabase | Free: 500 MB, pausa tras 7 días sin actividad, sin backups. Pro: desde US$25/mes por organización + cómputo por proyecto | Free para demo; Pro para producción |
 | Vercel | Hobby: gratis, uso no comercial, cron diario. Pro: US$20 por miembro al mes | Hobby para demo; Team Pro para producción |
 | Email, Web Push | Niveles gratuitos / sin costo | — |
 | Sentry | Gratuito para 1 usuario | — |
 
-**Orden de magnitud en Fase 2:** unos US$55–75 al mes (Supabase Pro + cómputo de `staging` + Vercel Pro), más Google según el uso. El costo real es el mantenimiento humano.
+**Orden de magnitud en Fase 2:** unos US$55–75 al mes (Supabase Pro + cómputo de `staging` + Vercel Pro). El mapa no cuesta nada. El costo real es el mantenimiento humano.
 
 **Controles:**
-- cuotas diarias en Google y alertas de presupuesto;
 - spend cap de Supabase;
 - alertas de uso de Vercel;
 - fotos comprimidas en el cliente.
 
 ### 13.8 Demo del reto
 
-- Deployment etiquetado y congelado.
-- Actividad en Supabase la semana previa (evitar la pausa).
-- Semilla de datos reales de la provincia.
-- Video de respaldo.
-- Guion de 25 minutos que muestre las 6 funcionalidades, la alerta en vivo y la generación del PDF.
+Guion, plan B y comprobaciones a mano: [docs/guion-demo.md](docs/guion-demo.md).
 
 ### 13.9 Variables de entorno
 
@@ -1222,22 +1184,19 @@ Se validan al arrancar con Zod (`config/env.ts`); si falta una, la aplicación n
 | `NEXT_PUBLIC_SUPABASE_URL` | Cliente y servidor | Sí | URL del proyecto Supabase |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Cliente y servidor | Sí | Anon o publishable key; RLS la protege |
 | `SUPABASE_SERVICE_ROLE_KEY` | Solo worker y cron | **No** | Solo en `lib/supabase/admin.ts` (`server-only`) |
-| `NEXT_PUBLIC_GOOGLE_MAPS_KEY` | Cliente | Sí | Restringida por referrer y por API |
-| `NEXT_PUBLIC_GOOGLE_MAP_ID` | Cliente | Sí | Requerido por AdvancedMarkerElement |
-| `GOOGLE_MAPS_SERVER_KEY` | Servidor (opcional) | **No** | Solo si se usa Geocoding desde el servidor |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Cliente | Sí | Suscripción Web Push |
 | `VAPID_PRIVATE_KEY` | Worker | **No** | Firma de los push |
 | `VAPID_SUBJECT` | Worker | No | `mailto:` de la organización |
 | `CRON_SECRET` | Vercel Cron → `/api/v1/cron/weekly-report` | **No** | Vercel lo envía en `Authorization: Bearer` |
 | `JOBS_SECRET` | `pg_net` → `/api/v1/internal/jobs/run` | **No** | El mismo valor va en Vault como `jobs_secret` |
-| `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` | Servidor / cliente | DSN público | Con eliminación de PII |
+| `SENTRY_DSN` | Servidor (opcional) | No | Si existe, `instrumentation.ts` también envía los errores a Sentry |
 | `APP_TIMEZONE` | Servidor | No | `America/Santo_Domingo` |
 | `DEFAULT_PROVINCE_CODE` | Servidor | No | `SR` |
 | `NEXT_PUBLIC_APP_URL` | Cliente y servidor | Sí | Redirecciones de Auth y enlaces en notificaciones |
 
 - **Configuración fuera de Vercel:**
   - SMTP: se configura en Supabase Auth (host, usuario y clave del proveedor), no en Next.js mientras no exista el canal email (Fase 2);
-  - Vault: `worker_url` (URL pública de `/api/v1/internal/jobs/run`) y `jobs_secret`, cargados por un script de despliegue.
+  - Vault: `worker_url` (URL pública de `/api/v1/internal/jobs/run`) y `jobs_secret` ([DEPLOYMENT.md §3.6](DEPLOYMENT.md)).
 - **Rotación:** cada secreto se rota en Vercel y, si aplica, en Vault, sin cambiar código.
 
 ---
@@ -1252,7 +1211,7 @@ cd supabase/tests && npm install && npm test
 
 - **Motor:** PGlite (PostgreSQL 18.3 + PostGIS 3.6.2 en WebAssembly), sin Docker.
 - **Stubs de Supabase** (`supabase-stubs.sql`): `auth.uid()` desde los claims del JWT, `storage.objects`, `realtime.send`, Vault y los roles `anon`, `authenticated` y `service_role`.
-- **Resultado:** **150 pruebas en 20 secciones (A–T), todas pasan.**
+- **Resultado:** todas pasan en cada push (cifras en [DATABASE.md](DATABASE.md#estado-verificado)).
 
 | Qué cubren |
 |---|
@@ -1270,16 +1229,15 @@ cd supabase/tests && npm install && npm test
 
 **No verificable fuera de Supabase:** §20.
 
-### 14.2 Pruebas de la aplicación ⏳
+### 14.2 Pruebas de la aplicación ✅
 
-| Nivel | Herramienta | Qué cubre |
-|---|---|---|
-| Unitarias | Vitest | Esquemas Zod, periodos y zona horaria, rejilla de bbox, mapeo de `reason` a HTTP, datos del PDF |
-| E2E | Playwright | Registro e inicio de sesión; reporte con foto y geolocalización simulada dentro y fuera de la provincia; consulta hasta resuelta; voto; alta y aprobación de negocio; propuesta de ruta; panel y PDF; modo offline con cola; axe en las pantallas principales |
-| PDF | Vitest | Se genera y tiene las secciones esperadas |
-| Manual | Dispositivos reales | Android de gama media, iPhone con la PWA instalada, tablet; prueba con 5 vecinos |
-
-En E2E, Google usa el adaptador `mock`, y los canales push y email usan modo `mock`.
+| Nivel | Herramienta | Qué cubre | Dónde corre |
+|---|---|---|---|
+| Unitarias | Vitest (`npm test`) | Mapeo de `reason` a HTTP, redirecciones seguras, rejilla de bbox, horario y "abierto ahora", lector de GPX, esquemas de negocio, procesamiento de fotos (EXIF, formato, tamaño), semanas ISO y periodos del informe, enlaces de notificaciones, secreto del worker | CI |
+| Fronteras | `node:test` (`npm run test:boundaries`) | Que el lint detecte importaciones prohibidas, incluido el alias `@/` | CI |
+| E2E | Playwright (`npm run test:e2e`) | Listados y filtros públicos, búsqueda sin tildes, fichas, y el recorrido central: vecino reporta → moderador publica → aparece en el mapa público. Limpia lo que crea | A mano, contra staging ([ADR-025](docs/decisions/ADR-025-e2e-contra-staging.md)) |
+| Manual | Teléfonos reales | GPS, cámara, push, modo sin conexión, iPhone instalado | [Guion de la demo](docs/guion-demo.md#prueba-completa-a-mano-teléfono-real) |
+| Personas | Vecinos | Baja alfabetización digital (20 puntos) | [Guía](docs/prueba-con-vecinos.md) |
 
 ### 14.3 Prototipo de diseño
 
@@ -1299,11 +1257,11 @@ En E2E, Google usa el adaptador `mock`, y los canales push y email usan modo `mo
 | INP | < 200 ms | < 100 ms |
 | CLS | < 0.1 | < 0.1 |
 | Mapa con primeras features | < 4 s | < 2.5 s |
-| JS inicial propio (gzip, sin Google) | < 200 KB | < 200 KB |
+| JS inicial propio (gzip, sin el mapa) | < 200 KB | < 200 KB |
 | `map_features` p95 en servidor | < 300 ms | — |
 
 **Técnicas:**
-- import dinámico del mapa, Recharts y el PDF;
+- el mapa solo en el cliente y el PDF solo en el servidor;
 - Server Components para todo lo no interactivo;
 - `next/image` y fotos en WebP;
 - payload mínimo por viewport y geometrías simplificadas;
@@ -1315,53 +1273,48 @@ Antes de producción se revisa `EXPLAIN (ANALYZE, BUFFERS)` de `map_features`, `
 
 ## 15. Estructura del repositorio
 
-✅ = existe hoy · ⏳ = se crea al implementar
-
 ```text
 sr-conecta/
-├─ README.md  ARCHITECTURE.md  DATABASE.md                       ✅
-├─ project/                     prototipo de diseño               ✅
-├─ supabase/
-│  ├─ migrations/               24 migraciones                    ✅
-│  ├─ seed.sql                  semilla de desarrollo             ✅
-│  ├─ ops/                      scripts de operación              ✅
-│  └─ tests/                    150 pruebas (PGlite)              ✅
-├─ package.json  tsconfig.json  eslint.config.mjs  eslint.boundaries.mjs  ✅
-├─ .github/workflows/ci.yml     comprobaciones en cada PR                      ✅
-├─ src/                         ✅ (negocios, turismo y rutas en curso)
-│  ├─ app/
-│  │  ├─ (public)/  (app)/mapa/  (app)/cuenta/  (business)/negocio/  (admin)/admin/
-│  │  ├─ api/v1/                Route Handlers (§12.2)
-│  │  ├─ auth/                  callback, reset
-│  │  └─ manifest.ts  offline/        (service worker: public/sw.js)
-│  ├─ modules/                  map · businesses · tourism · routes · traffic · citizen-reports
-│  │                            notifications · jobs · media · admin · analytics · reports
-│  │                            (cada uno: components/ server/ schemas.ts queries.ts types.ts index.ts)
-│  ├─ components/ui/            shadcn/ui
-│  ├─ lib/supabase/             server · client · anon · admin (server-only)
-│  ├─ hooks/                    useGeolocation · useOnlineStatus · useOfflineQueue
-│  ├─ types/                    supabase gen types
-│  ├─ config/env.ts
-│  └─ proxy.ts
-├─ data/                        límites OSM de los municipios                  ✅
-├─ tests/boundaries/            prueba de regresión de la regla de fronteras   ✅
-├─ tests/e2e/                   Playwright                                     ⏳
+├─ README.md  ARCHITECTURE.md  DATABASE.md  DEPLOYMENT.md  SECURITY.md  LICENSE  NOTICE
 ├─ docs/
-│  ├─ decisions/                21 ADR, una por archivo                        ✅
-│  └─ manual-administrativo.md  manual del panel municipal (entregable)        ⏳
-├─ DEPLOYMENT.md                manual de despliegue (entregable)              ⏳
-├─ SECURITY.md  CONTRIBUTING.md  API.md                                        ⏳
-├─ LICENSE                      MIT                                            ✅
-├─ vercel.json                  cron diario del informe                        ✅
-└─ .env.example                                                                ✅
+│  ├─ README.md                 índice de documentos por público
+│  ├─ decisions/                ADR, una decisión por archivo
+│  ├─ manual-administrativo.md  guion-demo.md  prueba-con-vecinos.md  REPARTO-DE-TRABAJO.md
+├─ supabase/
+│  ├─ migrations/               la fuente de verdad del modelo
+│  ├─ tests/                    pruebas de la base (PGlite)
+│  ├─ ops/                      scripts de operación: límites, datos de OSM, humo, admin provincial
+│  ├─ templates/  config.toml   correo en español y configuración de Auth
+│  └─ seed.sql                  semilla de pruebas locales
+├─ data/                        datos de OpenStreetMap e importadores (data/README.md)
+├─ scripts/                     cuentas de prueba, copia de seguridad, copia del worker del mapa
+├─ tests/boundaries/  tests/e2e/
+├─ public/                      sw.js, íconos, vendor/ (worker de MapLibre)
+├─ .github/workflows/           ci.yml · deploy.yml (apagado) · backup.yml (apagado)
+├─ vercel.json                  cron diario del informe
+└─ src/
+   ├─ app/
+   │  ├─ (app)/                 páginas con su layout (§6.1); _components/ y _contenido/ son piezas de página
+   │  ├─ api/v1/                Route Handlers (§12.2)
+   │  ├─ auth/callback/  offline/  manifest.ts  layout.tsx
+   ├─ modules/                  admin · businesses · citizen-reports · jobs · map · media
+   │                            notifications · reports · routes · tourism · traffic
+   │                            cada uno: index.ts (seguro para el cliente) + server.ts (solo servidor)
+   │                            + server/ (queries, commands) + schemas.ts
+   ├─ components/               ui/ (primitivas) · shared/ (navegación, íconos de catálogo, service worker)
+   ├─ lib/                      supabase/ (server · client · anon · admin), auth, catálogos, outbox, vocabulario
+   ├─ hooks/  config/  types/  utils/
+   └─ proxy.ts                  sesión + CSP con nonce
 ```
 
 **Reglas de módulos:**
-- Un módulo solo importa de otro a través de su `index.ts`. Lo exige `eslint-plugin-boundaries` (`eslint.boundaries.mjs`), corre en `npm run lint` y en el CI, y tiene su prueba de regresión (`npm run test:boundaries`).
+- Un módulo solo importa de otro a través de su `index.ts` o su `server.ts`. Lo exige `eslint-plugin-boundaries` (`eslint.boundaries.mjs`), corre en `npm run lint` y en el CI, y tiene su prueba de regresión (`npm run test:boundaries`).
 - Las capas compartidas (`components`, `hooks`, `lib`, `config`, `types`, `utils`) no importan módulos de dominio, y nada importa de `src/app`.
 - `map` no conoce reglas de negocio: los demás módulos le entregan capas.
 - `jobs` no conoce reglas de negocio: cada módulo registra sus handlers por `kind`.
-- `queries.ts` es la única frontera con la base; no hay capa "repositorio" adicional.
+- Las páginas leen y escriben **solo a través de los módulos** (o de `lib/auth` para el propio perfil); ninguna página consulta tablas directamente.
+- `admin` es el backend del panel: reúne lo que el personal necesita de varios dominios, pero cada cambio de estado lo valida la RPC del dominio en la base.
+- `server/queries.ts` y `server/commands.ts` son la frontera con la base; no hay capa "repositorio" adicional.
 
 ---
 
@@ -1406,28 +1359,22 @@ Si falta tiempo, se recortan primero los ítems marcados como recortables. Nunca
 
 Postergar los cimientos es exactamente el cambio brusco que esta arquitectura evita.
 
-### 16.3 Plan por semanas
+### 16.3 Ejecución
 
-| Semana | Entrega | Cubre |
-|---|---|---|
-| 1 (24–30 sep) | **Cimientos:** cuentas de la organización, SMTP propio, proyecto Supabase con las 17 migraciones aplicadas y verificadas (§20), Vault, `pg_cron`, esqueleto Next.js con auth y roles, worker de la cola, CI con release "migrar → desplegar". Importación de datos abiertos | Base de todo |
-| 2 (1–7 oct) | Mapa (capas, zoom, búsqueda, Broadcast) y reportes de tránsito con fotos, moderación y escalado | F1, F4 |
-| 3 (8–14 oct) | Consultas con estados, votos y seguimiento; panel municipal (bandejas, validaciones, roles); notificaciones in-app y alertas | F5, panel |
-| 4 (15–21 oct) | Negocios (alta, horario, fotos, promociones), turismo, rutas y propuestas; KPIs y PDF | F2, F3, F6 |
-| 5 (22–27 oct) | PWA, push, cola offline, prueba con vecinos, manuales, repositorio público, guion y ensayo de la demo | UX, sostenibilidad, documentación |
+El plan original por semanas (24/09–27/10) se adelantó: las seis funcionalidades, el panel, el PDF, la PWA y la publicación estaban en línea el 05/10. Lo que queda hasta la entrega ya no es código (contenido, prueba con vecinos, ensayo de la demo) y está repartido en [docs/REPARTO-DE-TRABAJO.md](docs/REPARTO-DE-TRABAJO.md).
 
 ### 16.4 Fases siguientes
 
 | Capacidad | MVP | Fase 2: producción municipal | Fase 3: escala regional |
 |---|---|---|---|
-| Mapa | Google, viewport, clustering, `map_aggregates` | Vector tiles si hacen falta | Multi-provincia; evaluar MapLibre |
-| Búsqueda | FTS + trigramas + Autocomplete | Cercanía y popularidad | Motor dedicado si hace falta |
+| Mapa | MapLibre + OpenFreeMap, viewport, clustering | Vector tiles propios si hacen falta | Multi-provincia; teselas propias (PMTiles) |
+| Búsqueda | FTS + trigramas sobre datos propios | Cercanía, popularidad y direcciones | Motor dedicado si hace falta |
 | Tránsito | Reportes, moderación, vencimiento, Broadcast, alertas | Confirmaciones comunitarias ("ya no está") | Datos oficiales (INTRANT/COE) si existen |
 | Consultas | Ciclo completo, votos, historial | SLA, asignación automática por categoría | Integración con sistemas municipales |
 | Negocios y turismo | Alta verificada, fotos, horario, promociones | Inglés, GPX, elevación | Paquetes regionales |
 | Notificaciones | In-app, push, alertas por municipio | Canal email, resúmenes | Canal nativo si hay app |
-| Panel | Bandejas, validaciones, roles, auditoría, informes | Sistema (cola, catálogos, flags), suspensión de usuarios | — |
-| Seguridad | RLS, RPC, rate limits, captcha, auditoría | 2FA admin (`aal2`), Vercel Firewall | Pentest externo |
+| Panel | Bandejas, validaciones, roles, auditoría, informes, catálogos | Sistema (cola, flags), suspensión de usuarios | — |
+| Seguridad | RLS, RPC, rate limits, auditoría | Captcha, 2FA admin (`aal2`), Vercel Firewall | Pentest externo |
 | Datos | `province_id` desde hoy | Descargar mis datos | Nuevas provincias sin migración de datos; particionado de `audit_logs` |
 | Cola | `private.jobs` + `pg_cron` | Más tipos de job | `pgmq` o Inngest con el mismo contrato |
 | Infraestructura | Hobby + Free | Vercel Team Pro, Supabase Pro + Branching | Más cómputo, réplicas de lectura |
@@ -1437,9 +1384,9 @@ Postergar los cimientos es exactamente el cambio brusco que esta arquitectura ev
 | | MVP (demo) | Fase 2: producción municipal | Fase 3: escala regional |
 |---|---|---|---|
 | Usuarios | Decenas (equipo, jurado, vecinos de prueba) | Miles a decenas de miles registrados; cientos a pocos miles activos por día; picos en temporada turística | Varias provincias de la Región Noroeste; cientos de miles registrados |
-| Datos | Semilla + datos abiertos | Miles de negocios y de reportes por año; fotos en GB | Millones de filas en auditoría e históricos |
+| Datos | OpenStreetMap + lo que cargan vecinos y municipio | Miles de negocios y de reportes por año; fotos en GB | Millones de filas en auditoría e históricos |
 | Arquitectura | La de este documento | La misma, sin migraciones estructurales: solo se activa lo marcado como Fase 2 | Multi-provincia en la misma base (sin migrar datos), particionado de `audit_logs`, réplicas de lectura, tiles en CDN |
-| Costo mensual | US$0 (planes gratuitos) | Decenas de USD + Google según uso (§13.7) | Revisar cómputo de Supabase y SKUs de Google con el volumen real |
+| Costo mensual | US$0 (planes gratuitos) | Decenas de USD (§13.7) | Revisar cómputo de Supabase con el volumen real |
 | Organización | Equipo del reto | Responsables de moderación por municipio, SLA de respuesta a consultas, acuerdo de datos con el municipio, contrato de soporte | Gobernanza regional de datos y de roles |
 
 Lo que no cambia en ninguna fase: PostgreSQL como fuente de verdad, la lógica crítica en la base y el monolito modular. Un servicio aparte solo se extrae si una carga concreta lo exige (por ejemplo, generación masiva de informes).
@@ -1451,22 +1398,21 @@ Lo que no cambia en ninguna fase: PostgreSQL como fuente de verdad, la lógica c
 | Riesgo | Prob. | Impacto | Mitigación | Plan B |
 |---|---|---|---|---|
 | Llamadas directas a la API saltando Next.js | Alta | Alto | RPC autosuficientes, sin escritura directa, pruebas de ataque directo | Revocar la RPC afectada y corregir por migración |
-| Costos de Google fuera de control | Media | Alto | Cuotas, alertas, field masks, sin llamadas por eventos del mapa | MapLibre + OSM vía adaptador |
 | Supabase Free pausado antes de la demo | Media | Alto | Actividad regular, monitor de uptime | Video de respaldo |
-| Emails de OTP no entregados | Media | Alto | SMTP propio con SPF, DKIM y DMARC antes de abrir el registro | Google OAuth |
-| Pérdida de datos (Free no tiene backups) | Media | Alto | `pg_dump` diario desde el primer dato real | Restaurar el último dump |
-| Código desplegado antes que su migración | Media | Alto | Action: migrar → desplegar; migraciones compatibles | Instant Rollback |
-| Spam o reportes falsos | Alta | Medio | Rate limits, captcha, moderación, reputación | Moderación previa para todos |
+| Correos de acceso no entregados | Media | Alto | SMTP propio (hoy Gmail, ~500/día); Resend con SPF y DKIM al tener dominio | Código de un solo uso por script para el equipo |
+| Pérdida de datos (Free no tiene backups) | Media | Alto | `backup.yml` cifrado diario (activar) y `npm run backup` antes de cambios grandes | Restaurar el último dump |
+| Código desplegado antes que su migración | Media | Alto | Regla: `db push` antes de subir a `main`; migraciones compatibles; `deploy.yml` cuando haya producción | Promote de la publicación anterior |
+| Spam o reportes falsos | Alta | Medio | Rate limits, moderación, reputación; captcha antes de abrir al público | Moderación previa para todos |
 | GPS impreciso en montaña | Alta | Medio | Pin ajustable; validación del moderador | — |
-| Cobertura pobre de Google en zonas rurales | Alta | Medio | Reportes ciudadanos como fuente principal | TrafficLayer apagada |
+| Cartografía de OSM pobre en zonas rurales | Alta | Medio | Reportes y propuestas de los vecinos; el personal corrige desde el panel | Contribuir a OSM |
 | Limitaciones de la PWA en iOS | Alta | Medio | Guía de instalación; in-app siempre | App nativa en Fase 3 si se justifica |
 | Cola detenida | Media | Medio | `/health`, `worker_queue_health`, alerta en `dead` | Disparo manual del worker |
 | Algo que funciona en PGlite no funciona igual en Supabase real (§20) | Media | Medio | Aplicar las migraciones en un proyecto real en la semana 1 | Ajustar por migración |
 | Mantenimiento tras el reto | Alta | Alto | Documentación, catálogos sin deploy, cuentas transferibles, costos bajos | Contrato de soporte |
 | Deuda técnica por la prisa del reto | Alta | Medio | Alcance claro, pruebas en lo crítico | Sprint de estabilización antes de la Fase 2 |
-| Licencias incompatibles | Baja | Medio | `license-checker` en CI | Reemplazar la dependencia |
+| Licencias incompatibles | Baja | Medio | Dependencias MIT/Apache/ISC; datos ODbL con atribución (NOTICE) | Reemplazar la dependencia |
 | Brecha de seguridad: RLS mal escrita o `service_role` expuesta | Media | Alto | Pruebas de RLS y de ataque directo en CI, `server-only`, advisors de Supabase | Rotar claves, revocar la función afectada, respuesta a incidentes |
-| Clave de Google robada o usada desde otro sitio | Media | Medio | Restricción por referrer y por API, cuotas diarias | Rotar la clave |
+| Publicaciones manuales desde cuentas o copias equivocadas | Media | Alto | Solo publica `main` desde GitHub; una cuenta de Vercel del equipo | Promote de la publicación correcta |
 | Negocios falsos o con datos inventados | Media | Medio | Verificación por el moderador (llamada o visita) antes de aprobar | Suspensión con motivo y auditoría |
 | Push no entregado | Media | Bajo | Centro de notificaciones in-app siempre | Canal email en Fase 2 |
 | Saturación del mapa | Media | Medio | Clustering, zoom con agregados, máximo 500 features por respuesta | Vector tiles (Fase 2/3) |
@@ -1492,7 +1438,7 @@ Cada ADR tiene su archivo en [`docs/decisions/`](docs/decisions), con contexto, 
 | [006](docs/decisions/ADR-006-postgresql-unica.md) | PostgreSQL como única base de datos | Firestore, Mongo, Redis | Una sola copia de la verdad |
 | [007](docs/decisions/ADR-007-postgis.md) | PostGIS con SRID 4326 y cast a `geography` | Turf en JS; Google para distancias | Consultas espaciales indexadas y gratuitas |
 | [008](docs/decisions/ADR-008-monolito-modular.md) | Monolito modular | Microservicios; backend separado | Un despliegue; fronteras verificadas por lint |
-| [009](docs/decisions/ADR-009-pwa.md) | PWA con Serwist | React Native, Capacitor | Sin tiendas; push en iOS solo con la PWA instalada |
+| [009](docs/decisions/ADR-009-pwa.md) | PWA (service worker propio; ver su nota de implementación) | React Native, Capacitor | Sin tiendas; push en iOS solo con la PWA instalada |
 | [010](docs/decisions/ADR-010-misiones.md) | Misiones — **Retirada** (24/09/2026) | — | Fuera del alcance del proyecto; no se reintroducen |
 | [011](docs/decisions/ADR-011-recompensas.md) | Recompensas — **Retirada** (24/09/2026) | — | Los comercios tienen solo promociones informativas |
 | [012](docs/decisions/ADR-012-realtime.md) | **Realtime solo para alertas de tránsito públicas (Broadcast por provincia).** El panel usa sondeo de 30 s. *Revisada en v2.0: ya no incluye la bandeja del panel* | Realtime para todas las capas; Postgres Changes en el panel | Sin publicación de tablas con datos personales |
@@ -1506,19 +1452,22 @@ Cada ADR tiene su archivo en [`docs/decisions/`](docs/decisions), con contexto, 
 | [020](docs/decisions/ADR-020-sin-super-admin.md) | Sin `super_admin`; gobernanza por `municipal_admin` provincial y scripts de operación | `super_admin` con 2FA | Nadie amplía su propio poder desde la aplicación |
 | [021](docs/decisions/ADR-021-descarga-pdf-auditada.md) | Descarga del PDF con auditoría obligatoria: la política de Storage exige el registro en `audit_logs` | Firmar con `service_role` y auditar desde Next.js; no auditar | La auditoría no se puede saltar; sin `service_role` en requests de usuario |
 | [022](docs/decisions/ADR-022-maplibre-openfreemap.md) | MapLibre + OpenFreeMap como mapa base definitivo del MVP, detrás del mismo adaptador | Google Maps (ADR-004) | Sin costo ni claves, cacheable sin conexión, coherente con los datos de OSM |
+| [023](docs/decisions/ADR-023-server-actions.md) | Server Actions para lo que solo se hace desde la interfaz; Route Handlers solo para el mapa, la cola offline, el worker y los cron | Una API REST completa `/me/*` | Menos superficie pública; las RPC siguen siendo la barrera |
+| [024](docs/decisions/ADR-024-datos-osm.md) | OpenStreetMap como fuente provisional de límites, negocios, lugares y rutas, con importadores idempotentes | Datos inventados de demostración; esperar los datos oficiales | Datos reales para la demo; los oficiales se cargan encima |
+| [025](docs/decisions/ADR-025-e2e-contra-staging.md) | E2E con Playwright contra staging, a mano; el CI corre lo que no necesita cuentas | Supabase local con Docker en CI | Pruebas reales del recorrido central sin secretos en CI |
 
-### 18.1 Decisiones que cambiaron de la v1.6 a la v2.x
+### 18.1 Decisiones que cambiaron
 
-Ninguna decisión cambia en silencio. Estas se revisaron en la auditoría del 24–25/09/2026:
+Ninguna decisión cambia en silencio. Las primeras filas se revisaron en la auditoría del 24–25/09/2026; las últimas, durante la construcción (hasta el 07/10/2026):
 
-| Tema | v1.6 | v2.x | Motivo |
+| Tema | Antes | Ahora | Motivo |
 |---|---|---|---|
 | Tiempo real en el panel | Postgres Changes con RLS | Sondeo cada 30 s (ADR-012) | No publicar tablas con datos personales; menos piezas |
 | Endpoint de mapa autenticado `/api/v1/me/map/features` | Previsto | Eliminado | El ciudadano usa `my_activity`; el panel lee las tablas con RLS |
 | 2FA del administrador provincial | Desde el MVP | Fase 2, junto con el resto de administradores (`aal2`) | Tiempo del reto; el alcance provincial solo se crea por script auditado |
 | Canal email de notificaciones | MVP (para iPhone sin la PWA) | Fase 2 (ADR-013) | Recorte del MVP; in-app siempre y guía de instalación |
 | Confirmar "ya no está" en tránsito | MVP | Fase 2 | El vencimiento automático cubre el MVP |
-| Panel "Sistema" (cola, catálogos, flags) | MVP | Fase 2 | En el MVP se opera con `worker_queue_health` y SQL de operación |
+| Panel "Sistema" (cola, catálogos, flags) | MVP | Catálogos en el MVP (**Panel → Catálogos**, migración 300); cola y flags en Fase 2 | Sostenibilidad: el municipio edita sus listas sin ayuda técnica |
 | Auditoría de descargas del PDF | Declarada, sin pieza que la hiciera | Obligatoria por política de Storage (ADR-021) | La v1.6 prometía algo que nada implementaba |
 | Firma de la URL del PDF | Con `service_role` desde el servidor | Con el JWT del administrador (ADR-021) | Cumplir ADR-018 |
 | Envío de alertas masivas | Job que dividía destinatarios en lotes de ~500 | Una función SQL inserta todas; el worker envía los push por lotes | Más simple y atómico a la escala de 3 municipios |
@@ -1527,6 +1476,13 @@ Ninguna decisión cambia en silencio. Estas se revisaron en la auditoría del 24
 | Rate limit | Ventana deslizante en `private.rate_limits` | Ventana fija en `private.rate_limit_hits` | Así está implementado y probado |
 | Métricas de vistas | `daily_view_counts` en Fase 2 | `engagement_daily` + `track_engagement` en el MVP | Las estadísticas del comercio son parte de F2 |
 | Vértices de una ruta | Máximo 2 000 | Entre 2 y 5 000 | Margen para rutas grabadas con GPS; es lo que valida el SQL |
+| Mapa base | Google Maps (ADR-004) | MapLibre + OpenFreeMap (ADR-022) | Costo, términos que impedían el uso sin conexión y tiempo del reto |
+| Stack de interfaz | shadcn/ui, React Hook Form, TanStack Query, Zustand, Recharts | Componentes propios, `useActionState`, estado de React y URL, barras en CSS | No hicieron falta: menos dependencias para quien herede el proyecto |
+| API de la cuenta (`/me/*`), alta de negocio y propuestas | Endpoints REST | Server Actions (ADR-023) | Solo los usa la interfaz; menos superficie pública |
+| Despliegue | Action "migrar → publicar" desde el día 1 | Integración Git de Vercel + regla "migración primero"; la Action se activa con producción | Hay un solo proyecto Supabase hasta la producción municipal |
+| Service worker | Serwist | Archivo propio `public/sw.js` (nota en ADR-009) | Serwist necesitaba un plugin aparte para Turbopack |
+| Datos de la demo | Semilla inventada | OpenStreetMap (ADR-024) | Credibilidad frente a un jurado local |
+| Catálogos editables | SQL de operación | **Panel → Catálogos** (migración 300) | Criterio de sostenibilidad |
 
 ---
 
@@ -1534,8 +1490,8 @@ Ninguna decisión cambia en silencio. Estas se revisaron en la auditoría del 24
 
 | No hacer | Hacer en su lugar |
 |---|---|
-| Usar Google Places como base de negocios | Tabla `businesses` propia; guardar solo `google_place_id` |
-| Llamar a Google en cada movimiento del mapa | PostGIS por viewport; Google solo por intención del usuario |
+| Depender de un proveedor externo para los datos | Tablas propias en PostGIS; OSM solo como fuente de importación |
+| Llamar servicios externos en cada movimiento del mapa | PostGIS por viewport; servicios externos solo por intención del usuario |
 | Confiar en que Next.js valida | Validación autoritativa dentro de cada RPC |
 | Usar `service_role` en requests de usuario | JWT del usuario; `service_role` solo en el worker y el cron |
 | `RAISE EXCEPTION` para rechazos de negocio | Devolver `{status:'rejected'}` y hacer commit |
@@ -1548,16 +1504,16 @@ Ninguna decisión cambia en silencio. Estas se revisaron en la auditoría del 24
 | Enviar push inline "después del commit" | Cola `private.jobs` |
 | Publicar Postgres Changes de tablas con datos personales | Broadcast con datos públicos; sondeo en el panel |
 | Buckets públicos para evidencias; fotos con EXIF | Bucket privado + URL firmada; re-codificar sin EXIF |
-| Auto-deploy de producción con la migración aparte | Action: migrar → desplegar |
+| Subir código que usa una migración sin aplicarla antes | `db push` primero; `deploy.yml` cuando haya producción |
 | SMTP por defecto de Supabase con usuarios reales | SMTP propio con dominio verificado |
-| Cambios de esquema desde el dashboard | Migraciones versionadas |
+| Cambios de esquema o datos desde el SQL Editor | Migraciones versionadas; datos por el panel o scripts de `supabase/ops` |
 | Cuentas personales de integrantes | Cuentas de la organización |
 | Rastreo GPS continuo | Ubicación puntual por acción |
 | Firebase, Redux, microservicios o Kubernetes | Supabase, estado local, monolito modular |
 | Cargar todos los puntos de las capas que crecen | Viewport + zoom + clustering (solo las capas pequeñas y estables se cargan completas) |
 | Posponer `province_id` "hasta que haya otra provincia" | `province_id` desde el MVP (ADR-017) |
 | Confiar en `proxy.ts` como autorización | Verificar sesión y rol en cada handler y acción; la RPC decide |
-| Claves de Google sin restricciones | Restricción por referrer y por API + cuotas diarias |
+| Publicar a mano con `vercel deploy --prod` | Solo publica `main` desde GitHub |
 | Cron o tareas programadas no idempotentes | Chequeo que genera solo si falta (`report_runs` con clave única), `dedupe_key` en la cola |
 | Guardar fechas sin zona horaria | `timestamptz` + periodos calculados en `America/Santo_Domingo` |
 | Crear URLs firmadas con `service_role` en un request de usuario | Firmar con el JWT del usuario y dejar que la política de Storage decida (ADR-021) |
@@ -1565,36 +1521,32 @@ Ninguna decisión cambia en silencio. Estas se revisaron en la auditoría del 24
 
 ---
 
-## 20. Pendiente de verificar
+## 20. Verificaciones en el servicio real
 
-Lo que ninguna prueba local puede confirmar (19 puntos). Se resuelve en la semana 1, al crear el proyecto Supabase real.
+Lo que las pruebas locales no podían confirmar se comprobó en el proyecto `staging` y en Vercel.
 
-| # | Qué verificar | Dónde |
+| # | Qué | Estado |
 |---|---|---|
-| 1 | Todas las migraciones se aplican en un proyecto Supabase recién creado (verificado en staging: 24 de 24) | Supabase |
-| 2 | `pg_cron`, `pg_net` y Vault se habilitan, y `cron.schedule` registra las 4 tareas (en las pruebas se omiten) | Supabase |
-| 3 | La firma de `realtime.send(payload, event, topic, private)` y la suscripción del cliente a un canal Broadcast público | Documentación de Supabase Realtime |
-| 4 | Las claves de `storage.objects.metadata` (`mimetype`, `size`) que usa `register_attachment` | Supabase Storage |
-| 5 | `storage.foldername()` y los límites de los buckets en el servicio real | Supabase Storage |
-| 6 | Que la Data API exponga solo `public`, y los grants por defecto a tablas nuevas (la migración 200 los fija explícitamente) | Supabase |
-| 7 | El método recomendado de validación de sesión en `@supabase/ssr` (`getUser` o `getClaims`) | Documentación de Supabase |
-| 8 | La integración nativa de Turnstile en Supabase Auth | Documentación de Supabase |
-| 9 | Los límites del SMTP por defecto de Supabase | Documentación de Supabase |
-| 10 | Conexión directa solo por IPv6 frente a los runners de GitHub (usar el pooler) | Supabase |
-| 11 | Disponibilidad y precio de Supabase Branching | Supabase |
-| 12 | `proxy.ts` y el runtime Node en Next.js 16 | Documentación de Next.js |
-| 13 | Límites de Vercel Hobby (cron, uso comercial, commits de colaboradores en repos privados) | Vercel |
-| 14 | Precios y cuotas de Google Maps por SKU | Google |
-| 15 | Límite de usuarios del plan gratuito de Sentry | Sentry |
-| 16 | `ST_CoverageSimplify` en la versión de PostGIS del proyecto | Supabase |
-| 17 | Rendimiento con los polígonos oficiales de los municipios (los de desarrollo son rectángulos) | Datos abiertos |
-| 18 | Hacer **público** el repositorio antes de la entrega (hoy es privado) | GitHub |
-| 19 | `createSignedUrl` con el JWT del usuario respeta la política `reports_pdf_read_after_audit` (ADR-021) | Supabase Storage |
+| 1 | Todas las migraciones se aplican en un Supabase recién creado | ✅ Staging |
+| 2 | `pg_cron`, `pg_net` y Vault; las tareas programadas registradas | ✅ El worker se despierta solo cada minuto (`pg_net` → 200) |
+| 3 | `realtime.send` y la suscripción a Broadcast | ✅ La alerta aparece en vivo |
+| 4–5 | Metadatos y carpetas de Storage, límites de los buckets | ✅ Subida, registro y procesamiento de fotos de punta a punta |
+| 6 | La Data API expone solo `public`, con los grants por defecto cerrados | ✅ Migración 240 (hallazgo con `supabase db advisors`) |
+| 7 | Validación de sesión en `@supabase/ssr` | ✅ `getClaims()` |
+| 8 | Captcha nativo de Supabase Auth | ⏳ Pendiente ([SECURITY.md](SECURITY.md)) |
+| 9 | Límites del SMTP por defecto | ✅ 2 por hora: se usa SMTP propio |
+| 10 | Conexión de los runners de GitHub por el pooler | ⏳ Al activar `backup.yml` |
+| 11 | Supabase Branching | ⏳ Fase 2 (requiere Pro) |
+| 12 | `proxy.ts` en Next.js 16 | ✅ |
+| 13 | Límites de Vercel Hobby | ✅ Cron diario; los commits deben tener un autor reconocido por la cuenta |
+| 16–17 | Simplificación y rendimiento con los polígonos reales | ✅ Límites de OSM simplificados en la carga |
+| 18 | Repositorio público | ✅ 05/10/2026 |
+| 19 | URL firmada del PDF con el JWT del administrador y la política de auditoría | ✅ |
+| — | Precios de Google y Sentry | No aplica (ADR-022; Sentry es opcional) |
 
 **Fuentes consultadas:**
 - bases del reto: https://conectasr.com;
-- precios de Google Maps: https://developers.google.com/maps/billing-and-pricing/overview;
-- políticas de Places: https://developers.google.com/maps/documentation/places/web-service/policies;
+- OpenFreeMap: https://openfreemap.org;
 - Supabase: https://supabase.com/pricing;
 - Vercel: https://vercel.com/pricing y https://vercel.com/docs/cron-jobs/usage-and-pricing.
 
@@ -1608,3 +1560,4 @@ Lo que ninguna prueba local puede confirmar (19 puntos). Se resuelve en la seman
 | 2.0 | 24/09/2026 | Documento reorganizado de principio a fin. Una decisión por tema, sin secciones retiradas. Alineado con el SQL verificado: fotos, alertas por municipio, edición de lugares y rutas, métricas de uso, Realtime solo para tránsito, sondeo del panel, catálogo completo de API |
 | 2.1 | 25/09/2026 | Recupera lo que la v2.0 había perdido de la v1.6 y añade: 21 ADR completas en `docs/decisions/`, registro de decisiones cambiadas (§18.1), variables de entorno (§13.9), diagramas de secuencia (§11.2), consultas espaciales tipo (§7.4), tamaño por fase (§16.5), 11 riesgos y 7 reglas de "No hacer" más. Nueva descarga auditada del PDF (ADR-021, migración `20260925120000`, 6 pruebas) |
 | **2.2** | 25/09/2026 | La regla de fronteras de ADR-008 deja de ser solo documento: `package.json`, `tsconfig.json`, ESLint con `eslint-plugin-boundaries` (8 pruebas de regresión, incluido el alias `@/`), los 12 módulos con su `index.ts` y CI en GitHub Actions |
+| **3.0** | 07/10/2026 | **Documento de lo construido.** Stack real (§4), una sola carpeta de rutas (§6.1), MapLibre + OpenFreeMap (§7, ADR-022), API real: Route Handlers + Server Actions (§12, ADR-023), CI/CD y operación reales (§13), pruebas E2E (§14), estructura real (§15), ejecución (§16.3), riesgos sin Google (§17), ADR-023 a 025, verificaciones resueltas (§20). Las cifras pasan a vivir solo en DATABASE.md |

@@ -33,3 +33,8 @@ Producción la despliega una GitHub Action que primero migra y después ejecuta 
 | Riesgo | Mitigación |
 |---|---|
 | Fallo entre la migración y el deploy | Migraciones compatibles hacia atrás mantienen funcionando el código anterior; Instant Rollback. |
+
+## Revisión (07/10/2026)
+
+- **E2E en el CI contra Supabase local:** sustituido por [ADR-025](ADR-025-e2e-contra-staging.md). Las E2E se corren a mano contra staging.
+- **Despliegue de producción:** mientras haya un solo proyecto Supabase (staging), publica la integración Git de Vercel desde `main`, con la regla "migración primero" (`db push` antes de subir el código). El workflow `deploy.yml` (migrar → publicar) está listo y se activa con `DEPLOY_ENABLED=true` cuando exista el proyecto de producción. Entonces se desactiva la publicación automática de `main` en Vercel. Pasos: [DEPLOYMENT.md §4](../../DEPLOYMENT.md).
