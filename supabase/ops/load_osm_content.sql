@@ -108,12 +108,14 @@ with src (slug, name, category, label, lng, lat, phone, website) as (values
 )
 insert into public.businesses (province_id, municipality_id, category_id, slug, name, description, geom, phone, website, status)
 select l.province_id, l.municipality_id, c.id, l.slug, l.name,
-       l.label || ' en ' || l.muni || '. Datos de OpenStreetMap: si es tu negocio, regístralo en SR Conecta para completar horario, fotos y contacto.',
+       null,
        l.geom, l.phone, l.website, 'approved'
 from located l join public.business_categories c on c.slug = l.category
 on conflict (province_id, slug) do update
   set name = excluded.name, category_id = excluded.category_id, geom = excluded.geom,
-      phone = coalesce(public.businesses.phone, excluded.phone), website = coalesce(public.businesses.website, excluded.website);
+      phone = coalesce(public.businesses.phone, excluded.phone), website = coalesce(public.businesses.website, excluded.website),
+      -- quita el texto de relleno de cargas anteriores; nunca borra una descripción escrita por el negocio o el municipio
+      description = case when public.businesses.description like '%Datos de OpenStreetMap%' then null else public.businesses.description end;
 
 with src (slug, name, kind, label, lng, lat, opening) as (values
   ('iglesia-de-las-mercedes-osmn2037619928', 'Iglesia De Las Mercedes', 'cultural', 'Templo', -71.341219, 19.4756564, null),
@@ -144,10 +146,11 @@ with src (slug, name, kind, label, lng, lat, opening) as (values
 )
 insert into public.tourism_places (province_id, municipality_id, slug, name, kind, description, opening_info, geom, status)
 select l.province_id, l.municipality_id, l.slug, l.name, l.kind,
-       l.label || ' en ' || l.muni || '. Ubicación de OpenStreetMap; la descripción la completa el municipio desde el panel.',
+       null,
        l.opening, l.geom, 'published'
 from located l
-on conflict (province_id, slug) do update set name = excluded.name, kind = excluded.kind, geom = excluded.geom;
+on conflict (province_id, slug) do update set name = excluded.name, kind = excluded.kind, geom = excluded.geom,
+  description = case when public.tourism_places.description like '%Ubicación de OpenStreetMap%' then null else public.tourism_places.description end;
 
 with src (slug, name, kind, difficulty, duration_min, description, geojson) as (values
   ('moncion-presa-osm', 'De Monción a la Presa', 'ecologica', 'baja', 60, 'Caminata desde el Parque Central de Monción hasta la Presa de Monción, sobre el río Mao. El trazado sigue calles y caminos que existen en OpenStreetMap; conviene validarlo con el municipio antes de recomendarlo.', '{"type":"MultiLineString","coordinates":[[[-71.150208,19.410864],[-71.150093,19.410842],[-71.150117,19.410658],[-71.149703,19.410597],[-71.149661,19.410591],[-71.149666,19.410553],[-71.148633,19.410401],[-71.148594,19.410396],[-71.148546,19.410386],[-71.148357,19.410347],[-71.148233,19.41034],[-71.148016,19.410369],[-71.147702,19.410431],[-71.147286,19.410512],[-71.146955,19.409349],[-71.146782,19.409336],[-71.146472,19.409267],[-71.145925,19.409145],[-71.145225,19.408989],[-71.143598,19.40881],[-71.143308,19.408688],[-71.142604,19.407963],[-71.142156,19.407488],[-71.141798,19.407149],[-71.14158,19.407065],[-71.141094,19.407078],[-71.139748,19.407151],[-71.137705,19.407086],[-71.13646,19.407086],[-71.136301,19.407109],[-71.135543,19.407427],[-71.135367,19.40748],[-71.134393,19.407357],[-71.134263,19.407311],[-71.133271,19.406959],[-71.132836,19.406779],[-71.132575,19.406555],[-71.132418,19.406172],[-71.132399,19.405873],[-71.132335,19.405619],[-71.132169,19.405402],[-71.131377,19.405052],[-71.130966,19.405015],[-71.130423,19.405077],[-71.129683,19.404947],[-71.128974,19.404849],[-71.128418,19.404562],[-71.128159,19.404275],[-71.127536,19.403594],[-71.127262,19.403513],[-71.126873,19.403462],[-71.126337,19.403407],[-71.126081,19.403486],[-71.125885,19.403656],[-71.125638,19.403908],[-71.125494,19.404057],[-71.125344,19.404285],[-71.125036,19.404526],[-71.124812,19.404652],[-71.124577,19.404758],[-71.124411,19.404915],[-71.124362,19.405049],[-71.124318,19.405409],[-71.124181,19.405731],[-71.124063,19.405861],[-71.123804,19.405921],[-71.123281,19.406045],[-71.123215,19.406046],[-71.122985,19.405928],[-71.122328,19.405595],[-71.122008,19.405447],[-71.121901,19.405454],[-71.121824,19.405507],[-71.121751,19.405567],[-71.121599,19.405731],[-71.121535,19.405792],[-71.120701,19.406613],[-71.120595,19.406723],[-71.120416,19.40688],[-71.120351,19.406905],[-71.120277,19.40691],[-71.12018,19.406873],[-71.120055,19.406808],[-71.119069,19.405725]]]}'),

@@ -13,9 +13,9 @@ export const ICON_PATHS: Record<LayerId, string> = {
 
 export const LAYERS: LayerDef[] = [
   { id: 'tourism', label: 'Turismo', color: '#16a34a', icon: ICON_PATHS.tourism, href: (id) => `/turismo/${id}` },
-  { id: 'business', label: 'Negocios', color: '#2f6feb', icon: ICON_PATHS.business, href: (id) => `/negocios/${id}` },
+  { id: 'business', label: 'Negocios', color: '#2563eb', icon: ICON_PATHS.business, href: (id) => `/negocios/${id}` },
   { id: 'route', label: 'Rutas', color: '#0e9f9a', icon: ICON_PATHS.route, href: (id) => `/rutas/${id}` },
-  { id: 'traffic', label: 'Tránsito', color: '#e5484d', icon: ICON_PATHS.traffic, href: () => null },
+  { id: 'traffic', label: 'Tránsito', color: '#d92d33', icon: ICON_PATHS.traffic, href: () => null },
   { id: 'request', label: 'Reportes', color: '#7c3aed', icon: ICON_PATHS.request, href: (id) => `/consultas/${id}` },
 ];
 

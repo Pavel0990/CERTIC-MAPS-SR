@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Globe, Mail, MapPin, MessageCircle, Phone, Settings, Tag } from 'lucide-react';
+import { Globe, Mail, MapPin, MessageCircle, Phone, Settings, Store, Tag } from 'lucide-react';
 import { getBusinessDetail, isBusinessMember } from '@/modules/businesses/server';
 import { formatTime, hoursByDay, isOpenNow } from '@/modules/businesses';
 import { listPhotos } from '@/modules/media/server';
@@ -49,12 +50,17 @@ export default async function BusinessPage({ params }: { params: Promise<{ id: s
 
   return (
     <PageShell
-      back={{ href: '/mapa?capas=business', label: 'Mapa' }}
+      back={{ href: '/mapa?capas=business', label: 'Volver' }}
       eyebrow={`${b.category ?? 'Negocio'}${b.municipality ? ` · ${b.municipality}` : ''}`}
       title={b.name}
       actions={
         <HeaderActions>
           <DirectionsButton entity="business" id={b.id} point={b.point} />
+          {approved && b.phone && (
+            <a href={`tel:${b.phone.replace(/[^\d+]/g, '')}`} className="inline-flex min-h-[52px] flex-1 items-center justify-center gap-2 rounded-[14px] border border-line-strong bg-surface px-5 text-base font-semibold hover:bg-canvas sm:flex-none">
+              <Phone className="size-5" aria-hidden /> Llamar
+            </a>
+          )}
           {member && <SecondaryLink href={`/negocio/${b.id}`} icon={<Settings className="size-4" aria-hidden />}>Administrar</SecondaryLink>}
         </HeaderActions>
       }
@@ -88,10 +94,20 @@ export default async function BusinessPage({ params }: { params: Promise<{ id: s
               </ul>
             </Card>
           )}
-          <Card className="p-5">
-            <Eyebrow>Sobre el negocio</Eyebrow>
-            <p className="mt-2 whitespace-pre-line text-[17px] leading-relaxed">{b.description || 'Este negocio todavía no tiene descripción.'}</p>
-          </Card>
+          {b.description ? (
+            <Card className="p-5">
+              <Eyebrow>Sobre el negocio</Eyebrow>
+              <p className="mt-2 whitespace-pre-line text-[17px] leading-relaxed">{b.description}</p>
+            </Card>
+          ) : (
+            !member && approved && (
+              <Card className="flex flex-wrap items-center gap-3 border border-dashed border-line-strong p-5 shadow-none">
+                <Store className="size-6 shrink-0 text-brand" aria-hidden />
+                <p className="min-w-0 flex-1 text-[16px]"><strong>¿Es tu negocio?</strong> Regístralo gratis para mostrar tu horario, fotos, WhatsApp y promociones.</p>
+                <Link href="/negocios/registrar" className="inline-flex h-11 items-center rounded-[12px] bg-brand px-4 text-[15px] font-semibold text-white hover:bg-brand-strong">Registrar mi negocio</Link>
+              </Card>
+            )
+          )}
           {b.hours.length > 0 && (
             <Card className="p-5">
               <Eyebrow className="mb-3">Horario</Eyebrow>

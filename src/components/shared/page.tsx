@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { ChevronLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Eyebrow } from '@/components/ui/primitives';
+import { BackLink } from './back-link';
 import { cn } from '@/utils/cn';
 
 /** Contenedor de las páginas de contenido (no mapa): ancho legible y encabezado consistente. */
@@ -25,9 +25,7 @@ export function PageShell({
   return (
     <div className={cn('mx-auto w-full px-4 pb-10 pt-5 md:px-8 md:pt-8', wide ? 'max-w-6xl' : 'max-w-3xl')}>
       {back && (
-        <Link href={back.href} className="-ml-2 mb-3 inline-flex h-10 items-center gap-1 rounded-full px-2 text-[15px] font-semibold text-muted hover:bg-surface hover:text-ink">
-          <ChevronLeft className="size-5" aria-hidden /> {back.label}
-        </Link>
+        <BackLink href={back.href} label={back.label} />
       )}
       <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">

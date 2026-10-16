@@ -43,7 +43,10 @@ export function SearchBox({ onPick }: { onPick: (hit: SearchHit) => void }) {
           placeholder="¿A dónde quieres ir?"
           className="h-full min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-subtle"
           autoComplete="off"
-          aria-controls="search-results"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-controls={hits ? 'search-results' : undefined}
+          aria-expanded={!!hits}
         />
         {query && (
           <button type="button" aria-label="Borrar búsqueda" onClick={() => setQuery('')} className="rounded-full p-2 text-muted hover:bg-canvas">

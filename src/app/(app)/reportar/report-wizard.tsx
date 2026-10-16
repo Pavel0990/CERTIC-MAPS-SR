@@ -141,7 +141,7 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
           {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
           {isInquiry && (
             <label className="mt-4 flex items-center gap-3 rounded-[14px] bg-surface p-4 shadow-[var(--shadow-card)]">
-              <input type="checkbox" checked={noPlace} onChange={(e) => setNoPlace(e.target.checked)} className="size-6 accent-[#2f6feb]" />
+              <input type="checkbox" checked={noPlace} onChange={(e) => setNoPlace(e.target.checked)} className="size-6 accent-brand" />
               <span className="text-[16px] font-semibold">No es en un lugar específico</span>
             </label>
           )}

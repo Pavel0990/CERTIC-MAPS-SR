@@ -3,7 +3,7 @@ import { APP_TIMEZONE } from '@/utils/locale';
 import type { WeeklyReportData, WeeklyKpis } from '../index';
 
 // Colores de la marca (src/app/globals.css). Helvetica estándar: cubre tildes y eñes sin incrustar fuentes.
-const C = { ink: '#111418', muted: '#5b616b', line: '#e6e8eb', brand: '#2f6feb', brandSoft: '#eaf1ff', ok: '#15803d', warn: '#8a5a00' };
+const C = { ink: '#111418', muted: '#5b616b', line: '#e6e8eb', brand: '#2563eb', brandSoft: '#eaf1ff', ok: '#15803d', warn: '#8a5a00' };
 
 const s = StyleSheet.create({
   page: { paddingTop: 40, paddingBottom: 56, paddingHorizontal: 40, fontFamily: 'Helvetica', fontSize: 10, color: C.ink },

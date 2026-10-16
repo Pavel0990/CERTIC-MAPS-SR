@@ -38,7 +38,7 @@ export default async function TourismPlacePage({ params }: { params: Promise<{ i
 
   return (
     <PageShell
-      back={{ href: '/mapa?capas=tourism', label: 'Mapa' }}
+      back={{ href: '/mapa?capas=tourism', label: 'Volver' }}
       eyebrow={`${PLACE_KIND[p.kind] ?? 'Turismo'}${p.municipality ? ` · ${p.municipality}` : ''}`}
       title={p.name}
       actions={
@@ -54,11 +54,13 @@ export default async function TourismPlacePage({ params }: { params: Promise<{ i
         <div className="flex flex-col gap-4">
           {p.status === 'rejected' && <RejectedNotice reason={p.status_reason} />}
           <PhotoGallery photos={photos} name={p.name} />
-          <Card className="p-5">
-            <Eyebrow>Sobre el lugar</Eyebrow>
-            <p className="mt-2 whitespace-pre-line text-[17px] leading-relaxed">{p.description || 'Todavía no hay una descripción de este lugar.'}</p>
-            <p className="mt-3 text-sm text-muted">Actualizado el {formatDate(p.updated_at)}</p>
-          </Card>
+          {p.description && (
+            <Card className="p-5">
+              <Eyebrow>Sobre el lugar</Eyebrow>
+              <p className="mt-2 whitespace-pre-line text-[17px] leading-relaxed">{p.description}</p>
+              <p className="mt-3 text-sm text-muted">Actualizado el {formatDate(p.updated_at)}</p>
+            </Card>
+          )}
           <ServicesCard services={listServices(p.services)} />
         </div>
         <div className="flex flex-col gap-4">

@@ -149,12 +149,14 @@ ${bizRows.join(',\n')}
 )
 insert into public.businesses (province_id, municipality_id, category_id, slug, name, description, geom, phone, website, status)
 select l.province_id, l.municipality_id, c.id, l.slug, l.name,
-       l.label || ' en ' || l.muni || '. Datos de OpenStreetMap: si es tu negocio, regístralo en SR Conecta para completar horario, fotos y contacto.',
+       null,
        l.geom, l.phone, l.website, 'approved'
 from located l join public.business_categories c on c.slug = l.category
 on conflict (province_id, slug) do update
   set name = excluded.name, category_id = excluded.category_id, geom = excluded.geom,
-      phone = coalesce(public.businesses.phone, excluded.phone), website = coalesce(public.businesses.website, excluded.website);
+      phone = coalesce(public.businesses.phone, excluded.phone), website = coalesce(public.businesses.website, excluded.website),
+      -- quita el texto de relleno de cargas anteriores; nunca borra una descripción escrita por el negocio o el municipio
+      description = case when public.businesses.description like '%Datos de OpenStreetMap%' then null else public.businesses.description end;
 
 with src (slug, name, kind, label, lng, lat, opening) as (values
 ${placeRows.join(',\n')}
@@ -167,10 +169,11 @@ ${placeRows.join(',\n')}
 )
 insert into public.tourism_places (province_id, municipality_id, slug, name, kind, description, opening_info, geom, status)
 select l.province_id, l.municipality_id, l.slug, l.name, l.kind,
-       l.label || ' en ' || l.muni || '. Ubicación de OpenStreetMap; la descripción la completa el municipio desde el panel.',
+       null,
        l.opening, l.geom, 'published'
 from located l
-on conflict (province_id, slug) do update set name = excluded.name, kind = excluded.kind, geom = excluded.geom;
+on conflict (province_id, slug) do update set name = excluded.name, kind = excluded.kind, geom = excluded.geom,
+  description = case when public.tourism_places.description like '%Ubicación de OpenStreetMap%' then null else public.tourism_places.description end;
 
 with src (slug, name, kind, difficulty, duration_min, description, geojson) as (values
 ${routeRows.join(',\n')}

@@ -155,7 +155,7 @@ export function CatalogEditor({ catalog, items }: { catalog: CatalogKey; items: 
                 {(a) => <Input {...a} type="number" inputMode="numeric" min={0} max={999} value={draft.sort} onChange={(e) => setDraft({ ...draft, sort: Math.max(0, Math.min(999, Number(e.target.value) || 0)) })} />}
               </Field>
               <label className="flex cursor-pointer items-center gap-3 self-end rounded-[12px] border border-line p-3">
-                <input type="checkbox" checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} className="size-6 accent-[#2f6feb]" />
+                <input type="checkbox" checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} className="size-6 accent-brand" />
                 <span>
                   <span className="block font-semibold">Activo</span>
                   <span className="block text-sm text-muted">Se ofrece en los formularios</span>

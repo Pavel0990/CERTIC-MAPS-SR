@@ -109,7 +109,7 @@ export function HoursEditor({ businessId, initial }: { businessId: string; initi
                     type="checkbox"
                     checked={open}
                     onChange={(e) => update(d, () => (e.target.checked ? [{ opens: '08:00', closes: '17:00' }] : []))}
-                    className="size-6 accent-[#2f6feb]"
+                    className="size-6 accent-brand"
                   />
                   <span className="w-24 font-semibold">{WEEKDAYS[d]}</span>
                   {!open && <span className="text-muted">Cerrado</span>}

@@ -52,7 +52,7 @@ export function PreferencesForm({
         <legend className="mb-2 text-[15px] font-semibold">Quiero que me avisen de…</legend>
         {topics.map((t) => (
           <label key={t.id} className="flex cursor-pointer items-start gap-3 rounded-[12px] p-2.5 hover:bg-canvas">
-            <input type="checkbox" name="topics" value={t.id} defaultChecked={selectedTopics.includes(t.id)} className="mt-0.5 size-6 shrink-0 accent-[#2f6feb]" />
+            <input type="checkbox" name="topics" value={t.id} defaultChecked={selectedTopics.includes(t.id)} className="mt-0.5 size-6 shrink-0 accent-brand" />
             <span>
               <span className="block font-semibold">{t.label}</span>
               <span className="block text-sm text-muted">{t.hint}</span>
@@ -66,7 +66,7 @@ export function PreferencesForm({
         <div className="flex flex-wrap gap-2">
           {municipalities.map((m) => (
             <label key={m.id} className="flex cursor-pointer items-center gap-2 rounded-full border border-line-strong bg-surface px-3.5 py-2 has-[:checked]:border-brand has-[:checked]:bg-brand-soft has-[:checked]:text-brand-strong">
-              <input type="checkbox" name="municipalities" value={m.id} defaultChecked={selectedMunicipalities.includes(m.id)} className="size-4 accent-[#2f6feb]" />
+              <input type="checkbox" name="municipalities" value={m.id} defaultChecked={selectedMunicipalities.includes(m.id)} className="size-4 accent-brand" />
               <span className="text-[15px] font-semibold">{m.name}</span>
             </label>
           ))}

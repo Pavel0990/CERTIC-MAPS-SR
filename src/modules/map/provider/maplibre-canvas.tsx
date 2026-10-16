@@ -124,8 +124,8 @@ export default function MaplibreCanvas({
       );
 
       map.addSource('municipalities', { type: 'geojson', data: current().staticLayers?.municipalities ?? { type: 'FeatureCollection', features: [] } });
-      map.addLayer({ id: 'muni-fill', type: 'fill', source: 'municipalities', paint: { 'fill-color': '#2f6feb', 'fill-opacity': 0.03 } });
-      map.addLayer({ id: 'muni-line', type: 'line', source: 'municipalities', paint: { 'line-color': '#2f6feb', 'line-width': 1.6, 'line-opacity': 0.55, 'line-dasharray': [3, 2] } });
+      map.addLayer({ id: 'muni-fill', type: 'fill', source: 'municipalities', paint: { 'fill-color': '#2563eb', 'fill-opacity': 0.03 } });
+      map.addLayer({ id: 'muni-line', type: 'line', source: 'municipalities', paint: { 'line-color': '#2563eb', 'line-width': 1.6, 'line-opacity': 0.55, 'line-dasharray': [3, 2] } });
 
       map.addSource('routes', { type: 'geojson', data: current().staticLayers?.routes ?? { type: 'FeatureCollection', features: [] } });
       map.addLayer({ id: 'route-casing', type: 'line', source: 'routes', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 7 } });
@@ -135,7 +135,7 @@ export default function MaplibreCanvas({
       map.addLayer({
         id: 'clusters', type: 'circle', source: 'points', filter: ['has', 'point_count'],
         paint: {
-          'circle-color': '#ffffff', 'circle-stroke-color': '#2f6feb', 'circle-stroke-width': 3,
+          'circle-color': '#ffffff', 'circle-stroke-color': '#2563eb', 'circle-stroke-width': 3,
           'circle-radius': ['step', ['get', 'point_count'], 18, 10, 22, 50, 28],
         },
       });
@@ -147,7 +147,7 @@ export default function MaplibreCanvas({
       map.addLayer({
         id: 'traffic-halo', type: 'circle', source: 'points',
         filter: ['all', ['!', ['has', 'point_count']], ['==', ['get', 'layer'], 'traffic']],
-        paint: { 'circle-color': '#e5484d', 'circle-opacity': 0.18, 'circle-radius': 26 },
+        paint: { 'circle-color': '#d92d33', 'circle-opacity': 0.18, 'circle-radius': 26 },
       });
       map.addLayer({
         id: 'pins', type: 'symbol', source: 'points', filter: ['!', ['has', 'point_count']],
@@ -237,7 +237,7 @@ export default function MaplibreCanvas({
       el.setAttribute('aria-label', 'Tu ubicación');
       el.className = 'relative size-5';
       el.innerHTML =
-        '<span class="absolute inset-0 rounded-full bg-[#2f6feb]/40 animate-pulse-ring"></span><span class="absolute inset-0 rounded-full border-[3px] border-white bg-[#2f6feb] shadow"></span>';
+        '<span class="absolute inset-0 rounded-full bg-[#2563eb]/40 animate-pulse-ring"></span><span class="absolute inset-0 rounded-full border-[3px] border-white bg-[#2563eb] shadow"></span>';
       userMarker.current = new Marker({ element: el });
     }
     userMarker.current.setLngLat([userLocation.lng, userLocation.lat]).addTo(map);
@@ -249,7 +249,7 @@ export default function MaplibreCanvas({
       {centerPin && (
         <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full" aria-hidden>
           <svg width="44" height="56" viewBox="0 0 44 56">
-            <path d="M22 54s18-18.5 18-32A18 18 0 0 0 4 22c0 13.5 18 32 18 32z" fill="#e5484d" stroke="#fff" strokeWidth="3" />
+            <path d="M22 54s18-18.5 18-32A18 18 0 0 0 4 22c0 13.5 18 32 18 32z" fill="#d92d33" stroke="#fff" strokeWidth="3" />
             <circle cx="22" cy="22" r="7" fill="#fff" />
           </svg>
           <span className="absolute left-1/2 top-full h-1.5 w-4 -translate-x-1/2 rounded-full bg-ink/25 blur-[1px]" />

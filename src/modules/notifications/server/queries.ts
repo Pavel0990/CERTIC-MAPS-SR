@@ -1,6 +1,7 @@
 import 'server-only';
 import type { ServerSupabase } from '@/lib/supabase/server';
 import { notificationHref, type NotificationPayload } from '../href';
+import { notificationBody } from '../text';
 
 
 export interface NotificationView {
@@ -19,7 +20,7 @@ export async function listNotifications(supabase: ServerSupabase, limit = 50): P
     id: n.id,
     kind: n.kind,
     title: n.title,
-    body: n.body,
+    body: notificationBody(n.kind, n.body, (n.payload ?? {}) as { status?: unknown }),
     href: notificationHref(n.kind, (n.payload ?? {}) as NotificationPayload),
     read: !!n.read_at,
     created_at: n.created_at,

@@ -55,7 +55,8 @@ export function Discover({ items, alerts }: { items: DiscoverItem[]; alerts: num
                   <svg viewBox="0 0 24 24" className="absolute -bottom-3 -right-3 size-24 text-white/25" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <path d={L.icon} />
                   </svg>
-                  <span className="absolute left-2.5 top-2.5 rounded-full bg-white px-2 py-0.5 text-[12px] font-bold" style={{ color: L.color }}>
+                  <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1.5 rounded-full bg-white px-2 py-0.5 text-[12px] font-bold text-ink">
+                    <span className="size-2 rounded-full" style={{ background: L.color }} aria-hidden />
                     {L.label}
                   </span>
                 </div>

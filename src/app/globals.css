@@ -6,20 +6,20 @@
 
   --color-ink: #111418;
   --color-muted: #5b616b;
-  --color-subtle: #8a9099;
+  --color-subtle: #687079; /* 5,0:1 sobre blanco y 4,6:1 sobre el fondo (WCAG AA) */
   --color-line: #e6e8eb;
   --color-line-strong: #d6d9de;
   --color-canvas: #f3f4f6;
   --color-surface: #ffffff;
   --color-sand: #f2efe9;
 
-  --color-brand: #2f6feb;
+  --color-brand: #2563eb; /* 5,2:1 sobre blanco y 4,7:1 sobre el fondo (WCAG AA) */
   --color-brand-strong: #1d4ed8;
   --color-brand-soft: #eaf1ff;
 
   --color-ok: #15803d;
   --color-ok-soft: #dcfce7;
-  --color-danger: #e5484d;
+  --color-danger: #d92d33; /* texto blanco encima: 4,8:1 (WCAG AA) */
   --color-danger-strong: #b42318;
   --color-danger-soft: #fee4e2;
   --color-warn: #8a5a00;
@@ -29,10 +29,10 @@
   --color-violet-soft: #ede9fe;
 
   /* Capas del mapa */
-  --color-layer-business: #2f6feb;
+  --color-layer-business: #2563eb;
   --color-layer-tourism: #16a34a;
   --color-layer-route: #0e9f9a;
-  --color-layer-traffic: #e5484d;
+  --color-layer-traffic: #d92d33;
   --color-layer-request: #7c3aed;
 
   --radius-sm: 10px;

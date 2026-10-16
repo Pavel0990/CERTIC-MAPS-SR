@@ -57,7 +57,7 @@ export default async function RoutePage({ params }: { params: Promise<{ id: stri
 
   return (
     <PageShell
-      back={{ href: '/mapa?capas=route', label: 'Mapa' }}
+      back={{ href: '/mapa?capas=route', label: 'Volver' }}
       eyebrow={`Ruta ${(ROUTE_KIND[r.kind] ?? '').toLowerCase()}${r.municipalities.length ? ` · ${r.municipalities.join(', ')}` : ''}`}
       title={r.name}
       actions={

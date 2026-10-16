@@ -3,6 +3,7 @@ import webpush, { WebPushError } from 'web-push';
 import { publicEnv } from '@/config/env';
 import { serverEnv } from '@/config/server-env';
 import { notificationHref, type NotificationPayload } from '../href';
+import { notificationBody } from '../text';
 
 export interface PushTarget {
   endpoint: string;
@@ -43,7 +44,7 @@ export function pushConfigured() {
 function pushBody(m: PushMessage) {
   return JSON.stringify({
     title: m.title,
-    body: m.body ?? '',
+    body: notificationBody(m.kind, m.body, m.payload as { status?: unknown }) ?? '',
     url: notificationHref(m.kind, m.payload) ?? '/notificaciones',
     tag: m.id,
   });
