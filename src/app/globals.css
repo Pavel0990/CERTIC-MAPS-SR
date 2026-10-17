@@ -46,6 +46,8 @@
   --animate-sheet-in: sheet-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
   --animate-fade-in: fade-in 180ms ease-out;
   --animate-pulse-ring: pulse-ring 1.8s ease-out infinite;
+  --animate-step-in: step-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-pop-in: pop-in 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @keyframes sheet-in {
@@ -55,6 +57,16 @@
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+/* Cambio de paso en un asistente: entra desde la derecha, sin saltos */
+@keyframes step-in {
+  from { transform: translateX(18px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+/* Confirmación (✓ enviado): aparece con un pequeño rebote */
+@keyframes pop-in {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 @keyframes pulse-ring {
   0% { transform: scale(0.8); opacity: 0.7; }
@@ -81,7 +93,23 @@
   ::selection { background: var(--color-brand-soft); }
 }
 
+/* Respuesta al toque: el control se hunde un poco mientras se presiona. En un teléfono es la
+   señal de "sí, lo tocaste" (§6.2). `press` para botones y chips; `press-soft` para filas y tarjetas. */
+@utility press {
+  transition-property: transform, background-color, border-color, color, box-shadow, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  &:active:not(:disabled):not([aria-disabled='true']) { transform: scale(0.96); }
+}
+@utility press-soft {
+  transition-property: transform, background-color, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  &:active { transform: scale(0.985); }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .press:active, .press-soft:active { transform: none !important; }
   *, *::before, *::after {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;

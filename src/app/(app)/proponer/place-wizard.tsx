@@ -68,7 +68,7 @@ export function PlaceWizard({ staff }: { staff: boolean }) {
       <WizardHeader step={step} total={3} onBack={() => setStep((s) => (s - 1) as 1 | 2)} />
 
       {step === 1 && (
-        <section className="flex flex-col gap-5 px-4 pb-8 pt-5">
+        <section className="animate-step-in flex flex-col gap-5 px-4 pb-8 pt-5">
           <StepTitle headingRef={heading} title="Proponer un lugar" hint="Un sitio bonito o importante de la provincia que todos deberían conocer." />
           <p className="-mt-2 text-[15px]">
             ¿Es un recorrido o sendero? <Link href="/proponer?que=ruta" className="font-semibold text-brand underline">Proponer una ruta</Link>
@@ -82,7 +82,7 @@ export function PlaceWizard({ staff }: { staff: boolean }) {
       )}
 
       {step === 2 && (
-        <section className="flex flex-col px-4 pb-8 pt-5">
+        <section className="animate-step-in flex flex-col px-4 pb-8 pt-5">
           <StepTitle headingRef={heading} title="¿Dónde está?" hint="Mueve el mapa hasta que el pin rojo quede sobre el lugar." />
           {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
           <LocationPicker onChange={setPoint} initial={point} ariaLabel="Mapa para marcar dónde está el lugar" />
@@ -91,7 +91,7 @@ export function PlaceWizard({ staff }: { staff: boolean }) {
       )}
 
       {step === 3 && (
-        <section className="flex flex-col gap-5 px-4 pb-8 pt-5">
+        <section className="animate-step-in flex flex-col gap-5 px-4 pb-8 pt-5">
           <StepTitle headingRef={heading} title="Cuéntanos del lugar" hint={`${PLACE_KIND[kind] ?? ''} · ${name.trim()}`} />
           {error && <ErrorNote>{error}</ErrorNote>}
           <Field label="¿Qué hay y por qué vale la pena?" optional hint="Por ejemplo: «se ve todo el valle, hay sombra y un ventorrillo los domingos».">

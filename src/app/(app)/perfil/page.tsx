@@ -26,7 +26,7 @@ export default async function ProfilePage() {
 
   return (
     <PageShell title={viewer.displayName} eyebrow={roleLabel} description={viewer.email}>
-      <div className="grid gap-4 md:grid-cols-[1fr_300px]">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_300px]">
         <div className="flex flex-col gap-4">
           <Card className="p-5">
             <h2 className="mb-4 text-lg font-bold">Tus datos</h2>
@@ -75,7 +75,7 @@ function MenuLink({ href, icon, label, badge = 0 }: { href: string; icon: React.
     <Link href={href} className="flex items-center gap-3 border-b border-line px-5 py-4 font-semibold last:border-0 hover:bg-[#fafbfc]">
       <span className="text-muted" aria-hidden>{icon}</span>
       <span className="flex-1">{label}</span>
-      {badge > 0 && <span className="rounded-full bg-danger px-2 py-0.5 text-[12px] font-bold text-white">{badge} sin leer</span>}
+      {badge > 0 && <span className="rounded-full bg-danger px-2 py-0.5 text-[13px] font-bold text-white">{badge} sin leer</span>}
       <ChevronRight className="size-4 text-subtle" aria-hidden />
     </Link>
   );

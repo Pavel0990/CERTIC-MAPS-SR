@@ -73,7 +73,7 @@ export default async function BusinessPage({ params }: { params: Promise<{ id: s
       }
     >
       {approved && <TrackView entity="business" id={b.id} />}
-      <div className="grid gap-4 md:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex flex-col gap-4">
           {(b.status === 'rejected' || b.status === 'suspended') && <RejectedNotice reason={b.status_reason} />}
           <PhotoGallery photos={photos} name={b.name} />

@@ -49,19 +49,19 @@ export function SearchBox({ onPick }: { onPick: (hit: SearchHit) => void }) {
           aria-expanded={!!hits}
         />
         {query && (
-          <button type="button" aria-label="Borrar búsqueda" onClick={() => setQuery('')} className="rounded-full p-2 text-muted hover:bg-canvas">
+          <button type="button" aria-label="Borrar búsqueda" onClick={() => setQuery('')} className="press rounded-full p-2.5 text-muted hover:bg-canvas">
             <X className="size-5" />
           </button>
         )}
         <Link
           href="/reportar"
-          className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-[12px] bg-danger-soft px-3 text-[15px] font-semibold text-danger-strong hover:bg-[#fdd5d2]"
+          className="press inline-flex h-10 shrink-0 items-center gap-1.5 rounded-[12px] bg-danger-soft px-3 text-[15px] font-semibold text-danger-strong hover:bg-[#fdd5d2]"
         >
           <TriangleAlert className="size-4" aria-hidden /> Reportar
         </Link>
       </label>
       {hits && (
-        <div id="search-results" className="absolute inset-x-0 top-[calc(100%+6px)] max-h-[50dvh] overflow-y-auto rounded-[18px] bg-surface p-2 shadow-[var(--shadow-float)]">
+        <div id="search-results" className="animate-fade-in absolute inset-x-0 top-[calc(100%+6px)] max-h-[50dvh] overflow-y-auto rounded-[18px] bg-surface p-2 shadow-[var(--shadow-float)]">
           {hits.length === 0 ? (
             <p className="px-3 py-4 text-[15px] text-muted">No encontramos «{query}». Prueba con otra palabra, como «café» o «río».</p>
           ) : (
@@ -76,7 +76,7 @@ export function SearchBox({ onPick }: { onPick: (hit: SearchHit) => void }) {
                         setQuery('');
                         onPick(h);
                       }}
-                      className="flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-left hover:bg-canvas"
+                      className="press-soft flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-left hover:bg-canvas active:bg-canvas"
                     >
                       <LayerDot color={L.color} path={L.icon} />
                       <span className="min-w-0 flex-1">

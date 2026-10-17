@@ -18,7 +18,7 @@ export function FilterChips({ label, options, active, hrefFor }: {
           href={hrefFor(o.value)}
           aria-current={active === o.value ? 'true' : undefined}
           className={cn(
-            'inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-[15px] font-semibold transition',
+            'press inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-[15px] font-semibold',
             active === o.value ? 'bg-ink text-white' : 'bg-surface text-ink shadow-[var(--shadow-card)] hover:bg-canvas',
           )}
         >
@@ -42,7 +42,7 @@ export function ListRow({ href, icon, iconClass, title, subtitle, badge, action 
 }) {
   return (
     <li className="flex items-center gap-2 border-b border-line last:border-0">
-      <Link href={href} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 hover:bg-canvas md:px-5">
+      <Link href={href} className="press-soft flex min-w-0 flex-1 items-center gap-3 px-4 py-3 hover:bg-canvas active:bg-canvas md:px-5">
         <span className={cn('grid size-12 shrink-0 place-items-center rounded-[14px]', iconClass ?? 'bg-brand-soft text-brand-strong')} aria-hidden>
           {icon}
         </span>

@@ -53,7 +53,7 @@ export default async function ReportsPage() {
       {runs.length === 0 ? (
         <Card><EmptyState icon={<FileText className="size-7" />} title="Todavía no hay informes">El primero se genera solo el lunes siguiente a la publicación.</EmptyState></Card>
       ) : (
-        <Card className="overflow-x-auto">
+        <Card className="relative overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-[15px]">
             <thead className="border-b border-line text-sm text-muted">
               <tr>

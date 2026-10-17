@@ -81,11 +81,11 @@ function Overview({ k, labels }: { k: Kpis; labels: { trafficTypes: Record<strin
         />
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card className="p-5">
           <div className="mb-4 flex items-baseline justify-between">
             <h2 className="text-lg font-bold">Tránsito por tipo</h2>
-            <Link href="/admin/bandeja" className="text-sm font-semibold text-brand hover:underline">Ver bandeja</Link>
+            <Link href="/admin/bandeja" className="press -my-2 -mr-2 inline-flex min-h-11 items-center px-2 text-sm font-semibold text-brand hover:underline">Ver bandeja</Link>
           </div>
           {byType.length === 0 ? (
             <p className="py-6 text-center text-muted">No hubo alertas de tránsito en estos días.</p>
@@ -149,7 +149,7 @@ function Header({ title, subtitle, children }: { title: string; subtitle: string
 
 function ScopeLink({ href, active, label }: { href: string; active: boolean; label: string }) {
   return (
-    <Link href={href} aria-current={active ? 'page' : undefined} className={cn('rounded-[11px] px-3 py-2 text-[15px] font-semibold', active ? 'bg-surface shadow-sm' : 'text-muted hover:text-ink')}>
+    <Link href={href} aria-current={active ? 'page' : undefined} className={cn('press inline-flex min-h-11 items-center rounded-[11px] px-3 text-[15px] font-semibold', active ? 'bg-surface shadow-sm' : 'text-muted hover:text-ink')}>
       {label}
     </Link>
   );

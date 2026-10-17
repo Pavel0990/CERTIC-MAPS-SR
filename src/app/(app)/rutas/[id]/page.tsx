@@ -74,7 +74,7 @@ export default async function RoutePage({ params }: { params: Promise<{ id: stri
         <Fact icon={<Clock className="size-5" />} label="Duración" value={formatMinutes(r.duration_min)} />
         <Fact icon={<Mountain className="size-5" />} label="Dificultad" value={difficulty ? <Badge tone={difficulty.tone}>{difficulty.label}</Badge> : r.difficulty} />
       </dl>
-      <div className="grid gap-4 md:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex flex-col gap-4">
           {r.status === 'rejected' && <RejectedNotice reason={r.status_reason} />}
           <div className="relative h-[300px] overflow-hidden rounded-[18px] shadow-[var(--shadow-card)] md:h-[380px]">

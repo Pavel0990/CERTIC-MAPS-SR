@@ -10,17 +10,17 @@ export function WizardHeader({ step, total, onBack, cancelHref = '/perfil', canc
   return (
     <div className="flex items-center gap-3 px-4 pt-4">
       {step > 1 ? (
-        <button type="button" onClick={onBack} aria-label="Volver al paso anterior" className="flex size-11 items-center justify-center rounded-full bg-surface shadow-[var(--shadow-card)]">
+        <button type="button" onClick={onBack} aria-label="Volver al paso anterior" className="press flex size-11 items-center justify-center rounded-full bg-surface shadow-[var(--shadow-card)]">
           <ChevronLeft className="size-5" />
         </button>
       ) : (
-        <Link href={cancelHref} aria-label={cancelLabel} className="flex size-11 items-center justify-center rounded-full bg-surface shadow-[var(--shadow-card)]">
+        <Link href={cancelHref} aria-label={cancelLabel} className="press flex size-11 items-center justify-center rounded-full bg-surface shadow-[var(--shadow-card)]">
           <X className="size-5" />
         </Link>
       )}
       <ol className="flex flex-1 gap-1.5" aria-label={`Paso ${step} de ${total}`}>
         {Array.from({ length: total }, (_, i) => (
-          <li key={i} className={cn('h-1.5 flex-1 rounded-full', i < step ? 'bg-brand' : 'bg-line-strong')} />
+          <li key={i} className={cn('h-1.5 flex-1 rounded-full transition-colors duration-300', i < step ? 'bg-brand' : 'bg-line-strong')} />
         ))}
       </ol>
       <span className="text-sm font-semibold text-muted">{step} de {total}</span>
@@ -52,15 +52,15 @@ export function DoneScreen({
 }) {
   return (
     <section className="mx-auto flex max-w-md flex-col items-center px-6 py-16 text-center">
-      <div className={cn('flex size-20 items-center justify-center rounded-full', queued ? 'bg-warn-soft text-warn' : 'bg-ok-soft text-ok')}>
+      <div className={cn('flex size-20 animate-pop-in items-center justify-center rounded-full', queued ? 'bg-warn-soft text-warn' : 'bg-ok-soft text-ok')}>
         {queued ? <CloudOff className="size-10" aria-hidden /> : <Check className="size-10" aria-hidden />}
       </div>
       <h1 ref={headingRef} tabIndex={-1} className="mt-6 text-[28px] font-extrabold outline-none">{title}</h1>
       <div className="mt-2 text-[17px] text-muted">{message}</div>
       {photoError && <div className="mt-4 w-full"><Notice tone="warn">Algunas fotos no se pudieron subir: {photoError}</Notice></div>}
       <div className="mt-8 flex w-full flex-col gap-2">
-        <Link href={primary.href} className="inline-flex h-13 min-h-[52px] items-center justify-center rounded-[14px] bg-ink font-semibold text-white">{primary.label}</Link>
-        {secondary && <Link href={secondary.href} className="inline-flex h-12 items-center justify-center rounded-[14px] font-semibold text-ink hover:bg-surface">{secondary.label}</Link>}
+        <Link href={primary.href} className="press inline-flex h-13 min-h-[52px] items-center justify-center rounded-[14px] bg-ink font-semibold text-white">{primary.label}</Link>
+        {secondary && <Link href={secondary.href} className="press inline-flex h-12 items-center justify-center rounded-[14px] font-semibold text-ink hover:bg-surface">{secondary.label}</Link>}
       </div>
     </section>
   );
@@ -78,7 +78,7 @@ export function ChoiceGrid<T extends string>({ legend, options, value, onChange,
             type="button"
             aria-pressed={value === o.value}
             onClick={() => onChange(o.value)}
-            className={cn('flex min-h-14 items-center justify-center gap-2 rounded-[14px] border-2 px-3 text-center text-[16px] font-bold leading-tight transition', value === o.value ? 'border-brand bg-brand-soft text-brand-strong' : 'border-line bg-surface text-ink hover:border-line-strong')}
+            className={cn('press flex min-h-14 items-center justify-center gap-2 rounded-[14px] border-2 px-3 text-center text-[16px] font-bold leading-tight', value === o.value ? 'border-brand bg-brand-soft text-brand-strong' : 'border-line bg-surface text-ink hover:border-line-strong')}
           >
             {value === o.value && <Check className="size-4 shrink-0" aria-hidden />}
             {o.label}

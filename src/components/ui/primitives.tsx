@@ -27,7 +27,7 @@ export function Badge({ tone = 'neutral', className, children }: { tone?: Tone; 
 
 /** Rótulo pequeño en mayúsculas (sección). */
 export function Eyebrow({ className, children }: { className?: string; children: ReactNode }) {
-  return <p className={cn('text-[12px] font-bold uppercase tracking-[0.08em] text-muted', className)}>{children}</p>;
+  return <p className={cn('text-[13px] font-bold uppercase tracking-[0.08em] text-muted', className)}>{children}</p>;
 }
 
 export function Skeleton({ className }: { className?: string }) {

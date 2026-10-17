@@ -73,7 +73,7 @@ export function BusinessWizard({ categories }: { categories: { slug: string; nam
       <WizardHeader step={step} total={3} onBack={() => setStep((s) => (s - 1) as 1 | 2)} />
 
       {step === 1 && (
-        <section className="flex flex-col gap-5 px-4 pb-8 pt-5">
+        <section className="animate-step-in flex flex-col gap-5 px-4 pb-8 pt-5">
           <StepTitle headingRef={heading} title="¿Qué negocio tienes?" hint="Aparecerá gratis en el mapa de la provincia cuando el municipio lo apruebe." />
           {error && <ErrorNote>{error}</ErrorNote>}
           <fieldset>
@@ -107,7 +107,7 @@ export function BusinessWizard({ categories }: { categories: { slug: string; nam
       )}
 
       {step === 2 && (
-        <section className="flex flex-col px-4 pb-8 pt-5">
+        <section className="animate-step-in flex flex-col px-4 pb-8 pt-5">
           <StepTitle headingRef={heading} title="¿Dónde está?" hint="Mueve el mapa hasta que el pin rojo quede sobre la puerta del negocio." />
           {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
           <LocationPicker onChange={setPoint} initial={point} ariaLabel="Mapa para marcar dónde está el negocio" />
@@ -116,7 +116,7 @@ export function BusinessWizard({ categories }: { categories: { slug: string; nam
       )}
 
       {step === 3 && (
-        <section className="flex flex-col gap-5 px-4 pb-8 pt-5">
+        <section className="animate-step-in flex flex-col gap-5 px-4 pb-8 pt-5">
           <StepTitle headingRef={heading} title="¿Cómo te contactan?" hint="Todo es opcional, pero ayuda a que te encuentren." />
           {error && <ErrorNote>{error}</ErrorNote>}
           <Field label="WhatsApp" optional hint="Con este número la gente te escribe directo desde el mapa.">

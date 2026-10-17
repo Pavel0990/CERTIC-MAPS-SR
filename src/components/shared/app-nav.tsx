@@ -60,14 +60,14 @@ export function AppNav({ signedIn, isStaff, isEntrepreneur, unread }: NavProps) 
                 <Link
                   href={t.href}
                   aria-current={active ? 'page' : undefined}
-                  className={cn('relative flex flex-1 flex-col items-center justify-center gap-0.5 text-[12px] font-semibold', active ? 'text-ink' : 'text-subtle')}
+                  className={cn('press relative flex flex-1 flex-col items-center justify-center gap-0.5 text-[13px] font-semibold', active ? 'text-ink' : 'text-subtle')}
                 >
                   {t.primary ? (
                     <span className="flex size-11 items-center justify-center rounded-full bg-danger text-white shadow-[0_6px_16px_rgb(229_72_77/0.35)]">
                       <t.icon className="size-6" aria-hidden />
                     </span>
                   ) : (
-                    <span className={cn('flex h-8 w-14 items-center justify-center rounded-full transition', active && 'bg-brand-soft text-brand-strong')}>
+                    <span className={cn('flex h-8 w-14 items-center justify-center rounded-full transition-colors duration-200', active && 'bg-brand-soft text-brand-strong')}>
                       <t.icon className="size-[22px]" aria-hidden />
                     </span>
                   )}
@@ -89,7 +89,7 @@ function RailLink({ href, label, active, primary, badge = 0, children }: { href:
       href={href}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative flex w-[72px] flex-col items-center gap-1 rounded-[14px] py-2 text-[12px] font-semibold transition',
+        'press relative flex w-[72px] flex-col items-center gap-1 rounded-[14px] py-2 text-[13px] font-semibold',
         primary ? 'text-danger-strong hover:bg-danger-soft' : active ? 'bg-brand-soft text-brand-strong' : 'text-muted hover:bg-canvas',
       )}
     >

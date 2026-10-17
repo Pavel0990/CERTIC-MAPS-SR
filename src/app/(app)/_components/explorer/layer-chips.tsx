@@ -14,7 +14,7 @@ export function LayerChips({ layers, onToggle }: { layers: LayerId[]; onToggle: 
             aria-pressed={on}
             onClick={() => onToggle(l.id)}
             className={cn(
-              'inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-3.5 text-[15px] font-semibold shadow-[var(--shadow-card)] transition',
+              'press inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-3.5 text-[15px] font-semibold shadow-[var(--shadow-card)]',
               on ? 'bg-ink text-white' : 'bg-surface text-muted',
             )}
           >

@@ -32,7 +32,7 @@ export function TrafficCard({ t, typeName, municipality, incidentCategories }: T
       <h3 className="mt-2 text-[17px] font-bold">{typeName}</h3>
       {t.description && <p className="mt-1 text-[15px] text-muted">{t.description}</p>}
       {t.point && (
-        <a href={directionsUrl(t.point.lat, t.point.lng)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline">
+        <a href={directionsUrl(t.point.lat, t.point.lng)} target="_blank" rel="noopener noreferrer" className="press mt-1 -ml-1 inline-flex min-h-11 items-center gap-1 px-1 text-sm font-semibold text-brand hover:underline">
           <MapPin className="size-4" aria-hidden /> Ver el lugar
         </a>
       )}
@@ -57,7 +57,7 @@ function EscalateButton({ id, categories }: { id: string; categories: { code: st
   const [open, setOpen] = useState(false);
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] px-3 text-sm font-semibold text-muted hover:bg-canvas hover:text-ink">
+      <button type="button" onClick={() => setOpen(true)} className="press inline-flex h-11 items-center gap-1.5 rounded-[10px] px-3 text-sm font-semibold text-muted hover:bg-canvas hover:text-ink md:h-9">
         <ArrowUpRight className="size-4" aria-hidden /> Pasar a obra municipal
       </button>
     );
@@ -158,7 +158,7 @@ function AssignControl({ requestId, staff, current, viewerId }: { requestId: str
       <label className="sr-only" htmlFor={`asg-${requestId}`}>Responsable</label>
       <Select
         id={`asg-${requestId}`}
-        className="h-9 w-auto py-0 pr-9 text-sm"
+        className="h-11 w-auto py-0 pr-9 text-sm md:h-9"
         value={current ?? ''}
         disabled={pending}
         onChange={(e) => {

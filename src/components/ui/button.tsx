@@ -14,7 +14,7 @@ const variants: Record<Variant, string> = {
   danger: 'bg-surface text-danger-strong border border-[#f5c2c0] hover:bg-danger-soft',
 };
 const sizes: Record<Size, string> = {
-  sm: 'h-9 px-3 text-sm gap-1.5 rounded-[10px]',
+  sm: 'h-11 md:h-9 px-3 text-sm gap-1.5 rounded-[10px]',
   md: 'h-11 px-4 text-[15px] gap-2 rounded-[12px]',
   lg: 'h-13 px-5 text-base gap-2.5 rounded-[14px] min-h-[52px]',
 };
@@ -38,7 +38,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={cn(
-        'inline-flex select-none items-center justify-center font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-55',
+        'press inline-flex select-none items-center justify-center font-semibold disabled:cursor-not-allowed disabled:opacity-55',
         variants[variant],
         sizes[size],
         block && 'w-full',
@@ -65,7 +65,7 @@ export function IconButton({
       aria-label={label}
       title={label}
       className={cn(
-        'inline-flex size-11 items-center justify-center rounded-full bg-surface text-ink shadow-[var(--shadow-card)] transition hover:bg-canvas disabled:opacity-50',
+        'press inline-flex size-11 items-center justify-center rounded-full bg-surface text-ink shadow-[var(--shadow-card)] hover:bg-canvas disabled:opacity-50',
         className,
       )}
       {...rest}

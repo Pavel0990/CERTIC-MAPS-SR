@@ -45,7 +45,7 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
       title={r.title}
       description={<span className="flex flex-wrap items-center gap-2"><RequestStatusBadge status={r.status} /> {info?.explain}</span>}
     >
-      <div className="grid gap-4 md:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex flex-col gap-4">
           {r.status === 'resolved' && r.resolution_note && (
             <Notice tone="ok">

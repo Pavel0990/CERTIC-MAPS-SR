@@ -115,7 +115,7 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
       <WizardHeader step={step} total={3} onBack={() => setStep((s) => (s - 1) as 1 | 2)} cancelHref="/" cancelLabel="Cancelar y volver al inicio" />
 
       {step === 1 && (
-        <section className="px-4 pb-8 pt-5">
+        <section className="animate-step-in px-4 pb-8 pt-5">
           <StepTitle headingRef={heading} title="¿Qué pasó?" hint="Toca lo que más se parece." />
           <Group title="En la calle o la carretera" hint="Sale en el mapa para avisar a todos y se quita sola cuando vence.">
             {traffic.map((t) => (
@@ -136,11 +136,11 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
       )}
 
       {step === 2 && choice && (
-        <section className="flex flex-col px-4 pb-8 pt-5">
+        <section className="animate-step-in flex flex-col px-4 pb-8 pt-5">
           <StepTitle headingRef={heading} title="¿Dónde es?" hint="Mueve el mapa hasta que el pin rojo quede sobre el lugar." />
           {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
           {isInquiry && (
-            <label className="mt-4 flex items-center gap-3 rounded-[14px] bg-surface p-4 shadow-[var(--shadow-card)]">
+            <label className="press-soft mt-4 flex cursor-pointer items-center gap-3 rounded-[14px] bg-surface p-4 shadow-[var(--shadow-card)]">
               <input type="checkbox" checked={noPlace} onChange={(e) => setNoPlace(e.target.checked)} className="size-6 accent-brand" />
               <span className="text-[16px] font-semibold">No es en un lugar específico</span>
             </label>
@@ -184,7 +184,7 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
       )}
 
       {step === 3 && choice && (
-        <section className="flex flex-col gap-5 px-4 pb-8 pt-5">
+        <section className="animate-step-in flex flex-col gap-5 px-4 pb-8 pt-5">
           <StepTitle headingRef={heading} title="Cuéntanos más" hint={`${choice.name}${choice.flow === 'traffic' ? ' · alerta vial' : ''}`} />
           {error && <ErrorNote>{error}</ErrorNote>}
 
@@ -198,7 +198,7 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
                     type="button"
                     aria-pressed={severity === n}
                     onClick={() => setSeverity(n)}
-                    className={cn('flex h-14 items-center justify-center gap-2 rounded-[14px] border-2 text-[16px] font-bold transition', severity === n ? 'border-danger bg-danger-soft text-danger-strong' : 'border-line bg-surface text-muted')}
+                    className={cn('press flex h-14 items-center justify-center gap-2 rounded-[14px] border-2 text-[16px] font-bold', severity === n ? 'border-danger bg-danger-soft text-danger-strong' : 'border-line bg-surface text-muted')}
                   >
                     {severity === n && <Check className="size-4" aria-hidden />}
                     {SEVERITY[n]?.label}
@@ -246,7 +246,7 @@ function Group({ title, hint, children }: { title: string; hint: string; childre
 function Tile({ icon: Icon, label, tone, onClick }: { icon: LucideIcon; label: string; tone: 'danger' | 'brand' | 'violet'; onClick: () => void }) {
   const tones = { danger: 'bg-danger-soft text-danger-strong', brand: 'bg-brand-soft text-brand-strong', violet: 'bg-violet-soft text-violet' };
   return (
-    <button type="button" onClick={onClick} className="flex min-h-[104px] flex-col items-start justify-between gap-3 rounded-[18px] bg-surface p-4 text-left shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-float)]">
+    <button type="button" onClick={onClick} className="press flex min-h-[104px] flex-col items-start justify-between gap-3 rounded-[18px] bg-surface p-4 text-left shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-float)] active:shadow-none">
       <span className={cn('flex size-11 items-center justify-center rounded-[12px]', tones[tone])}>
         <Icon className="size-6" aria-hidden />
       </span>

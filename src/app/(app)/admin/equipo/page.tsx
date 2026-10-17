@@ -27,7 +27,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
         <p className="mt-1 text-[16px] text-muted">Quién modera y administra cada municipio. Cada cambio queda en la auditoría.</p>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         <Card className="overflow-hidden">
           <h2 className="border-b border-line px-5 py-4 text-lg font-bold">Personal actual</h2>
           <ul>

@@ -50,7 +50,7 @@ export default async function TourismPlacePage({ params }: { params: Promise<{ i
       description={published ? undefined : <StatusLine status={p.status} />}
     >
       {published && <TrackView entity="tourism_place" id={p.id} />}
-      <div className="grid gap-4 md:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex flex-col gap-4">
           {p.status === 'rejected' && <RejectedNotice reason={p.status_reason} />}
           <PhotoGallery photos={photos} name={p.name} />

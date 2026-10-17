@@ -52,7 +52,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
       </header>
       <nav aria-label="Tipo de acción" className="mb-4 flex flex-wrap gap-1.5">
         {GROUPS.map((g) => (
-          <Link key={g.id} href={g.id ? `/admin/auditoria?tipo=${g.id}` : '/admin/auditoria'} aria-current={group === g.id ? 'true' : undefined} className={cn('rounded-full px-3 py-1.5 text-sm font-semibold', group === g.id ? 'bg-ink text-white' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
+          <Link key={g.id} href={g.id ? `/admin/auditoria?tipo=${g.id}` : '/admin/auditoria'} aria-current={group === g.id ? 'true' : undefined} className={cn('press inline-flex min-h-11 shrink-0 items-center rounded-full px-3.5 md:min-h-8 text-sm font-semibold', group === g.id ? 'bg-ink text-white' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
             {g.label}
           </Link>
         ))}

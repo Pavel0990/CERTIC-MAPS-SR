@@ -65,8 +65,8 @@ export function PreferencesForm({
         <p className="mb-2 text-sm text-muted">Si no marcas ninguno, usamos el municipio donde vives.</p>
         <div className="flex flex-wrap gap-2">
           {municipalities.map((m) => (
-            <label key={m.id} className="flex cursor-pointer items-center gap-2 rounded-full border border-line-strong bg-surface px-3.5 py-2 has-[:checked]:border-brand has-[:checked]:bg-brand-soft has-[:checked]:text-brand-strong">
-              <input type="checkbox" name="municipalities" value={m.id} defaultChecked={selectedMunicipalities.includes(m.id)} className="size-4 accent-brand" />
+            <label key={m.id} className="press flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-line-strong bg-surface px-3.5 has-[:checked]:border-brand has-[:checked]:bg-brand-soft has-[:checked]:text-brand-strong">
+              <input type="checkbox" name="municipalities" value={m.id} defaultChecked={selectedMunicipalities.includes(m.id)} className="size-5 accent-brand" />
               <span className="text-[15px] font-semibold">{m.name}</span>
             </label>
           ))}

@@ -18,14 +18,14 @@ export function FeatureList({ items, catalogs, userLocation, onSelect }: {
   onSelect: (f: MapFeature) => void;
 }) {
   return (
-    <section aria-label="Lugares en esta zona" className="absolute inset-x-0 bottom-0 top-[124px] z-10 overflow-y-auto bg-canvas p-3 md:left-3 md:right-auto md:top-[132px] md:w-[400px] md:rounded-t-[18px] md:p-0">
+    <section aria-label="Lugares en esta zona" className="animate-sheet-in absolute inset-x-0 bottom-0 top-[124px] z-10 overflow-y-auto bg-canvas p-3 md:left-3 md:right-auto md:top-[132px] md:w-[400px] md:rounded-t-[18px] md:p-0">
       <p className="mb-2 px-1 text-sm font-semibold text-muted">{items.length} en esta zona{userLocation ? ', los más cercanos primero' : ''}</p>
       <ul className="flex flex-col gap-2">
         {items.map((f) => {
           const L = LAYER_BY_ID[f.properties.layer];
           return (
             <li key={f.properties.id}>
-              <button type="button" onClick={() => onSelect(f)} className="flex w-full items-center gap-3 rounded-[16px] bg-surface p-3 text-left shadow-[var(--shadow-card)] hover:bg-[#fafbfc]">
+              <button type="button" onClick={() => onSelect(f)} className="press-soft flex w-full items-center gap-3 rounded-[16px] bg-surface p-3 text-left shadow-[var(--shadow-card)] hover:bg-[#fafbfc] active:bg-canvas">
                 <LayerDot color={L.color} path={L.icon} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{f.properties.title}</span>
