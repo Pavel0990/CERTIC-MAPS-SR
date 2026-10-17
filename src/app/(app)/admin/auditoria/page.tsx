@@ -57,7 +57,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           </Link>
         ))}
       </nav>
-      <Card className="overflow-x-auto">
+      <Card className="overflow-x-auto" tabIndex={0} role="region" aria-label="Registro de auditoría (desliza para ver todas las columnas)">
         <table className="w-full min-w-[640px] text-left text-[15px]">
           <thead className="border-b border-line text-sm text-muted">
             <tr>

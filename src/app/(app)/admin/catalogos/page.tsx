@@ -35,7 +35,7 @@ export default async function CatalogsPage({ searchParams }: { searchParams: Pro
       <nav aria-label="Catálogo" className="mb-4 flex flex-wrap gap-1.5">
         {TABS.map((t) => (
           <Link key={t.id} href={`/admin/catalogos?que=${t.id}`} aria-current={t.id === tab.id ? 'true' : undefined} className={cn('press inline-flex min-h-11 items-center rounded-full px-3.5 text-[15px] font-semibold', t.id === tab.id ? 'bg-ink text-white' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
-            {t.label} <span className="opacity-70">({lists[t.key].length})</span>
+            {t.label} <span className="font-normal">({lists[t.key].length})</span>
           </Link>
         ))}
       </nav>

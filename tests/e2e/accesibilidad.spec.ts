@@ -30,3 +30,16 @@ test('sin errores de accesibilidad: pantallas con sesión', async ({ page }) => 
   }
   expect(all, all.join('\n\n')).toEqual([]);
 });
+
+test('sin errores de accesibilidad: panel de administración', async ({ page }) => {
+  test.setTimeout(120_000);
+  await signIn(page, ACCOUNTS.admin);
+  const all: string[] = [];
+  for (const path of ['/admin', '/admin/bandeja', '/admin/validaciones', '/admin/informes', '/admin/equipo', '/admin/auditoria', '/admin/catalogos', '/negocio']) {
+    await page.goto(path, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1200);
+    const { violations } = await scan(page);
+    if (violations.length) all.push(`${path}\n${fmt(violations)}`);
+  }
+  expect(all, all.join('\n\n')).toEqual([]);
+});
