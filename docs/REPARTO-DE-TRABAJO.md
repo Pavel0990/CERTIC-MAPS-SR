@@ -1,147 +1,146 @@
-# Reparto del trabajo: del 7 al 27 de octubre
+# Reparto del trabajo: lo que falta
 
-El código está prácticamente terminado: las seis funcionalidades del reto funcionan en https://sr-conecta.vercel.app. Lo que falta para ganar es **contenido, prueba con personas reales y una demo ensayada**. Este reparto lo divide entre **dos personas** con una carga parecida (unas 30 horas cada una), para avanzar en paralelo sin pisarse.
+Equipo de dos personas, del **17 al 27 de octubre de 2026**. Cada una trabaja su parte en paralelo; marquen `[x]` al terminar cada tarea.
 
-**Regla de oro: el código queda congelado.** Solo se cambia código para corregir lo que salga de la prueba con vecinos o un error real.
-
-| Persona | Frente | En una frase | Horas aprox. | ¿Programa? |
-|---|---|---|---|---|
-| **A** · ________ | **Contenido y presentación** | Que el mapa muestre la provincia de verdad y que la presentación lo cuente bien | ~30 h | No: todo desde el panel |
-| **B** · ________ | **Vecinos, correcciones y plataforma** | Probar con personas reales, corregir lo que salga y que nada se caiga el día de la demo | ~29 h | Sí |
-
-Las horas incluyen las tareas comunes (ensayos y reuniones), unas 5 h por persona.
-
-**Ya hecho, no hay que repetirlo:**
-- copia de seguridad diaria cifrada, activa y verificada;
-- datos reales de OpenStreetMap;
-- listados de negocios, lugares y rutas;
-- pruebas E2E;
-- documentación al día.
-
-Fechas comunes:
-
-| Fecha | Hito |
-|---|---|
-| **Domingo 12/10** | 15 lugares completos (A) · Ronda 1 con vecinos hecha (B) |
-| **Domingo 19/10** | Rutas validadas (A) · Correcciones publicadas y ronda 2 hecha (B) |
-| **Miércoles 22 y viernes 24/10** | **Ensayos de la demo, los dos juntos** |
-| **Lunes 27/10** | **Código congelado** · Video grabado · Revisión final |
-
----
-
-## Persona A · Contenido y presentación
-
-**Objetivo:** que un jurado de Santiago Rodríguez abra cualquier ficha y reconozca su provincia, y que la presentación explique el proyecto en pocos minutos.
-
-**Herramientas:**
-- Cuenta de **administración** en la app: **Panel → Validaciones** y **Catálogos**, y el botón **Editar** en las fichas de lugares y rutas.
-- Teléfono con cámara.
-- [Manual administrativo](manual-administrativo.md).
-
-| # | Tarea | Hecho cuando… | Fecha | Horas |
-|---|---|---|---|---|
-| A1 | Elegir los **15 lugares más importantes**: Presa de Monción, parques centrales, reservas, miradores, balnearios… Los que falten se agregan con **Proponer un lugar** y se aprueban en el panel | Lista de 15, todos en la app | 09/10 | 2 |
-| A2 | Completar esos 15 lugares con: **descripción** de 2–4 frases en lenguaje sencillo, **qué hay** (servicios, accesibilidad), **horario** si aplica y **al menos 1 foto propia** (no de internet, por derechos de autor) | Ninguno dice "la descripción la completa el municipio" | 12/10 | 7 |
-| A3 | Revisar los **84 negocios**: quitar o corregir los que no existen o están mal ubicados. Completar teléfono y horario de los **20 más conocidos** (colmados, farmacias, restaurantes del centro) | Ningún negocio cerrado aparece en el mapa | 15/10 | 4 |
-| A4 | **Validar las 3 rutas** con alguien que las conozca o recorriéndolas: corregir el trazado (**Editar**) o archivarlas. Agregar **1 o 2 rutas reales** con **Proponer una ruta**, dibujándolas o con un GPX del teléfono | Las rutas publicadas existen y se pueden hacer | 19/10 | 4 |
-| A5 | Revisar los **catálogos** (**Panel → Catálogos**): ¿faltan tipos de alerta o de negocio que se usen en la zona? | Los tipos coinciden con cómo habla la gente de allí | 19/10 | 1 |
-| A6 | **Probar en teléfonos reales**: un Android barato con datos móviles y un iPhone con la app instalada (push y modo sin conexión). Usar la tabla "Prueba completa a mano" del [guion](guion-demo.md#prueba-completa-a-mano-teléfono-real) y abrir un *issue* para B por cada fallo | Tabla con ✅ o el problema encontrado | 17/10 | 3 |
-| A7 | Preparar el **contenido de la demo**: 2–3 negocios con promoción activa y fotos, y un reporte real en la bandeja | Comprobado en el primer ensayo | 22/10 | 2 |
-| A8 | **Presentación**: 5–6 diapositivas de apoyo (problema, solución, arquitectura en un dibujo, costos, datos abiertos y los resultados de la prueba con vecinos que le pasa B). El resto es la app en vivo | Diapositivas listas para el primer ensayo | 21/10 | 2 |
-
-**No hace falta** completar los 84 negocios ni escribir textos largos. Mejor 15 fichas excelentes que 100 a medias.
-
----
-
-## Persona B · Vecinos, correcciones y plataforma
-
-**Objetivo:** demostrar con datos que gente con poca experiencia digital usa la app (criterio de 20 puntos), corregir lo que no entienda y dejar la plataforma estable y a nombre de la organización.
-
-**Herramientas:**
-- La [guía de prueba con vecinos](prueba-con-vecinos.md) impresa.
-- El repositorio, y acceso a GitHub, Vercel y Supabase.
-- [DEPLOYMENT.md](../DEPLOYMENT.md) y el [guion de la demo](guion-demo.md).
-
-| # | Tarea | Hecho cuando… | Fecha | Horas |
-|---|---|---|---|---|
-| B1 | Conseguir **5–6 vecinos variados**: una persona mayor, alguien que casi solo usa WhatsApp, un comerciante, un joven, alguien de Monción o Villa Los Almácigos | Agenda cerrada | 08/10 | 1 |
-| B2 | Hacer la **ronda 1** siguiendo la guía: no ayudar, tomar tiempos y anotar las palabras que no entienden | 5 hojas llenas | 11/10 | 4 |
-| B3 | Pasar las hojas a **Resultados** y abrir un *issue* por problema (etiqueta `ux`): ordenados por cuántas personas lo tuvieron y, si es de palabras, con el **texto nuevo** propuesto | Lista de *issues* priorizada | 13/10 | 2 |
-| B4 | **Corregir los *issues*** `ux` y los que abra A en A6, por gravedad. Si un cambio trae migración: primero `db push`, después `main`. Antes de cada push: `npm run check`, `npm run test:db` y `npm run test:e2e` | *Issues* cerrados con su commit | 17/10 | 7 |
-| B5 | Hacer la **ronda 2** con 3–5 personas **distintas**, después de las correcciones, y pasarle los resultados a A para la presentación | Comparación ronda 1 frente a ronda 2 (p. ej. "de 22/35 a 31/35 tareas sin ayuda") | 19/10 | 3 |
-| B6 | **Cuentas:** una sola cuenta de Vercel (la del equipo), sin proyectos sobrantes ni publicaciones a mano. Compartir las cuentas con la organización ([DEPLOYMENT.md §9](../DEPLOYMENT.md#9-traspaso-a-cuentas-de-la-organización)): al menos dos dueños en GitHub, Supabase y Vercel | Ningún servicio depende de una sola persona | 15/10 | 2 |
-| B7 | **Mantener Supabase despierto** (el plan gratuito se pausa tras unos 7 días sin uso): revisar `/api/v1/health` dos veces por semana y que la copia diaria siga en verde en *Actions → backup* | La web nunca amanece pausada | Continuo | 1 |
-| B8 | **Grabar el video de respaldo** (unos 12 minutos) con la versión final. Subirlo como no listado y guardarlo en una memoria USB | Video en dos lugares | 26/10 | 3 |
-| B9 | **Congelar y revisar** el 27/10: `main` en verde, copia del día, salud "ok", sesiones iniciadas en los teléfonos de la demo | Lista "Antes de empezar" del guion completa | 27/10 | 1 |
-
-**Opcional, solo si sobra tiempo:**
-- dominio propio y Resend para el correo;
-- captcha en el inicio de sesión ([SECURITY.md](../SECURITY.md)).
-
----
-
-## Juntos (A y B)
-
-| # | Tarea | Fecha | Horas cada uno |
+| Parte | Persona | Se encarga de | Horas |
 |---|---|---|---|
-| J1 | **Dos ensayos completos** de 25 minutos con cronómetro, siguiendo el [guion](guion-demo.md). Uno habla y el otro maneja los teléfonos y la computadora; el guion se ajusta después de cada ensayo | 22/10 y 24/10 | 3 |
-| J2 | Reunión de 15 minutos los **lunes y jueves**: qué terminé, qué sigue y qué me bloquea | Toda la etapa | 2 |
-
-## Cómo nos coordinamos
-
-- **Un solo lugar para las tareas:** los *issues* de GitHub, con las etiquetas `contenido` (A), `ux` y `plataforma` (B). Cada persona cierra los suyos.
-- **Dependencias:**
-  - B entrega los resultados de los vecinos → A los usa en la presentación (A8).
-  - A encuentra fallos en los teléfonos (A6) → B los corrige (B4).
-  - A deja listo el contenido de la demo (A7) → se prueba en el primer ensayo (J1).
-- **Una sola sesión de trabajo por carpeta.** Quien programe (B) trabaja en su propia rama o en su propia carpeta: dos sesiones a la vez en la misma carpeta pueden pisarse.
-- **Sin cambios por fuera de la app:** nadie toca la base a mano (SQL Editor) ni publica en Vercel desde su computadora. El contenido se edita desde el panel; el código entra por `main`.
-- **Antes de cambios grandes de datos:** `npm run backup` (lo hace B).
+| **A** | ________ | Contenido, presentación, cuentas y ronda 2 con vecinos (sin programar) | ~27 h |
+| **B** | ________ | Toda la implementación: panel de indicadores, base de datos, seguridad y correcciones, más la ronda 1 con vecinos | ~30 h |
 
 ---
 
-## Reglas técnicas (para quien toque código)
+## Parte A · Contenido, presentación y cuentas
 
-**Ramas:** `main` es la rama principal y la de producción. Cada persona trabaja en su rama y entra por pull request:
+Todo se hace desde el panel de administración de la app y desde la web de cada servicio. Guía: [manual administrativo](manual-administrativo.md).
 
-```bash
-git fetch origin
-git switch -c fix/<tema> origin/main
-# … cambios …
-git fetch origin && git rebase origin/main
-npm run check          # lint + tipos + unitarias + fronteras de módulos
-npm run test:db        # si tocaste migraciones
-npm run test:e2e       # con npm run dev corriendo
-```
-
-- **Pull requests pequeños:** uno por problema. Nunca `push --force` a `main` ni a la rama de otra persona.
-- **Secretos:** solo en `.env.local`. Nunca en el chat, el código ni los commits.
-
-**Publicación (Vercel):**
-
-| Cuando se sube a… | Vercel hace… |
-|---|---|
-| `main` | Publica en **https://sr-conecta.vercel.app** |
-| cualquier otra rama | Crea una **vista previa** privada; el enlace aparece en el PR |
-
-- **No publiques a mano** con `npx vercel deploy --prod`: sube a GitHub y Vercel publica solo.
-- **Migraciones:** se aplican primero a la base (`npx supabase db push`, antes con `--dry-run`) y **después** se sube el código a `main`.
-
-**Archivos compartidos:**
-
-| Archivo | Regla |
-|---|---|
-| `supabase/migrations/*` | Nunca editar una ya aplicada. Se crea una nueva con `npx supabase migration new <nombre>`, con su prueba en `supabase/tests/run.mjs` |
-| `src/types/database.ts` | No editar a mano: `npm run db:types` |
-| `package.json` / `package-lock.json` | Avisar antes de agregar una dependencia |
-| `src/lib/vocabulary.ts` | Solo **agregar** líneas al final de cada lista |
+- [ ] **A1 · Elegir los 15 lugares más importantes** (Presa de Monción, parques, reservas, miradores, balnearios…). Los que falten se agregan con *Proponer un lugar* y se aprueban en el panel. — **18/10** · 1 h
+- [ ] **A2 · Completar 10 lugares:** descripción de 2–4 frases sencillas, qué hay (servicios, accesibilidad), horario y al menos 1 foto propia. — **20/10** · 4 h
+- [ ] **A3 · Completar los 5 lugares restantes** igual que en A2. — **22/10** · 2 h
+- [ ] **A4 · Revisar los 84 negocios:** archivar los que no existen y poner teléfono y horario a los 20 más conocidos. — **22/10** · 3 h
+- [ ] **A5 · Validar las 3 rutas** con alguien que las conozca: corregir el trazado o archivarlas. — **22/10** · 2 h
+- [ ] **A6 · Revisar los catálogos** (*Panel → Catálogos*): que los tipos de alerta y de negocio sean los que usa la gente de allí. — **20/10** · 0,5 h
+- [ ] **A7 · Probar en teléfonos reales** (un Android barato y un iPhone, con push y sin conexión) con la tabla del [guion](guion-demo.md#prueba-completa-a-mano-teléfono-real). Cada fallo, un *issue* para B. — **21/10** · 2,5 h
+- [ ] **A8 · Contenido de la demo:** 2–3 negocios con promoción activa y fotos, y un reporte real en la bandeja. — **23/10** · 1,5 h
+- [ ] **A9 · Diapositivas** (5–6): problema, solución, arquitectura, seguridad, costos y datos abiertos. El 24/10 se suman los resultados de los vecinos y una captura del panel. — **23 y 24/10** · 3,5 h
+- [ ] **A10 · Cuentas:** al menos dos dueños en GitHub, Supabase y Vercel ([DEPLOYMENT.md §9](../DEPLOYMENT.md#9-traspaso-a-cuentas-de-la-organización)). — **23/10** · 1,5 h
+- [ ] **A11 · Supabase despierto:** dos veces por semana, abrir https://sr-conecta.vercel.app/api/v1/health (debe decir `"ok"`) y ver que *Actions → backup* esté en verde. Si algo falla, avisar a B. — **continuo** · 0,5 h
+- [ ] **A12 · Video de respaldo** (unos 12 minutos) con la versión final, incluido el panel. Subirlo como no listado y copiarlo a una memoria USB. — **26/10** · 2 h
+- [ ] **A13 · Ronda 2 con 3 vecinos distintos** a los de la ronda 1, con la [guía](prueba-con-vecinos.md) y después de las correcciones de B. Anotar la comparación (p. ej. "de 22/35 a 31/35 tareas sin ayuda") para las diapositivas. — **24/10** · 2,5 h
 
 ---
 
-## Historial
+## Parte B · Implementación y ronda 1
 
-- **Frente A, contenido (A1–A7):** fichas, alta y panel de negocio, propuestas y edición. Completado el 02/10/2026.
-- **Frente B, plataforma (B1–B7):** worker, PDF, PWA, push, despliegue y documentación. Completado entre el 02/10 y el 05/10/2026. Con él quedaron también los catálogos editables, los datos reales de OpenStreetMap, los listados, las pruebas E2E y las copias de seguridad.
-- **Plan de tres personas (07/10/2026):** reemplazado el mismo día por este reparto entre dos.
+Guías: [prueba con vecinos](prueba-con-vecinos.md), [SECURITY.md](../SECURITY.md), [DATABASE.md](../DATABASE.md) y [guion de la demo](guion-demo.md). El detalle de cada bloque está más abajo.
 
-El detalle de los repartos anteriores está en el historial de git de este archivo.
+**Vecinos y correcciones**
+- [ ] **B1 · Publicar la auditoría de seguridad** ya hecha (redirección abierta, Next 16.3.8, migración aplicada) y ajustar el panel de Supabase: código de acceso de 10 minutos y límites de envío activos. — **18/10** · 1 h
+- [ ] **B2 · Ronda 1 con 5 vecinos variados** (persona mayor, alguien que casi solo usa WhatsApp, comerciante, joven, alguien de Monción o Los Almácigos). No ayudar; tomar tiempos y anotar las palabras que no entienden. — **20/10** · 5 h
+- [ ] **B3 · Pasar los resultados** a la guía y abrir un *issue* `ux` por problema, ordenados por cuántas personas lo tuvieron. Pasarle la ronda 1 a A. — **21/10** · 1,5 h
+- [ ] **B4 · Corregir los *issues*** de B3 y los que abra A en A7. — **22/10** · 4 h
+
+**Panel de indicadores (KPI)**
+- [ ] **B5 · Fase 1:** periodo, comparación y navegación. — **21/10** · 4 h
+- [ ] **B6 · Fase 2:** gráficos, municipios, lo más visto y CSV. — **23/10** · 4 h
+- [ ] **B7 · Fase 3:** pulido de UX/UI de los indicadores. — **24/10** · 2 h
+
+**Seguridad**
+- [ ] **B8 · Captcha en el inicio de sesión** (Cloudflare Turnstile). — **22/10** · 2 h
+- [ ] **B9 · Seguridad automática en GitHub:** auditoría de dependencias en la CI, Dependabot y escaneo de secretos. — **19/10** · 1 h
+
+**Base de datos**
+- [ ] **B10 · Auditoría de la base repetible** (`npm run db:audit`), también en GitHub Actions. — **24/10** · 2 h
+- [ ] **B11 · Simulacro de restauración** de la copia de seguridad. — **25/10** · 1 h
+- [ ] **B12 · Pulido final:** tipos al día y las pruebas E2E sin limpieza manual. — **26/10** · 1 h
+
+**Cierre**
+- [ ] **B13 · Congelar y revisar:** `main` en verde, copia del día, salud "ok" y sesiones abiertas en los teléfonos de la demo. — **27/10** · 1 h
+
+---
+
+## Detalle de implementación
+
+### Panel de indicadores (B5–B7)
+
+Convertir `/admin` en un dashboard que se explora, **con el mismo diseño** (tarjetas, colores y tipografía). No necesita librerías nuevas ni cambios en la base: `kpi_summary`, `weekly_kpi_snapshots` y `engagement_daily` ya existen y la administración ya puede leerlas.
+
+| Fase | Qué se agrega |
+|---|---|
+| **1 · Interacción** | Selector de periodo: 7, 30 y 90 días, en la URL (`?periodo=30`) para que el enlace se pueda compartir |
+| | Comparación con el periodo anterior en cada indicador (▲ / ▼ %), en verde si mejora y en rojo si empeora: más resueltos es bueno, más abiertos es malo |
+| | Cada indicador abre su lista: "Abiertos ahora" → bandeja filtrada, "Negocios pendientes" → Validaciones… |
+| | Para moderación: cuánto lleva esperando lo más antiguo |
+| **2 · Gráficos** | Tendencia de 8 semanas (recibidos frente a resueltos) con `weekly_kpi_snapshots`, en SVG propio, con el valor al tocar cada punto |
+| | Comparación entre municipios (barras) al ver toda la provincia |
+| | Las 5 fichas más vistas del periodo, con visitas, "Cómo llegar" y WhatsApp (`engagement_daily`) |
+| | Botón **Descargar CSV** con los indicadores del periodo |
+| **3 · UX/UI** | Un **"?"** junto a cada indicador que explica en lenguaje sencillo qué mide |
+| | Tiempos legibles ("3 h 20 min", no "3,33 horas") y números con el formato de RD |
+| | Estados completos: cargando (esqueleto con la forma de la tarjeta), sin datos ("Todavía no hay reportes en este periodo") y error con **Reintentar** |
+| | Orden por importancia: lo que hay que atender (abiertos, pendientes) arriba; las cifras de contexto, abajo |
+| | 1 columna en teléfono, 2 en tableta y 4 en computadora; los gráficos se adaptan al ancho sin scroll horizontal |
+| | "Actualizado a las 5:47 p. m." y un botón para actualizar |
+| | Accesible: el ▲ / ▼ siempre lleva texto (no depende solo del color), el gráfico tiene una tabla equivalente y el valor de cada punto también se ve con el teclado |
+| | Vista para imprimir del resumen |
+
+**Hecho cuando:** los números coinciden con los del PDF semanal; se ve bien a 320 px con áreas táctiles de 44 px; pasa `tests/e2e/accesibilidad.spec.ts`; tiene una prueba E2E que cambia el periodo y abre una lista; y el [manual administrativo](manual-administrativo.md) lo explica.
+
+### Seguridad (B1, B8, B9)
+
+Parte de la [auditoría del 17/10](../SECURITY.md#auditoría-del-17102026): lo crítico ya está corregido y aplicado en la base; queda publicarlo y cerrar los pendientes.
+
+| Tarea | Cómo | Hecho cuando |
+|---|---|---|
+| **B1 · Publicar** | Subir a `main` (la migración ya está en la base). En Supabase: *Authentication → Providers → Email*, código de 10 minutos; *Rate Limits* con los valores por defecto | En Vercel, y `/entrar?next=/..//ejemplo.com` termina en la app |
+| **B8 · Captcha** | Crear el widget de Turnstile en Cloudflare (gratis), activarlo en *Supabase → Authentication → Attack Protection*, poner el widget en `/entrar` y añadir `challenges.cloudflare.com` a la CSP de `src/proxy.ts`. Las pruebas E2E entran con un código generado por el servidor, así que no se rompen | Pedir un código exige el captcha; el inicio de sesión funciona en Android e iPhone; SECURITY.md lo pasa de "pendiente" a "hecho" |
+| **B9 · GitHub** | Añadir `npm audit --omit=dev --audit-level=high` a `ci.yml`, crear `.github/dependabot.yml` (npm y GitHub Actions, semanal) y activar *Secret scanning* y *Push protection* en *Settings → Code security* | La CI falla si aparece una vulnerabilidad alta; Dependabot abre su primer PR |
+
+Se hace temprano (19 y 22/10) para que los dos ensayos ya usen el inicio de sesión con captcha.
+
+### Base de datos (B10–B12)
+
+La base está sana: RLS en todo, permisos mínimos y 2–3 ms por consulta del mapa. Lo que falta es que **siga así sin depender de una revisión a mano**.
+
+| Tarea | Cómo | Hecho cuando |
+|---|---|---|
+| **B10 · Auditoría repetible** | Convertir las consultas de la auditoría del 17/10 en `scripts/db-audit.mjs` (`npm run db:audit`). Debe fallar si aparece una tabla sin RLS, una función `SECURITY DEFINER` sin `search_path`, una función nueva que pueda ejecutar `anon`, o una política de lectura en `public-media`. Correrlo cada semana en GitHub Actions con el mismo secreto que usa `backup.yml` | Pasa contra staging, y falla si se crea a propósito una tabla sin RLS en una base local |
+| **B11 · Simulacro de restauración** | Cargar la última copia (`backups/*.json` o el artefacto de `backup.yml`) en una base PGlite con todas las migraciones y comparar los conteos por tabla | Conteos iguales; el procedimiento queda en [DEPLOYMENT.md §8.1](../DEPLOYMENT.md#81-copias-de-seguridad) |
+| **B12 · Pulido final** | `npm run db:types` sin diferencias con `src/types/database.ts`. En `tests/e2e/helpers.ts`, limpiar el límite de reportes por hora de las cuentas de prueba antes de cada ejecución, igual que ya se hace con la reputación | `git diff` vacío tras regenerar los tipos; las E2E pasan varias veces seguidas sin tocar la base |
+
+Cada cambio de la base va en una migración nueva con su prueba en `supabase/tests/run.mjs`, siguiendo el orden de las reglas de abajo.
+
+---
+
+## Juntos
+
+- [ ] **Ensayo 1** de la demo: 25 minutos con cronómetro, siguiendo el [guion](guion-demo.md). — **viernes 23/10**
+- [ ] **Ensayo 2.** — **domingo 25/10**
+- [ ] Reunión de 15 minutos: qué terminé, qué sigue, qué me bloquea. — **19, 21, 23 y 25/10**
+
+## Calendario
+
+| Fecha | Parte A | Parte B |
+|---|---|---|
+| Dom 18/10 | A1 | B1 |
+| Lun 19/10 | A2 (empieza) | B9 · B2 (empieza) |
+| Mar 20/10 | A2, A6 | B2 |
+| Mié 21/10 | A7 | B3, B5 |
+| Jue 22/10 | A3, A4, A5 | B4, B8 |
+| Vie 23/10 | A8, A9, A10 · **Ensayo 1** | B6 · **Ensayo 1** |
+| Sáb 24/10 | A13, A9 con resultados | B7, B10 |
+| Dom 25/10 | **Ensayo 2** | B11 · **Ensayo 2** |
+| Lun 26/10 | A12 | B12 · ajustes finales |
+| Mar 27/10 | Revisión final | B13 · **código congelado** |
+
+## Reglas para trabajar en equipo
+
+- **Las partes solo se cruzan en cuatro puntos:**
+  - fallos de los teléfonos (A → B, 21/10);
+  - resultados de la ronda 1 (B → A, 21/10);
+  - correcciones publicadas antes de la ronda 2 (B → A, 22/10);
+  - contenido de la demo y panel listos para el ensayo 1 (23/10).
+- **Tareas en GitHub:** un *issue* por problema, con la etiqueta `contenido` (A), `ux` o `plataforma` (B).
+- **El código solo cambia** para lo que está en este documento. Antes de cada push: `npm run check`, `npm run test:db` y `npm run test:e2e`.
+- **Nadie toca la base a mano** ni publica en Vercel desde su computadora: el contenido se edita en el panel y el código entra por `main`.
+- **Migraciones:** `npm run backup` → `npx supabase db push --dry-run` → `db push` → y después el código a `main`.
+- **Secretos** solo en `.env.local` y en los secretos de GitHub, Vercel y Supabase; nunca en el chat ni en los commits. Nunca `push --force` a `main`.
