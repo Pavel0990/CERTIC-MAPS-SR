@@ -679,6 +679,23 @@ ok('T8 categorías de negocio con slug y todo queda en la auditoría',
    bizCat.code === 'peluqueria-y-barberia' && audits.n >= 6, JSON.stringify({ bizCat, audits }));
 
 // ---------------------------------------------------------------------------------------------
+// U. Endurecimiento tras la auditoría del 17/10 (migración 20261017120000)
+// ---------------------------------------------------------------------------------------------
+await db.query(`insert into storage.objects (bucket_id, name) values ('public-media', 'auditoria/foto.webp') on conflict do nothing`);
+const listedAnon = await as(db, null, `select count(*)::int n from storage.objects where bucket_id = 'public-media'`);
+const listedUser = await as(db, U.beto, `select count(*)::int n from storage.objects where bucket_id = 'public-media'`);
+ok('U1 nadie puede listar el bucket público con la clave pública (las URL públicas no dependen de RLS)',
+   listedAnon.rows[0].n === 0 && listedUser.rows[0].n === 0, JSON.stringify([listedAnon.rows, listedUser.rows]));
+const visible = await one(`select id from public.tourism_places where status = 'published' and deleted_at is null limit 1`);
+await as(db, null, `select public.track_engagement('tourism_place', $1, 'view')`, [visible.id]);
+await db.query(`update public.engagement_daily set count = 1999 where entity_id = $1 and metric = 'view'`, [visible.id]);
+for (let i = 0; i < 3; i++) await as(db, null, `select public.track_engagement('tourism_place', $1, 'view')`, [visible.id]);
+const capped = await one(`select count from public.engagement_daily where entity_id = $1 and metric = 'view'`, [visible.id]);
+ok('U2 las métricas anónimas tienen techo diario por ficha: no se pueden inflar sin límite', capped.count === 2000, JSON.stringify(capped));
+ok('U3 al reemplazar la función de métricas se conserva el permiso anónimo',
+   (await one(`select has_function_privilege('anon', 'public.track_engagement(text, uuid, text)', 'execute') a`)).a === true);
+
+// ---------------------------------------------------------------------------------------------
 // L. Mantenimiento y privacidad
 // ---------------------------------------------------------------------------------------------
 await db.query(`update public.traffic_reports set expires_at = created_at + interval '1 second' where id = $1`, [t1.id]);

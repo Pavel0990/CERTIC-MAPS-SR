@@ -432,7 +432,7 @@ Resumen. El detalle (columnas, índices, políticas, matriz de grants) está en 
 | Migraciones | 17 (`20260924120000` a `20260925120000`) |
 | Tablas | 27 en `public` (todas con RLS) y 6 en `private` |
 | Funciones | 35 en `public` (32 `SECURITY DEFINER`, 3 `SECURITY INVOKER`) y 34 en `private` |
-| Seguridad | 31 políticas RLS + 4 de Storage; grants por columna; `EXECUTE` explícito por función |
+| Seguridad | 31 políticas RLS + 3 de Storage; grants por columna; `EXECUTE` explícito por función |
 | Índices | 109, incluidos GiST, GIN y parciales |
 | Triggers | 16 |
 | Pruebas | 113, todas pasan (§14.1) |
@@ -621,7 +621,7 @@ pending → under_review → approved ⇄ suspended → archived
 | Horario | `set_business_hours`: reemplaza el horario completo, validado |
 | Promociones | `create_promotion`: informativas (texto y vigencia de hasta 90 días), sin stock, códigos ni canje. Entran como `pending` y se moderan: `pending → active / rejected`, `active ⇄ paused` |
 | Fotos | Hasta 10 por negocio (§10.5) |
-| Estadísticas del comercio | `track_engagement(entidad, id, métrica)` suma vistas, clics en "Cómo llegar" y clics en WhatsApp por día en `engagement_daily`. Nunca se guarda una fila por evento ni se identifica al visitante. El comercio ve las de su negocio. No tiene límite por usuario porque la llaman visitantes anónimos: las cifras son orientativas, y el cliente cuenta como máximo una vista por ficha y sesión |
+| Estadísticas del comercio | `track_engagement(entidad, id, métrica)` suma vistas, clics en "Cómo llegar" y clics en WhatsApp por día en `engagement_daily`. Nunca se guarda una fila por evento ni se identifica al visitante. El comercio ve las de su negocio. No tiene límite por usuario porque la llaman visitantes anónimos, pero sí un techo de 2000 por ficha, métrica y día: las cifras son orientativas, y el cliente cuenta como máximo una vista por ficha y sesión |
 | Origen de los datos | Los negocios importados de OpenStreetMap (ADR-024) entran aprobados y sin dueño; el comercio que se registra completa su ficha. Solo los **aprobados** aparecen en el mapa y en `/negocios` |
 
 ### 9.4 Turismo y rutas (F1 y F3)

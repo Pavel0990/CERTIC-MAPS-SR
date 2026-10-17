@@ -11,9 +11,9 @@
 
 | Qué | Cifra | Cómo se comprueba |
 |---|---|---|
-| Migraciones | **24**, todas aplicadas en el Supabase de staging | `ls supabase/migrations` · `npx supabase migration list` |
+| Migraciones | **25**, todas aplicadas en el Supabase de staging | `ls supabase/migrations` · `npx supabase migration list` |
 | Funciones en `public` | **47** (§6) | `grep -ohE "function public\.[a-z_]+" supabase/migrations/*.sql \| sort -u \| wc -l` |
-| Pruebas de la base | **150**, en 20 secciones (A–T), todas pasan en cada push (CI) | `npm run test:db` |
+| Pruebas de la base | **153**, en 21 secciones (A–U), todas pasan en cada push (CI) | `npm run test:db` |
 | Motor de las pruebas | PostgreSQL 18.3 + PostGIS 3.6.2 en PGlite. Staging: PostgreSQL 17 + PostGIS 3.3 | — |
 
 Las pruebas cubren seguridad (con ataques directos), integridad, concurrencia, PostGIS, fotos, alertas, KPIs, descarga auditada del PDF, entrega del worker, push, catálogos y mantenimiento. Lo que no se puede verificar fuera de Supabase está en §14 y en [ARCHITECTURE.md §20](ARCHITECTURE.md#20-verificaciones-en-el-servicio-real).
@@ -26,7 +26,7 @@ Las pruebas cubren seguridad (con ataques directos), integridad, concurrencia, P
 |---|---|
 | Motor | PostgreSQL (Supabase; probado en 18.3, compatible con 15+) + PostGIS, `pg_trgm`, `unaccent`, `pgcrypto`, `pg_cron`, `pg_net`, Vault |
 | Esquemas | `public` (expuesto por la Data API): 27 tablas y 35 funciones · `private` (no expuesto): 6 tablas y 34 funciones · `extensions` |
-| Seguridad | RLS en las 27 tablas de `public` (31 políticas + 4 de Storage) · grants por columna · `EXECUTE` explícito por función · 55 funciones `SECURITY DEFINER`, todas con `search_path` fijo |
+| Seguridad | RLS en las 27 tablas de `public` (31 políticas + 3 de Storage) · grants por columna · `EXECUTE` explícito por función · 55 funciones `SECURITY DEFINER`, todas con `search_path` fijo |
 | Integridad | FK compuestas territoriales, `CHECK` en cada columna con dominio acotado, `UNIQUE NULLS NOT DISTINCT` donde `NULL` tiene significado, arco exclusivo en adjuntos |
 | Rendimiento | 109 índices: GiST geométricos y geográficos, GIN de texto y trigramas, parciales para bandejas y colas, soporte de todas las FK hacia `profiles` |
 | Asincronía | Cola `private.jobs` (outbox) + worker con `FOR UPDATE SKIP LOCKED` + `pg_cron` |
@@ -267,7 +267,7 @@ Decisión deliberada: la regla "`in_progress` exige responsable" está en la RPC
 | `map_aggregates` | Conteos públicos por municipio para el zoom de provincia |
 | `worker_queue_health` | Pendientes, el más antiguo, fallidos y `dead` |
 | Trigger `profiles_before_delete` | Bloquea la baja del único dueño de un negocio vigente; encola el borrado de evidencias privadas; audita `account.delete` |
-| `track_engagement` | Suma métricas diarias de entidades públicas. La pueden llamar `anon` y usuarios, sin límite por usuario: las cifras son orientativas |
+| `track_engagement` | Suma métricas diarias de entidades públicas. La pueden llamar `anon` y usuarios, sin límite por usuario pero con un techo de 2000 por ficha, métrica y día (§5.19): las cifras son orientativas |
 
 ### 5.10 Índices de soporte de FK — `…220_fk_indexes.sql`
 
@@ -342,6 +342,17 @@ Pruebas R1–R6.
 
 No se borra nada: desactivar quita la opción de los formularios y del mapa (la política de lectura solo muestra lo activo) y conserva el historial. El campo `icon` se resuelve en la app con `src/components/shared/catalog-icon.tsx`. Pruebas T1–T8.
 
+### 5.19 Endurecimiento tras la auditoría — `20261017120000_security_hardening.sql`
+
+Resultado de la [auditoría de seguridad del 17/10/2026](SECURITY.md#auditoría-del-17102026), hecha contra la base en línea.
+
+| Cambio | Por qué |
+|---|---|
+| Se elimina la política `public_media_read` de `storage.objects` | Permitía **listar** el bucket público entero con la clave pública, incluidas fotos que ya no están en ninguna ficha. Las fotos se sirven por URL pública, que no pasa por RLS: siguen funcionando igual |
+| `track_engagement` deja de sumar al llegar a **2000** por ficha, métrica y día | La función es anónima a propósito, así que no hay usuario al que limitar. El techo acota cuánto puede inflar alguien las cifras del comercio y del informe semanal |
+
+Pruebas U1–U3.
+
 ## 6. Catálogo de RPC
 
 Todas las funciones de `public` (cifra en [Estado verificado](#estado-verificado)) son `SECURITY DEFINER`, salvo las marcadas como **invoker**.
@@ -368,7 +379,7 @@ Todas las funciones de `public` (cifra en [Estado verificado](#estado-verificado
 | `map_features` | anon, ciudadano | — | **invoker**; bbox ≤ 2°, ≤ 500 features, `truncated` |
 | `map_aggregates` | anon, ciudadano | — | **invoker** |
 | `search_all` | anon, ciudadano | — | **invoker**; 2–80 caracteres, ≤ 50 resultados |
-| `track_engagement` | anon, ciudadano | — | upsert diario |
+| `track_engagement` | anon, ciudadano | techo 2000/día por ficha y métrica | upsert diario |
 | `my_activity` | ciudadano | — | solo lo propio |
 | `kpi_summary` | admin (su alcance), service | — | **única fuente de KPIs** |
 | `weekly_report_begin` | service (cron) / admin provincial (manual) | — | toma atómica; versión nueva si es manual |
@@ -413,6 +424,7 @@ Qué endpoint o Server Action consume cada RPC: ARCHITECTURE.md §12.
 **Storage:**
 - `report-evidence` solo acepta subidas en `incoming/{auth.uid()}/…`, con un máximo de 20 por hora (`private.upload_quota_ok()`).
 - `public-media` y `reports-pdf` solo los escribe `service_role`.
+- `public-media` no tiene política de lectura: sus fotos se sirven por URL pública y nadie puede listar el bucket (§5.19).
 - `reports-pdf` solo se lee con una descarga registrada en `audit_logs` en los últimos 5 minutos (`reports_pdf_read_after_audit`, §5.11).
 
 ## 8. Errores de diseño detectados al ejecutar (y cómo se evitan)
