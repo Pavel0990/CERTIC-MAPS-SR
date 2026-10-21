@@ -13,7 +13,7 @@ Plataforma geográfica para la provincia **Santiago Rodríguez** (República Dom
 > - el informe semanal en PDF;
 > - el uso sin conexión.
 >
-> **Plan hasta la entrega, repartido entre dos personas (A y B): [docs/REPARTO-DE-TRABAJO.md](docs/REPARTO-DE-TRABAJO.md).**
+> **Estado, cobertura de la rúbrica y lo que falta hasta la entrega (27/11/2026): [docs/ESTADO-Y-PENDIENTES.md](docs/ESTADO-Y-PENDIENTES.md).**
 >
 > Lo que falta ya no es código: [probar con vecinos](docs/prueba-con-vecinos.md), [ensayar la demo](docs/guion-demo.md), el dominio y el correo propio, y [pasar las cuentas a la organización](DEPLOYMENT.md#9-traspaso-a-cuentas-de-la-organización).
 
@@ -87,7 +87,7 @@ Quita el reenvío al terminar: cualquiera con la URL ve la app.
 ```bash
 npm run check     # lint (con la regla de fronteras), tipos, pruebas unitarias y de fronteras
 npm run test:db   # pruebas de la base de datos (PostgreSQL + PostGIS en memoria, sin Docker)
-npm run test:e2e  # 4 recorridos en un navegador real contra staging (con npm run dev corriendo)
+npm run test:e2e  # 14 recorridos (incluido axe en claro y oscuro) en un navegador real contra staging (con npm run dev corriendo)
 npm run backup    # copia de los datos de staging en backups/ (antes de cambios grandes)
 ```
 
@@ -115,11 +115,12 @@ Ya listos: **GitHub** (con CI y copia de seguridad diaria cifrada, a activar), *
 
 ### 2. Construir lo que falta
 
-El reparto entre las dos personas del equipo hasta la entrega (A: contenido y presentación; B: vecinos, correcciones y plataforma) está en [docs/REPARTO-DE-TRABAJO.md](docs/REPARTO-DE-TRABAJO.md).
+Lo que falta hasta la entrega, con fechas, está en [docs/ESTADO-Y-PENDIENTES.md](docs/ESTADO-Y-PENDIENTES.md).
 
 | Qué | Estado |
 |---|---|
-| Panel municipal: bandeja, validaciones, KPIs, informes, equipo, auditoría y catálogos editables | ✅ |
+| Panel municipal: bandeja, validaciones, indicadores explorables (7/30/90 días, comparación, gráfico, municipios, CSV), informes, equipo, auditoría y catálogos editables | ✅ |
+| Modo oscuro, foto de perfil y tipografía de lectura fácil (Lexend/Nunito) | ✅ |
 | Worker de la cola: fotos, avisos al personal, alertas a vecinos, push | ✅ |
 | PDF semanal: cron diario y "Generar ahora" | ✅ |
 | PWA: *service worker*, página sin conexión, envío de la cola al volver la red, push por dispositivo | ✅ |
@@ -133,7 +134,7 @@ El reparto entre las dos personas del equipo hasta la entrega (A: contenido y pr
 | Dominio, Resend, Supabase de producción, captcha | ⏳ Necesitan cuentas ([DEPLOYMENT.md](DEPLOYMENT.md), [SECURITY.md](SECURITY.md)) |
 | `LICENSE` | ✅ MIT |
 
-### 3. Antes de la entrega (27/10/2026)
+### 3. Antes de la entrega (27/11/2026)
 
 - [x] Repositorio **público** con `main` al día.
 - [x] Datos reales en lugar de la demo (OpenStreetMap). Cuando la organización entregue los datos abiertos oficiales, se cargan encima.

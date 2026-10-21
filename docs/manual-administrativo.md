@@ -23,20 +23,38 @@ El panel está en **Perfil → Panel municipal**, o directamente en `/admin`. Fu
 - **La administración provincial no se da desde la app.** La crea el equipo técnico con un script revisado (ver [DEPLOYMENT.md](../DEPLOYMENT.md) §5). Así nadie puede darse más poder a sí mismo.
 - Para recibir un rol, la persona tiene que haber entrado al menos una vez a la aplicación con su correo.
 
-## 2. Resumen
+## 2. Resumen (indicadores)
 
-La primera pantalla muestra **Tu trabajo hoy**: cuántas alertas y reportes esperan respuesta, con un acceso directo a la bandeja.
+El panel se recorre con la **barra lateral** de la izquierda (en el teléfono, con las pestañas de arriba): *Gestión* (Resumen, Bandeja, Validaciones) y *Administración* (Informes, Equipo, Auditoría, Catálogos).
 
-Si eres administración, debajo ves los indicadores de los últimos 7 días:
+**Moderación** ve **Tu trabajo hoy**: alertas por confirmar, reportes por revisar y contenido por validar. Cada tarjeta lleva a su lista.
 
-- reportes recibidos, resueltos y abiertos ahora;
-- tiempo de respuesta;
-- tránsito por tipo;
-- negocios activos y turismo publicado;
-- personas nuevas;
-- **lo que más piden los vecinos**: los reportes públicos con más apoyos.
+**Administración** ve el tablero de indicadores:
 
-Son exactamente las mismas cifras que salen en el PDF semanal.
+1. **Periodo:** *7 días*, *30 días* o *90 días*. Queda en la dirección de la página, así que el enlace se puede compartir tal cual.
+2. **Territorio:** toda la provincia o un municipio (la administración provincial puede elegir).
+3. **Lo que hay que atender** (arriba, porque es lo urgente): reportes abiertos ahora, alertas por confirmar, contenido por validar y **la espera más antigua**. Tocar una tarjeta abre su lista.
+4. **Cómo va el periodo:** reportes recibidos, resueltos, tiempo para resolver y personas nuevas. Cada cifra trae una píldora ▲ / ▼ con el cambio frente al periodo anterior, **verde si mejora y roja si empeora** (más resueltos es bueno; más reportes recibidos, no).
+5. **Recibidos y resueltos:** gráfico por día (7 días) o por semana (30 y 90). Toca un punto, o usa las flechas del teclado, para ver su valor; *Ver como tabla* muestra los mismos números.
+6. **Aspectos destacados:** frases automáticas con lo más importante del periodo (por ejemplo, "Monción concentra el 60 % de los reportes").
+7. **Por municipio**, **tránsito por tipo**, **lo que más piden los vecinos** y **lo más visto** (las 5 fichas con más visitas, clics en *Cómo llegar* y en WhatsApp).
+8. **Contenido del mapa:** negocios activos, turismo publicado y visitas.
+
+El botón **?** de cada tarjeta explica qué mide en palabras simples. Arriba a la derecha: **Actualizar** (con la hora de la última carga), **Descargar CSV** (se abre en Excel con tildes) e **Imprimir**.
+
+Las cifras salen de la misma función que el PDF semanal, así que siempre coinciden con el informe.
+
+### 2.1 Completar las fichas de lugares, rutas y negocios
+
+Los datos de OpenStreetMap traen el nombre y la ubicación, pero casi nunca fotos ni descripción. El personal los completa así:
+
+| Qué | Dónde | Qué se puede cambiar |
+|---|---|---|
+| **Lugar turístico** | Abre el lugar (Turismo → el lugar) → **Editar** | Descripción, tipo, horario, accesibilidad, servicios y fotos. Si la ficha está vacía, la tarjeta *Agregar descripción y fotos* lleva directo a editarla |
+| **Ruta** | Abre la ruta → **Editar** | Descripción, dificultad, duración, servicios, fotos y el trazado (solo el personal cambia el trazado; la distancia se recalcula sola) |
+| **Negocio** | El dueño, desde **Perfil → Mi negocio**; el personal, desde la ficha | Datos, horario, fotos y promociones. Si el dueño cambia el **nombre** o la **página web**, el negocio vuelve a **Validaciones** antes de salir así en el mapa |
+
+Las fotos nuevas pasan por **Validaciones** antes de publicarse. Si dos personas editan a la vez, la segunda ve un aviso y recarga los datos: nunca se pisa el trabajo de otra persona.
 
 ## 3. Bandeja
 

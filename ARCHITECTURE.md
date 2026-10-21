@@ -1,6 +1,6 @@
 # SR Conecta — Arquitectura
 
-> **Versión 3.0 · 7 de octubre de 2026 · arquitectura tal como está construida.**
+> **Versión 3.1 · 21 de octubre de 2026 · arquitectura tal como está construida.**
 > Plataforma geográfica para la provincia Santiago Rodríguez (República Dominicana), para el reto TechEmprende SR Conecta 2026.
 > Describe el sistema que funciona hoy en https://sr-conecta.vercel.app. Las decisiones y sus alternativas están en [`docs/decisions/`](docs/decisions); lo que cambió respecto del diseño inicial, en §18.1. Las cifras verificadas (migraciones, funciones, pruebas) viven solo en [DATABASE.md](DATABASE.md#estado-verificado), para que no se desincronicen.
 
@@ -28,7 +28,7 @@
 17. [Riesgos](#17-riesgos)
 18. [Decisiones de arquitectura (ADR)](#18-decisiones-de-arquitectura-adr)
 19. [No hacer](#19-no-hacer)
-20. [Pendiente de verificar](#20-pendiente-de-verificar)
+20. [Verificaciones en el servicio real](#20-verificaciones-en-el-servicio-real)
 
 ---
 
@@ -52,7 +52,7 @@
 Este documento no repite columnas ni firmas de funciones: las nombra y remite a DATABASE.md.
 
 **Etiquetas de fase:**
-- **[MVP]**: se entrega para la demo del reto (28–30/10/2026).
+- **[MVP]**: se entrega para la demo del reto (28–30/11/2026).
 - **[Fase 2]**: producción municipal.
 - **[Fase 3]**: escala regional.
 
@@ -88,7 +88,7 @@ Fuente: bases oficiales de conectasr.com (endpoint público `/api/convocatoria`)
 | Stack libre; se evalúa el resultado | Se prioriza lo que se demuestra bien y se puede mantener. |
 | "Cualquier ciudadano ingresa datos y **recibe notificaciones** sobre el mapa" | Notificaciones in-app obligatorias, alertas de tránsito por municipio y push como canal adicional. |
 | Entregables: MVP, mapa integrado, panel municipal, PDF semanal, **repositorio público en GitHub** con documentación técnica y manual de despliegue, demo de 25 min | El repositorio se hace público antes de la entrega (hoy es privado). |
-| Calendario: desarrollo hasta el **27/10/2026**; demo del **28 al 30/10/2026** | Unas 5 semanas de construcción (§16.3). |
+| Calendario: desarrollo hasta el **27/11/2026**; demo del **28 al 30/11/2026** | Unas 5 semanas de construcción (§16.3). |
 
 **Criterios de evaluación (100 puntos):**
 
@@ -429,13 +429,13 @@ Resumen. El detalle (columnas, índices, políticas, matriz de grants) está en 
 
 | | |
 |---|---|
-| Migraciones | 17 (`20260924120000` a `20260925120000`) |
-| Tablas | 27 en `public` (todas con RLS) y 6 en `private` |
-| Funciones | 35 en `public` (32 `SECURITY DEFINER`, 3 `SECURITY INVOKER`) y 34 en `private` |
+| Migraciones | 27 (`20260924120000` a `20261021120000`) |
+| Tablas | 27 en `public` (todas con RLS) y 7 en `private` |
+| Funciones | 49 en `public` (detalle y conteo verificado en [DATABASE.md](DATABASE.md)) |
 | Seguridad | 31 políticas RLS + 3 de Storage; grants por columna; `EXECUTE` explícito por función |
-| Índices | 109, incluidos GiST, GIN y parciales |
+| Índices | 109 al 07/10, incluidos GiST, GIN y parciales |
 | Triggers | 16 |
-| Pruebas | 113, todas pasan (§14.1) |
+| Pruebas | 173 de base de datos, todas pasan (§14.1) |
 
 ### 8.2 Esquemas y roles de base de datos
 
@@ -1117,7 +1117,7 @@ rama de trabajo → push / Pull Request
 push a main
   CI
   Vercel: publica en producción (integración Git)
-  Las migraciones se aplican ANTES con `npx supabase db push` (regla del equipo, docs/REPARTO-DE-TRABAJO.md)
+  Las migraciones se aplican ANTES con `npx supabase db push` (regla del equipo, docs/ESTADO-Y-PENDIENTES.md §7)
 
 cuando exista el Supabase de producción (ADR-019):
   deploy.yml: comprobaciones → supabase db push → vercel deploy --prod   (DEPLOY_ENABLED=true)
@@ -1279,7 +1279,7 @@ sr-conecta/
 ├─ docs/
 │  ├─ README.md                 índice de documentos por público
 │  ├─ decisions/                ADR, una decisión por archivo
-│  ├─ manual-administrativo.md  guion-demo.md  prueba-con-vecinos.md  REPARTO-DE-TRABAJO.md
+│  ├─ manual-administrativo.md  guion-demo.md  prueba-con-vecinos.md  ESTADO-Y-PENDIENTES.md
 ├─ supabase/
 │  ├─ migrations/               la fuente de verdad del modelo
 │  ├─ tests/                    pruebas de la base (PGlite)
@@ -1369,7 +1369,7 @@ Postergar los cimientos es exactamente el cambio brusco que esta arquitectura ev
 
 ### 16.3 Ejecución
 
-El plan original por semanas (24/09–27/10) se adelantó: las seis funcionalidades, el panel, el PDF, la PWA y la publicación estaban en línea el 05/10. Lo que queda hasta la entrega ya no es código (contenido, prueba con vecinos, ensayo de la demo) y está repartido en [docs/REPARTO-DE-TRABAJO.md](docs/REPARTO-DE-TRABAJO.md).
+El plan original por semanas (24/09–27/11) se adelantó: las seis funcionalidades, el panel, el PDF, la PWA y la publicación estaban en línea el 05/10. Lo que queda hasta la entrega ya no es código (contenido, prueba con vecinos, ensayo de la demo) y está en [docs/ESTADO-Y-PENDIENTES.md](docs/ESTADO-Y-PENDIENTES.md).
 
 ### 16.4 Fases siguientes
 
@@ -1475,7 +1475,7 @@ Ninguna decisión cambia en silencio. Las primeras filas se revisaron en la audi
 | 2FA del administrador provincial | Desde el MVP | Fase 2, junto con el resto de administradores (`aal2`) | Tiempo del reto; el alcance provincial solo se crea por script auditado |
 | Canal email de notificaciones | MVP (para iPhone sin la PWA) | Fase 2 (ADR-013) | Recorte del MVP; in-app siempre y guía de instalación |
 | Confirmar "ya no está" en tránsito | MVP | Fase 2 | El vencimiento automático cubre el MVP |
-| Panel "Sistema" (cola, catálogos, flags) | MVP | Catálogos en el MVP (**Panel → Catálogos**, migración 300); cola y flags en Fase 2 | Sostenibilidad: el municipio edita sus listas sin ayuda técnica |
+| Panel "Sistema" (cola, catálogos, flags) | MVP | Catálogos en el MVP (**Panel → Catálogos**, migración `20261005120000_catalog_admin`); cola y flags en Fase 2 | Sostenibilidad: el municipio edita sus listas sin ayuda técnica |
 | Auditoría de descargas del PDF | Declarada, sin pieza que la hiciera | Obligatoria por política de Storage (ADR-021) | La v1.6 prometía algo que nada implementaba |
 | Firma de la URL del PDF | Con `service_role` desde el servidor | Con el JWT del administrador (ADR-021) | Cumplir ADR-018 |
 | Envío de alertas masivas | Job que dividía destinatarios en lotes de ~500 | Una función SQL inserta todas; el worker envía los push por lotes | Más simple y atómico a la escala de 3 municipios |
@@ -1490,7 +1490,7 @@ Ninguna decisión cambia en silencio. Las primeras filas se revisaron en la audi
 | Despliegue | Action "migrar → publicar" desde el día 1 | Integración Git de Vercel + regla "migración primero"; la Action se activa con producción | Hay un solo proyecto Supabase hasta la producción municipal |
 | Service worker | Serwist | Archivo propio `public/sw.js` (nota en ADR-009) | Serwist necesitaba un plugin aparte para Turbopack |
 | Datos de la demo | Semilla inventada | OpenStreetMap (ADR-024) | Credibilidad frente a un jurado local |
-| Catálogos editables | SQL de operación | **Panel → Catálogos** (migración 300) | Criterio de sostenibilidad |
+| Catálogos editables | SQL de operación | **Panel → Catálogos** (migración `20261005120000_catalog_admin`) | Criterio de sostenibilidad |
 
 ---
 
@@ -1567,5 +1567,6 @@ Lo que las pruebas locales no podían confirmar se comprobó en el proyecto `sta
 | 1.0–1.6 | 23–24/09/2026 | Diseño inicial, revisiones, alineación con las bases y definición de la base de datos (historial en Git) |
 | 2.0 | 24/09/2026 | Documento reorganizado de principio a fin. Una decisión por tema, sin secciones retiradas. Alineado con el SQL verificado: fotos, alertas por municipio, edición de lugares y rutas, métricas de uso, Realtime solo para tránsito, sondeo del panel, catálogo completo de API |
 | 2.1 | 25/09/2026 | Recupera lo que la v2.0 había perdido de la v1.6 y añade: 21 ADR completas en `docs/decisions/`, registro de decisiones cambiadas (§18.1), variables de entorno (§13.9), diagramas de secuencia (§11.2), consultas espaciales tipo (§7.4), tamaño por fase (§16.5), 11 riesgos y 7 reglas de "No hacer" más. Nueva descarga auditada del PDF (ADR-021, migración `20260925120000`, 6 pruebas) |
-| **2.2** | 25/09/2026 | La regla de fronteras de ADR-008 deja de ser solo documento: `package.json`, `tsconfig.json`, ESLint con `eslint-plugin-boundaries` (8 pruebas de regresión, incluido el alias `@/`), los 12 módulos con su `index.ts` y CI en GitHub Actions |
+| **2.2** | 25/09/2026 | La regla de fronteras de ADR-008 deja de ser solo documento: `package.json`, `tsconfig.json`, ESLint con `eslint-plugin-boundaries` (8 pruebas de regresión, incluido el alias `@/`), los módulos con su `index.ts` y CI en GitHub Actions |
 | **3.0** | 07/10/2026 | **Documento de lo construido.** Stack real (§4), una sola carpeta de rutas (§6.1), MapLibre + OpenFreeMap (§7, ADR-022), API real: Route Handlers + Server Actions (§12, ADR-023), CI/CD y operación reales (§13), pruebas E2E (§14), estructura real (§15), ejecución (§16.3), riesgos sin Google (§17), ADR-023 a 025, verificaciones resueltas (§20). Las cifras pasan a vivir solo en DATABASE.md |
+| **3.1** | 21/10/2026 | Fechas oficiales corregidas (desarrollo hasta el 27/11, demo del 28 al 30/11), cifras al día (27 migraciones, 49 funciones, 173 pruebas), panel de indicadores explorable, modo oscuro, foto de perfil, revisión de seguridad del 21/10 ([SECURITY.md](SECURITY.md)) y seguimiento único en [docs/ESTADO-Y-PENDIENTES.md](docs/ESTADO-Y-PENDIENTES.md) |

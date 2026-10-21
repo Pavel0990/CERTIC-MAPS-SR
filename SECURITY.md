@@ -75,6 +75,24 @@ Al activar Dependabot aparecieron 6 avisos, todos en herramientas de desarrollo 
 
 La auditoría semanal de la base usa el mismo secreto que la copia de seguridad (`SUPABASE_DB_URL`) y solo lee el catálogo. Si algún día se agrega a propósito algo que marca (por ejemplo, una función pública nueva para visitantes), se actualiza la lista permitida en `security_audit.sql` con su justificación.
 
+## Revisión del 21/10/2026
+
+Revisión línea por línea de todas las rutas de la API, las Server Actions, `src/proxy.ts`, las 27 migraciones (cada función `SECURITY DEFINER`, cada política RLS y de Storage), el service worker y las dependencias. **Ningún hallazgo crítico ni alto.** El modelo de "la base es la barrera" se sostiene.
+
+| Hallazgo | Nivel | Estado |
+|---|---|---|
+| El tope de 20 subidas de evidencia por hora se podía saltar pidiendo muchas URLs firmadas (firmar no crea ningún objeto) | Medio | **Corregido**: cada ruta es un permiso de un solo uso de `request_upload` (20 por hora) que la política de Storage exige. Pruebas K1–K1d y SR2 |
+| El dueño de un negocio aprobado podía cambiar el nombre o la web sin nueva revisión (suplantación, enlaces de estafa) | Medio | **Corregido**: nombre o web → vuelve a revisión; toda edición del dueño avisa al personal. Prueba SR3 |
+| Sin captcha, se pueden agotar los correos de acceso del proyecto (30 por hora) y los límites por IP de Supabase, que ven la IP de Vercel | Medio | **Pendiente**: Cloudflare Turnstile (requiere crear la cuenta). Mientras tanto: límites de Supabase Auth y SMTP propio |
+| Un moderador de un municipio veía la evidencia privada de toda la provincia | Bajo-medio | **Corregido**: solo la del municipio del reporte (y la provincia). Prueba SR1 |
+| Las suscripciones push aceptaban cualquier `https://` (el worker les enviaba un POST) y se podían insertar sin límite | Bajo | **Corregido**: solo servicios de push reales y alta solo por la RPC. Pruebas SR4–SR5 |
+| El service worker guardaba páginas privadas de consultas en el teléfono | Bajo | **Corregido**: `/consultas/` ya no se guarda. `/reportar` sí (es el formulario para reportar sin conexión y no lleva datos personales) |
+| La foto de perfil no se vuelve a codificar en el servidor | Bajo | **Riesgo aceptado**: máximo 64 KB, solo WebP/JPEG, servida como imagen (nunca se ejecuta), solo la ven la persona y el personal. El teléfono ya la vuelve a codificar sin metadatos |
+| Las RPC devolvían el texto de la restricción violada a quien llama la API directamente | Info | **Corregido** en `update_business`; las demás se revisarán en la próxima pasada |
+| `/api/v1/health` es público (solo cifras agregadas de la cola) | Info | Aceptado: lo usa el monitor de disponibilidad |
+
+Verificado como correcto: CSRF por origen en toda escritura, `getClaims()` (firma del JWT), validación zod en cada entrada, secretos de máquina comparados en tiempo constante, redirecciones solo internas, las 59 funciones `SECURITY DEFINER` con `search_path` fijo, RLS en todas las tablas, columnas personales ocultas por grants, roles sin escalada posible, sin `dangerouslySetInnerHTML`, fotos re-codificadas sin metadatos, PDF con descarga auditada y 0 vulnerabilidades en las dependencias de producción.
+
 ## Pendientes conocidos
 
 | Pendiente | Riesgo | Plan |
@@ -82,4 +100,4 @@ La auditoría semanal de la base usa el mismo secreto que la copia de seguridad 
 | **Sin captcha** en el inicio de sesión | Alguien podría pedir muchos correos de acceso. Hoy lo frenan los límites de Supabase Auth (correos por hora, intentos por IP) | Antes de abrir al público: Cloudflare Turnstile con la integración nativa de Supabase Auth (*Authentication → Attack Protection*) y el widget en `/entrar` (añadir `challenges.cloudflare.com` a la CSP) |
 | **Cuentas a nombre de una persona** (Supabase, SMTP de Gmail, Vercel) | Si esa persona pierde el acceso, se pierde el control | Traspaso a cuentas de la organización: [DEPLOYMENT.md §9](DEPLOYMENT.md#9-traspaso-a-cuentas-de-la-organización) |
 | **Base de staging compartida** entre la demo y las pruebas | Datos de prueba mezclados con reales | Supabase de producción separado ([DEPLOYMENT.md §3](DEPLOYMENT.md#3-supabase-de-producción)) |
-| **Restauración de la copia sin ensayar** | La copia diaria cifrada está activa, pero nunca se ha restaurado de prueba | Simulacro de restauración (tarea B11 del [reparto](docs/REPARTO-DE-TRABAJO.md)) y `npm run backup` antes de cambios grandes ([DEPLOYMENT.md §8.1](DEPLOYMENT.md#81-copias-de-seguridad)) |
+| **Restauración de la copia sin ensayar** | La copia diaria cifrada está activa, pero nunca se ha restaurado de prueba | Simulacro de restauración ([pendientes](docs/ESTADO-Y-PENDIENTES.md#51-código-poco-y-acotado)) y `npm run backup` antes de cambios grandes ([DEPLOYMENT.md §8.1](DEPLOYMENT.md#81-copias-de-seguridad)) |

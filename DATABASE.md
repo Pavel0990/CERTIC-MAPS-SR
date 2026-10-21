@@ -11,9 +11,9 @@
 
 | Qué | Cifra | Cómo se comprueba |
 |---|---|---|
-| Migraciones | **25**, todas aplicadas en el Supabase de staging | `ls supabase/migrations` · `npx supabase migration list` |
-| Funciones en `public` | **47** (§6) | `grep -ohE "function public\.[a-z_]+" supabase/migrations/*.sql \| sort -u \| wc -l` |
-| Pruebas de la base | **155**, en 21 secciones (A–U), todas pasan en cada push (CI) | `npm run test:db` |
+| Migraciones | **27**, todas aplicadas en el Supabase de staging | `ls supabase/migrations` · `npx supabase migration list` |
+| Funciones en `public` | **49** (§6) | `grep -ohE "function public\.[a-z_]+" supabase/migrations/*.sql \| sort -u \| wc -l` |
+| Pruebas de la base | **173**, en 23 secciones (A–U, AV y SR), todas pasan en cada push (CI) | `npm run test:db` |
 | Motor de las pruebas | PostgreSQL 18.3 + PostGIS 3.6.2 en PGlite. Staging: PostgreSQL 17 + PostGIS 3.3 | — |
 
 Las pruebas cubren seguridad (con ataques directos), integridad, concurrencia, PostGIS, fotos, alertas, KPIs, descarga auditada del PDF, entrega del worker, push, catálogos y mantenimiento. Lo que no se puede verificar fuera de Supabase está en §14 y en [ARCHITECTURE.md §20](ARCHITECTURE.md#20-verificaciones-en-el-servicio-real).
@@ -25,7 +25,7 @@ Las pruebas cubren seguridad (con ataques directos), integridad, concurrencia, P
 | | |
 |---|---|
 | Motor | PostgreSQL (Supabase; probado en 18.3, compatible con 15+) + PostGIS, `pg_trgm`, `unaccent`, `pgcrypto`, `pg_cron`, `pg_net`, Vault |
-| Esquemas | `public` (expuesto por la Data API): 27 tablas y 35 funciones · `private` (no expuesto): 6 tablas y 34 funciones · `extensions` |
+| Esquemas | `public` (expuesto por la Data API): 27 tablas y las funciones de [Estado verificado](#estado-verificado) · `private` (no expuesto): tablas y ayudantes internos · `extensions` |
 | Seguridad | RLS en las 27 tablas de `public` (31 políticas + 3 de Storage) · grants por columna · `EXECUTE` explícito por función · 55 funciones `SECURITY DEFINER`, todas con `search_path` fijo |
 | Integridad | FK compuestas territoriales, `CHECK` en cada columna con dominio acotado, `UNIQUE NULLS NOT DISTINCT` donde `NULL` tiene significado, arco exclusivo en adjuntos |
 | Rendimiento | 109 índices: GiST geométricos y geográficos, GIN de texto y trigramas, parciales para bandejas y colas, soporte de todas las FK hacia `profiles` |
@@ -241,7 +241,7 @@ Decisión deliberada: la regla "`in_progress` exige responsable" está en la RPC
 - **`notification_preferences`:** temas (por defecto incluye `traffic_nearby`), municipios de interés, push y email.
 - **`private.notify()`** inserta la notificación y encola un job `push` si el usuario lo activó.
 - **`private.jobs`:**
-  - tipos `push`, `email`, `image_process`, `publish_media`, `pdf_weekly`, `fanout_alert`, `notify_moderators` y `delete_storage_object` (`email` y `pdf_weekly` están reservados, sin productor todavía);
+  - tipos `push`, `email`, `image_process`, `publish_media`, `pdf_weekly`, `fanout_alert`, `notify_moderators` y `delete_storage_object` (`email` está reservado, sin productor todavía; `pdf_weekly` lo produce `request_weekly_report`, el botón «Generar ahora» del panel);
   - deduplicación con `UNIQUE` parcial en `dedupe_key` mientras el job está activo;
   - backoff exponencial y estado `dead` tras N intentos.
 - **`private.hit_rate_limit()`:** ventana fija con upsert atómico sobre `private.rate_limit_hits`, según `private.rate_limit_rules`.
@@ -352,6 +352,34 @@ Resultado de la [auditoría de seguridad del 17/10/2026](SECURITY.md#auditoría-
 | `track_engagement` deja de sumar al llegar a **2000** por ficha, métrica y día | La función es anónima a propósito, así que no hay usuario al que limitar. El techo acota cuánto puede inflar alguien las cifras del comercio y del informe semanal |
 
 Pruebas U1–U3.
+
+### 5.20 Foto de perfil — `20261020120000_profile_avatars.sql`
+
+Una foto por persona, pensada para gastar lo mínimo de Supabase.
+
+| Pieza | Diseño |
+|---|---|
+| Bucket `avatars` | Público, **64 KB** como máximo, solo WebP o JPEG. Ruta fija `{uid}.webp`: cambiar la foto sobrescribe el archivo (nunca quedan huérfanas). Sin política de listado |
+| Políticas de Storage | Cada persona escribe, lee y borra **solo** su archivo; reemplazarlo, como máximo cada 10 segundos |
+| `profiles.avatar_version` | `smallint`, `NULL` = sin foto. Va en la URL (`?v=`): la CDN cachea un año y cada foto nueva es otra URL. Solo la cambia la RPC |
+| `set_avatar(p_present)` | `true` tras subir (comprueba que el archivo exista; 10 cambios por hora); `false` para quitarla (sin límite) |
+| Baja de cuenta | `before_profile_delete` encola el borrado del archivo |
+
+El teléfono recorta la foto a 256×256 y la codifica antes de subirla: no hay procesamiento en el servidor. Pruebas AV1–AV10.
+
+### 5.21 Correcciones de la revisión de seguridad — `20261021120000_security_review_fixes.sql`
+
+Resultado de la [revisión del 21/10/2026](SECURITY.md#revisión-del-21102026). Ningún hallazgo crítico ni alto.
+
+| Cambio | Por qué |
+|---|---|
+| `private.upload_grants` + `request_upload(p_ext)` (20 por hora); la política `evidence_upload_own_folder` exige el permiso | Firmar una URL de subida no crea ningún objeto, así que el tope de 20 subidas por hora se podía saltar pidiendo cientos de URLs. Ahora cada ruta es un permiso de un solo uso con límite |
+| `attachments_read` y `evidence_read_own_or_staff` usan `private.attachment_municipality()` / `private.can_read_evidence()` | La evidencia privada la ve el personal **del municipio** del reporte (y la provincia), no cualquier moderador |
+| `update_business`: si el dueño cambia el **nombre** o la **web** de un negocio aprobado, vuelve a `under_review`; toda edición del dueño avisa al personal; sin `sqlerrm` en la respuesta | Evita suplantaciones y enlaces de estafa publicados sin revisión |
+| `push_subscriptions`: `CHECK` de servicios de push reales (`not valid`) y sin `INSERT` directo | El worker solo envía a FCM, Mozilla, Windows y Apple; el alta pasa por `register_push_device` (con límite) |
+| Bucket `avatars` acepta JPEG; `set_avatar(false)` sin límite; la baja de cuenta siempre borra la foto | iPhone (Safari no codifica WebP) y nunca una imagen rota |
+
+Pruebas SR1–SR5, K1–K1d y AV10.
 
 ## 6. Catálogo de RPC
 
@@ -500,6 +528,16 @@ El panel la llama en vivo. El informe semanal guarda su resultado en `weekly_kpi
 | `…210_storage_realtime_cron` | Buckets, políticas de Storage, broadcast, `pg_cron` |
 | `…220_fk_indexes` | Índices de soporte de FK |
 | `20260925120000_report_download_audit` | Descarga auditada del informe semanal |
+| `20260926120000_harden_default_privileges` | Privilegios por defecto de Supabase revocados (§5.12) |
+| `20260927120000_staff_directory` | Responsables y directorio del personal (§5.13) |
+| `20261002120000_worker_delivery` | Entrega del worker: push, avisos al personal (§5.14) |
+| `20261002130000_weekly_report_queue` | Informe semanal a pedido por la cola (§5.15) |
+| `20261002140000_push_devices` | Dispositivos de push por usuario (§5.16) |
+| `20261002150000_promotions_local_date` | Vigencia de promociones en fecha de RD (§5.17) |
+| `20261005120000_catalog_admin` | Catálogos editables desde el panel (§5.18) |
+| `20261017120000_security_hardening` | Auditoría del 17/10 (§5.19) |
+| `20261020120000_profile_avatars` | Foto de perfil (§5.20) |
+| `20261021120000_security_review_fixes` | Revisión de seguridad del 21/10 (§5.21) |
 
 **Reglas:**
 - Solo hacia adelante.
@@ -537,7 +575,7 @@ cd supabase/tests && npm install && npm test     # PostgreSQL 18 + PostGIS en We
 
 ## 14. No verificado fuera de Supabase
 
-Las pruebas usan stubs mínimos de lo que aporta Supabase ([`supabase/tests/supabase-stubs.sql`](supabase/tests/supabase-stubs.sql)). Antes de producción hay que comprobar en un proyecto Supabase real:
+Las pruebas usan stubs mínimos de lo que aporta Supabase ([`supabase/tests/supabase-stubs.sql`](supabase/tests/supabase-stubs.sql)). Todo lo de esta lista **ya se comprobó en el Supabase de staging** (ARCHITECTURE.md §20) y se debe volver a comprobar al crear el proyecto de producción:
 
 - que `pg_cron`, `pg_net` y Vault se habiliten y que `cron.schedule` registre las 4 tareas (en las pruebas se omiten);
 - la firma de `realtime.send(payload, event, topic, private)` y la configuración de canales Broadcast públicos;

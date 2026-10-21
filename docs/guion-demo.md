@@ -1,6 +1,6 @@
 # Guion de la demo (25 minutos)
 
-Demo en vivo del 28 al 30/10/2026, con datos reales. Este guion reparte el tiempo según los criterios de evaluación e incluye el plan B por si algo falla.
+Demo en vivo del 28 al 30/11/2026, con datos reales. Este guion reparte el tiempo según los criterios de evaluación e incluye el plan B por si algo falla.
 
 **Quién:** dos personas. Una habla y la otra maneja los teléfonos y la computadora.
 **Equipo:**

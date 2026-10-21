@@ -31,4 +31,4 @@ ADR-019 preveía E2E en el CI contra un Supabase local levantado con las migraci
 
 **En contra:**
 
-- Las E2E dependen de que alguien las corra. Mitigación: lo exige la regla de [REPARTO-DE-TRABAJO.md](../REPARTO-DE-TRABAJO.md) antes de subir a `main`.
+- Las E2E dependen de que alguien las corra. Mitigación: lo exige la regla de [ESTADO-Y-PENDIENTES.md §7](../ESTADO-Y-PENDIENTES.md#7-reglas-para-trabajar-en-equipo) antes de subir a `main`.

@@ -2,7 +2,7 @@
 
 El criterio **UX/UI para baja alfabetización digital** vale 20 de los 100 puntos. Esta guía sirve para probar la app con vecinos reales, anotar dónde se traban y corregirlo antes de la demo.
 
-**Cuándo:** cuanto antes. Lo ideal es hacer una ronda, corregir y hacer una segunda ronda antes del 24/10.
+**Cuándo:** cuanto antes. Lo ideal es hacer una ronda, corregir y hacer una segunda ronda antes del 18/11.
 **Con quién:** al menos **5 personas** de Santiago Rodríguez que no participen en el proyecto. Mejor si son variadas:
 - una persona mayor;
 - alguien que casi no usa el teléfono más que para WhatsApp;

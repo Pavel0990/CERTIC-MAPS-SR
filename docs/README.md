@@ -25,7 +25,7 @@ Orden recomendado para empezar:
 1. [README](../README.md): ejecutar en tu computadora, cuentas de prueba, comprobaciones.
 2. [ARCHITECTURE.md](../ARCHITECTURE.md) §4 (stack), §5 (capas), §15 (estructura y reglas de módulos).
 3. [DATABASE.md](../DATABASE.md): tablas, RPC, RLS y cómo se escribe una migración.
-4. [Reparto del trabajo](REPARTO-DE-TRABAJO.md), sección "Reglas para trabajar en equipo": migraciones primero, publicación.
+4. [Estado y pendientes](ESTADO-Y-PENDIENTES.md), sección "Reglas para trabajar en equipo": migraciones primero, publicación.
 
 | Si vas a… | Mira |
 |---|---|
@@ -46,7 +46,7 @@ Orden recomendado para empezar:
 
 | Documento | Para qué |
 |---|---|
-| [Reparto del trabajo](REPARTO-DE-TRABAJO.md) | Quién hace qué del 17 al 27 de octubre, en dos secciones en paralelo |
+| [Estado y pendientes](ESTADO-Y-PENDIENTES.md) | Qué está hecho, cobertura de la rúbrica y lo que falta hasta el 27/11, con fechas |
 | [Prueba con vecinos](prueba-con-vecinos.md) | Cómo probar la app con personas reales (20 puntos) |
 | [Guion de la demo](guion-demo.md) | Los 25 minutos, el plan B y las comprobaciones a mano |
 

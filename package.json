@@ -15,7 +15,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tests.json",
     "test": "vitest run",
     "test:boundaries": "node --test tests/boundaries/boundaries.test.mjs",
     "test:db": "npm --prefix supabase/tests test",

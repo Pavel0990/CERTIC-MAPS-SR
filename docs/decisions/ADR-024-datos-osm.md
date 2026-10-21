@@ -39,6 +39,6 @@ Importadores en `data/` que:
 
 **En contra:**
 
-- **Fichas pobres:** OSM casi no trae descripciones, fotos ni horarios. Se completan desde el panel (docs/REPARTO-DE-TRABAJO.md, Persona 1).
+- **Fichas pobres:** OSM casi no trae descripciones, fotos ni horarios. Se completan desde el panel ([manual administrativo §2.1](../manual-administrativo.md#21-completar-las-fichas-de-lugares-rutas-y-negocios)).
 - **Rutas sin validar:** las 3 rutas siguen caminos reales, pero alguien de la zona tiene que confirmarlas.
 - **Datos oficiales:** cuando lleguen, se importan encima (los límites primero) y los registros `-osm` que no coincidan se archivan.
