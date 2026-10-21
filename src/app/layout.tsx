@@ -36,8 +36,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Apariencia elegida en Perfil (cookie "tema"). Sin cookie: la del teléfono (prefers-color-scheme).
   const tema = (await cookies()).get('tema')?.value;
   const theme = tema === 'dark' || tema === 'light' ? tema : undefined;
+  // data-scroll-behavior="smooth": al cambiar de pantalla, Next sube al inicio de golpe en vez de deslizar la página
+  // (el desplazamiento suave de globals.css queda para los enlaces "#" dentro de una misma pantalla). Sin esto, en el
+  // teléfono la pantalla nueva seguía moviéndose casi un segundo después de tocar y los botones "huían" del dedo.
   return (
-    <html lang="es-DO" data-theme={theme} className={`${body.variable} ${display.variable}`}>
+    <html lang="es-DO" data-theme={theme} data-scroll-behavior="smooth" className={`${body.variable} ${display.variable}`}>
       <body className="min-h-dvh font-sans antialiased">
         <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded-lg focus:bg-ink focus:px-4 focus:py-2 focus:text-on-ink">
           Saltar al contenido
