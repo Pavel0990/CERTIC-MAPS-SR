@@ -89,6 +89,7 @@ npm run check     # lint (con la regla de fronteras), tipos, pruebas unitarias y
 npm run test:db   # pruebas de la base de datos (PostgreSQL + PostGIS en memoria, sin Docker)
 npm run test:e2e  # 15 recorridos (incluido axe en claro y oscuro y la velocidad de la navegación) en un navegador real contra staging (con npm run dev corriendo)
 npm run backup    # copia de los datos de staging en backups/ (antes de cambios grandes)
+npm run backup:check  # simulacro: restaura la última copia en PGlite y compara los conteos (DEPLOYMENT.md §8.1)
 ```
 
 El CI de GitHub ejecuta las dos primeras en cada pull request. Las de punta a punta (`test:e2e`) usan las cuentas de prueba de staging:
