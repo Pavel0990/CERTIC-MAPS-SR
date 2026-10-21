@@ -116,7 +116,8 @@ function Overview({ d, labels }: { d: Dashboard; labels: { trafficTypes: Record<
             help="Reportes al municipio que se marcaron como resueltos en el periodo (aunque hubieran llegado antes)." />
           <Kpi icon={<Clock />} label="Tiempo para resolver" value={formatHours(k.requests.avg_resolution_hours)}
             delta={k.requests.avg_resolution_hours != null && p.requests.avg_resolution_hours != null ? delta(k.requests.avg_resolution_hours, p.requests.avg_resolution_hours, false) : undefined}
-            help="Promedio entre que llega un reporte y se marca como resuelto, de los resueltos en el periodo." />
+            help="Promedio entre que llega un reporte y se marca como resuelto, de los resueltos en el periodo."
+            detail={k.requests.avg_resolution_hours == null ? 'sin reportes resueltos en el periodo' : undefined} />
           <Kpi icon={<Users />} label="Personas nuevas" value={k.users.new} delta={delta(k.users.new, p.users.new, true)}
             help="Cuentas que se crearon en el periodo." detail={`${formatNumber(k.engagement.views)} visitas a fichas`} />
         </div>
@@ -175,8 +176,8 @@ function Overview({ d, labels }: { d: Dashboard; labels: { trafficTypes: Record<
                 <tbody>
                   {d.topViewed.map((v) => (
                     <tr key={v.id} className="border-b border-line last:border-0">
-                      <td className="px-5 py-2.5">
-                        <Link prefetch={false} href={v.href} className="flex items-center gap-2.5 font-semibold hover:text-brand">
+                      <td className="px-5 py-0.5">
+                        <Link prefetch={false} href={v.href} className="flex min-h-11 items-center gap-2.5 font-semibold hover:text-brand">
                           <span className={cn('h-6 w-1 shrink-0 rounded-full', v.entity === 'business' ? 'bg-layer-business' : v.entity === 'tourism_place' ? 'bg-layer-tourism' : 'bg-layer-route')} aria-hidden />
                           <span className="truncate">{v.name}</span>
                         </Link>
@@ -241,9 +242,12 @@ function Kpi({ icon, label, value, detail, delta: dl, help, href, tone }: {
 /** "?" que explica el indicador en lenguaje sencillo. Funciona con toque, ratón y teclado. */
 function Help({ text, label }: { text: string; label: string }) {
   return (
-    <details className="group/help absolute right-4 top-4 print:hidden">
-      <summary aria-label={`Qué mide «${label}»`} className="press grid size-8 cursor-pointer list-none place-items-center rounded-full border border-line text-sm font-bold text-muted hover:bg-canvas [&::-webkit-details-marker]:hidden">?</summary>
-      <p className="animate-fade-in absolute right-0 top-10 z-20 w-64 rounded-[14px] bg-ink p-3 text-sm leading-snug text-on-ink shadow-[var(--shadow-float)]">{text}</p>
+    <details className="group/help absolute right-2.5 top-2.5 print:hidden">
+      {/* Área táctil de 44 px; el círculo visible sigue siendo de 32 px */}
+      <summary aria-label={`Qué mide «${label}»`} className="press group/q grid size-11 cursor-pointer list-none place-items-center rounded-full [&::-webkit-details-marker]:hidden">
+        <span className="grid size-8 place-items-center rounded-full border border-line text-sm font-bold text-muted group-hover/q:bg-canvas" aria-hidden>?</span>
+      </summary>
+      <p className="animate-fade-in absolute right-1.5 top-12 z-20 w-64 rounded-[14px] bg-ink p-3 text-sm leading-snug text-on-ink shadow-[var(--shadow-float)]">{text}</p>
     </details>
   );
 }
@@ -305,7 +309,7 @@ function Empty({ children }: { children: React.ReactNode }) {
 function Pill({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
   return (
     <Link prefetch={false} href={href} scroll={false} aria-current={active ? 'page' : undefined}
-      className={cn('press inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-[15px] font-semibold md:min-h-10', active ? 'bg-ink text-on-ink' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
+      className={cn('press inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-[15px] font-semibold', active ? 'bg-ink text-on-ink' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
       {children}
     </Link>
   );
@@ -321,6 +325,10 @@ function ModeratorHome({ counts, scopeNames }: { counts: { trafficPending: numbe
         <h1 className="text-[28px] font-extrabold leading-tight md:text-[34px]">Tu trabajo hoy</h1>
         <p className="mt-1 text-[16px] text-muted">{scopeNames}</p>
       </header>
+      {/* Con todo en cero, decirlo con palabras: tres ceros solos no dicen si falta cargar algo o si ya terminó */}
+      {counts.trafficPending + counts.requestsPending + counts.requestsInReview + counts.validations === 0 && (
+        <Notice tone="ok"><span className="inline-flex items-center gap-2 font-semibold"><CheckCircle2 className="size-5 shrink-0" aria-hidden />Todo al día: no hay nada pendiente por ahora.</span></Notice>
+      )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Kpi icon={<TrafficCone />} label="Alertas por confirmar" value={counts.trafficPending} href="/admin/bandeja" help="Alertas de tránsito que esperan que las publiques o descartes." tone={counts.trafficPending ? 'danger' : undefined} />
         <Kpi icon={<Inbox />} label="Reportes por revisar" value={counts.requestsPending + counts.requestsInReview} href="/admin/bandeja?ver=consultas" help="Reportes al municipio nuevos o en revisión." tone={counts.requestsPending ? 'warn' : undefined} />

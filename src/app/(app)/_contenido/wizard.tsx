@@ -66,6 +66,15 @@ export function DoneScreen({
   );
 }
 
+/**
+ * Debajo de un botón desactivado: qué falta para poder seguir (§6.3, estado DISABLED con motivo).
+ * Un botón pálido solo no explica nada y la persona se queda sin saber qué hacer.
+ */
+export function MissingHint({ show, children }: { show: boolean; children: ReactNode }) {
+  if (!show) return null;
+  return <p className="-mt-2 text-center text-[15px] text-muted">{children}</p>;
+}
+
 /** Botones grandes para elegir una opción (tipo de lugar, dificultad…). */
 export function ChoiceGrid<T extends string>({ legend, options, value, onChange, columns = 2 }: { legend: string; options: { value: T; label: string }[]; value: T | ''; onChange: (v: T) => void; columns?: 2 | 3 }) {
   return (

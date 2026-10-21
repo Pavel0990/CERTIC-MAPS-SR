@@ -9,7 +9,7 @@ import { ErrorNote } from '@/components/ui/primitives';
 import { PLACE_KIND } from '@/lib/vocabulary';
 import { LocationPicker } from '../_contenido/location-picker';
 import { PhotoPicker, usePhotos } from '../_contenido/photo-picker';
-import { ChoiceGrid, DoneScreen, StepTitle, WizardHeader } from '../_contenido/wizard';
+import { ChoiceGrid, DoneScreen, MissingHint, StepTitle, WizardHeader } from '../_contenido/wizard';
 import { submitPlace } from './actions';
 
 type Kind = (typeof PLACE_KINDS)[number];
@@ -78,6 +78,7 @@ export function PlaceWizard({ staff }: { staff: boolean }) {
             {(a) => <Input {...a} value={name} maxLength={120} onChange={(e) => setName(e.target.value)} />}
           </Field>
           <Button size="lg" disabled={!kind || name.trim().length < 2} onClick={() => setStep(2)}>Seguir</Button>
+          <MissingHint show={!kind || name.trim().length < 2}>{!kind ? 'Para seguir, toca el tipo de lugar.' : 'Para seguir, escribe el nombre del lugar.'}</MissingHint>
         </section>
       )}
 

@@ -12,7 +12,7 @@ import { DIFFICULTY, ROUTE_KIND } from '@/lib/vocabulary';
 import { distanceKm, formatDistance } from '@/utils/format';
 import { LocationPicker } from '../_contenido/location-picker';
 import { PhotoPicker, usePhotos } from '../_contenido/photo-picker';
-import { ChoiceGrid, DoneScreen, StepTitle, WizardHeader } from '../_contenido/wizard';
+import { ChoiceGrid, DoneScreen, MissingHint, StepTitle, WizardHeader } from '../_contenido/wizard';
 import { submitRoute } from './actions';
 
 type Kind = (typeof ROUTE_KINDS)[number];
@@ -146,6 +146,7 @@ export function RouteWizard({ staff }: { staff: boolean }) {
             {(a) => <Input {...a} type="number" inputMode="numeric" min={5} max={2880} value={duration} onChange={(e) => setDuration(e.target.value)} />}
           </Field>
           <Button size="lg" disabled={!step1Ok} onClick={() => setStep(2)}>Seguir</Button>
+          <MissingHint show={!step1Ok}>Para seguir, completa el nombre, el tipo, la dificultad y los minutos (de 5 en adelante).</MissingHint>
         </section>
       )}
 

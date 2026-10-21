@@ -14,7 +14,7 @@ import { sendOrQueue, type SendResult } from '@/lib/outbox';
 import { SEVERITY, reasonMessage } from '@/lib/vocabulary';
 import { cn } from '@/utils/cn';
 import { PhotoPicker, usePhotos } from '../_contenido/photo-picker';
-import { DoneScreen, StepTitle, WizardHeader } from '../_contenido/wizard';
+import { DoneScreen, MissingHint, StepTitle, WizardHeader } from '../_contenido/wizard';
 
 export interface ReportCatalogs {
   trafficTypes: { code: string; name: string; icon: string; default_severity: number }[];
@@ -234,6 +234,7 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
           <Button size="lg" onClick={submit} loading={busy} disabled={!detailsOk}>
             Enviar reporte
           </Button>
+          <MissingHint show={!detailsOk}>{title.trim().length < 3 ? 'Para enviar, escribe un título corto.' : 'Para enviar, cuenta un poco más (al menos 10 letras).'}</MissingHint>
           <p className="text-center text-sm text-muted">Tu nombre no aparece en el mapa público.</p>
         </section>
       )}

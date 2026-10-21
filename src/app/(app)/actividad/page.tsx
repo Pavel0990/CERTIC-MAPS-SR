@@ -31,7 +31,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
         active={tab === 'mios' ? '/actividad' : '/actividad?ver=prioridades'}
         tabs={[
           { href: '/actividad', label: 'Mis reportes', count: mine.length },
-          { href: '/actividad?ver=prioridades', label: 'Prioridades' },
+          { href: '/actividad?ver=prioridades', label: 'Apoyar reportes' },
         ]}
       />
 

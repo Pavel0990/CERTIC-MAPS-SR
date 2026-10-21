@@ -5,7 +5,7 @@ import { cn } from '@/utils/cn';
 
 const W = 640;
 const H = 220;
-const PAD = { top: 16, right: 16, bottom: 30, left: 16 };
+const PAD = { top: 16, right: 16, bottom: 8, left: 16 };
 
 /** Curva suave (Catmull-Rom → Bézier) que nunca pasa por debajo de cero. */
 function smooth(pts: [number, number][]) {
@@ -26,7 +26,7 @@ function smooth(pts: [number, number][]) {
 
 /**
  * Recibidos frente a resueltos. Se toca (o se recorre con las flechas del teclado) cada punto para ver su valor;
- * el contador entre corchetes muestra el valor elegido. Debajo hay una tabla equivalente para lectores de pantalla.
+ * encima se lee en palabras el valor elegido. Debajo hay una tabla equivalente para lectores de pantalla.
  */
 export function TrendChart({ series }: { series: SeriesPoint[] }) {
   const id = useId();
@@ -39,6 +39,8 @@ export function TrendChart({ series }: { series: SeriesPoint[] }) {
   const area = `${line('received')} L${x(series.length - 1)},${H - PAD.bottom} L${x(0)},${H - PAD.bottom} Z`;
   const cur = series[active] ?? series.at(-1)!;
   const empty = series.every((p) => p.received === 0 && p.resolved === 0);
+  // Con muchas fechas (90 días) se muestran unas 5 para que no se encimen; la elegida siempre se ve
+  const labelStep = series.length <= 7 ? 1 : Math.ceil(series.length / 5);
 
   function onKey(e: React.KeyboardEvent) {
     if (e.key === 'ArrowLeft') setActive(Math.max(0, active - 1));
@@ -63,8 +65,9 @@ export function TrendChart({ series }: { series: SeriesPoint[] }) {
           <span className="inline-flex items-center gap-2"><span className="h-1 w-5 rounded-full bg-brand" aria-hidden /> Recibidos</span>
           <span className="inline-flex items-center gap-2"><span className="h-1 w-5 rounded-full bg-ok" aria-hidden /> Resueltos</span>
         </div>
-        <p className="font-mono text-sm tabular-nums text-muted" aria-live="polite">
-          <span className="text-subtle">[</span> <strong className="text-ink">{cur.received}</strong> · <strong className="text-ok">{cur.resolved}</strong> <span className="text-subtle">]</span> <span className="ml-1">{cur.label}</span>
+        {/* El punto elegido, en palabras (antes "[ 0 · 0 ] MIÉ", difícil de leer para quien no conoce gráficos) */}
+        <p className="text-sm tabular-nums text-muted" aria-live="polite">
+          <span className="font-semibold text-ink">{cur.label}:</span> <strong className="text-brand-strong">{cur.received}</strong> {cur.received === 1 ? 'recibido' : 'recibidos'} · <strong className="text-ok">{cur.resolved}</strong> {cur.resolved === 1 ? 'resuelto' : 'resueltos'}
         </p>
       </div>
       <div
@@ -93,10 +96,17 @@ export function TrendChart({ series }: { series: SeriesPoint[] }) {
           {series.map((p, i) => (
             <g key={p.from}>
               <circle cx={x(i)} cy={y(p.received)} r={i === active ? 6 : 3.5} fill="var(--color-surface)" stroke="var(--color-brand)" strokeWidth={i === active ? 3 : 2} />
-              <text x={x(i)} y={H - 8} textAnchor="middle" className={cn('text-[11px] font-semibold', i === active ? 'fill-ink' : 'fill-subtle')}>{p.label}</text>
             </g>
           ))}
         </svg>
+        {/* Fechas del eje en HTML: dentro del SVG escalado medían unos 6 px en el teléfono */}
+        <div className="relative h-6" aria-hidden>
+          {series.map((p, i) => (i === active || (i % labelStep === 0 && (labelStep === 1 || Math.abs(i - active) > 1))) && (
+            <span key={p.from} style={{ left: `${(x(i) / W) * 100}%` }}
+              className={cn('absolute top-1 -translate-x-1/2 whitespace-nowrap text-[13px] font-semibold', i === active ? 'font-bold text-ink' : 'text-subtle',
+                i === 0 && 'translate-x-0', i === series.length - 1 && '-translate-x-full')}>{p.label}</span>
+          ))}
+        </div>
         {empty && <p className="pointer-events-none absolute inset-0 grid place-items-center text-[15px] text-muted">Todavía no hay reportes en este periodo.</p>}
       </div>
       <details className="mt-3 text-sm">

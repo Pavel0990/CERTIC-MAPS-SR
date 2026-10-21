@@ -85,7 +85,7 @@ export function SignInForm({ next, linkError, captcha }: { next: string; linkErr
       <Button type="submit" size="lg" block loading={sending}>
         Enviarme el correo para entrar
       </Button>
-      <Button variant="ghost" block onClick={() => setHaveCode(true)}>
+      <Button variant="secondary" block onClick={() => setHaveCode(true)}>
         Ya tengo un código
       </Button>
     </form>

@@ -10,7 +10,7 @@ import { ErrorNote } from '@/components/ui/primitives';
 import { cn } from '@/utils/cn';
 import { LocationPicker } from '../../_contenido/location-picker';
 import { PhotoPicker, usePhotos } from '../../_contenido/photo-picker';
-import { DoneScreen, StepTitle, WizardHeader } from '../../_contenido/wizard';
+import { DoneScreen, MissingHint, StepTitle, WizardHeader } from '../../_contenido/wizard';
 import { registerBusiness } from './actions';
 
 const newKey = () => crypto.randomUUID().replace(/-/g, '');
@@ -108,6 +108,7 @@ export function BusinessWizard({ categories }: { categories: { slug: string; nam
             {(a) => <Input {...a} value={name} maxLength={120} autoComplete="organization" onChange={(e) => setName(e.target.value)} />}
           </Field>
           <Button size="lg" disabled={!category || !nameOk} onClick={() => { setError(null); setStep(2); }}>Seguir</Button>
+          <MissingHint show={!category || !nameOk}>{!category ? 'Para seguir, toca el tipo de negocio.' : 'Para seguir, escribe el nombre del negocio.'}</MissingHint>
         </section>
       )}
 

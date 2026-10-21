@@ -40,7 +40,7 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
 
   return (
     <PageShell
-      back={{ href: mine ? '/actividad' : '/actividad?ver=prioridades', label: mine ? 'Mi actividad' : 'Prioridades' }}
+      back={{ href: mine ? '/actividad' : '/actividad?ver=prioridades', label: mine ? 'Mi actividad' : 'Apoyar reportes' }}
       eyebrow={`${labels.categories[r.category] ?? r.category}${r.municipality ? ` · ${r.municipality}` : ''}`}
       title={r.title}
       description={<span className="flex flex-wrap items-center gap-2"><RequestStatusBadge status={r.status} /> {info?.explain}</span>}

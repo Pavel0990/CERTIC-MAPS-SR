@@ -85,7 +85,7 @@ export default async function BusinessesPage({ searchParams }: { searchParams: P
       )}
       <ShowMore shown={shown} total={items.length} noun="negocios" href={href({ ver: String(shown + PAGE_SIZE) })} />
       <Card className="mt-4 flex flex-wrap items-center gap-3 p-4">
-        <span className="min-w-0 flex-1 text-[15px]"><strong>¿Tienes un negocio?</strong> Regístralo gratis para que aparezca con tu horario, fotos y WhatsApp.</span>
+        <span className="min-w-0 flex-[1_1_15rem] text-[16px]"><strong>¿Tienes un negocio?</strong> Regístralo gratis para que aparezca con tu horario, fotos y WhatsApp.</span>
         <Link prefetch={false} href="/negocios/registrar" className="inline-flex h-11 items-center rounded-full bg-brand px-4 text-[15px] font-semibold text-on-brand hover:bg-brand-strong">Registrar mi negocio</Link>
       </Card>
       <OsmCredit />
