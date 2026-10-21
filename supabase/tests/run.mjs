@@ -767,6 +767,101 @@ ok('V3 el servicio reinicia solo los límites de cuentas @example.com, aunque le
    resetN === 2 && hitsLeft.e2e === 0 && hitsLeft.beto >= 1, JSON.stringify({ resetN, ...hitsLeft }));
 
 // ---------------------------------------------------------------------------------------------
+// W. Aviso de reporte parecido cercano antes de enviar (migración 20261022130000)
+// ---------------------------------------------------------------------------------------------
+lastStep = 'reporte parecido';
+const dani = await newUser('dani@ejemplo.do', 'Dani');
+const eva = await newUser('eva@ejemplo.do', 'Eva');
+// Zona libre de Sabaneta (ninguna otra prueba crea reportes aquí). 0,00045° de latitud ≈ 50 m.
+const W0 = [19.5000, -71.3200];
+const north = (m) => [W0[0] + (m / 50) * 0.00045, W0[1]];
+const addTraffic = async (who, [lat, lng], type, status = 'active', expires = "now() + interval '1 day'", municipality = muni.SAB) =>
+  (await one(`insert into public.traffic_reports (province_id, municipality_id, reporter_id, type, severity, geom, status, expires_at)
+              values ($1, $2, $3, $4, 2, private.make_point($5, $6), $7, ${expires}) returning id`,
+             [provinceId, municipality, who, type, lat, lng, status])).id;
+const addRequest = async (who, [lat, lng], category, status, isPublic, created = 'now()') =>
+  (await one(`insert into public.citizen_requests (province_id, municipality_id, requester_id, kind, category, title, description,
+                                                   geom, status, is_public, support_count, resolution_note, created_at)
+              values ($1, $2, $3, 'incident', $4, 'Poste apagado', 'La calle queda oscura toda la noche', private.make_point($5, $6),
+                      $7, $8, 2, case when $7 = 'resolved' then 'Arreglado' end, ${created}) returning id`,
+             [provinceId, muni.SAB, who, category, lat, lng, status, isPublic])).id;
+const similar = (who, kind, type, [lat, lng]) => rpc(who, `public.find_similar_reports($1, $2, $3, $4)`, [kind, type, lat, lng]);
+
+const wNear = await addTraffic(U.beto, north(50), 'bache');
+const wFar = await addTraffic(U.beto, north(300), 'bache');
+const wOtherType = await addTraffic(U.beto, north(20), 'accidente');
+const wResolved = await addTraffic(U.beto, north(10), 'bache', 'resolved');
+const wExpired = await addTraffic(U.beto, north(15), 'bache', 'active', "now() + interval '1 second'");
+await db.query(`update public.traffic_reports set created_at = now() - interval '2 hours', expires_at = now() - interval '1 minute' where id = $1`, [wExpired]);
+const wPendingBeto = await addTraffic(U.beto, north(30), 'bache', 'pending');
+const reqPublic = await addRequest(U.beto, north(80), 'alumbrado', 'approved', true);
+const reqResolved = await addRequest(U.beto, north(10), 'alumbrado', 'resolved', true);
+const reqOld = await addRequest(U.beto, north(20), 'alumbrado', 'in_progress', true, "now() - interval '100 days'");
+const reqPrivate = await addRequest(U.beto, north(30), 'alumbrado', 'pending', false);
+const reqApprovedHidden = await addRequest(U.beto, north(40), 'alumbrado', 'approved', false);
+
+const sT = await similar(dani, 'traffic', 'bache', W0);
+const sR = await similar(dani, 'incident', 'alumbrado', W0);
+ok('W1 cerca: encuentra la alerta y el reporte abiertos del mismo tipo a menos de 150 m, con la distancia en metros',
+   sT.status === 'ok' && sT.items.length === 1 && sT.items[0].id === wNear && Math.abs(sT.items[0].distance_m - 50) <= 2
+   && sT.items[0].mine === false && sT.items[0].support_count === undefined
+   && sR.items.length === 1 && sR.items[0].id === reqPublic && sR.items[0].support_count === 2
+   && sR.items[0].can_support === true && sR.items[0].supported === false, JSON.stringify([sT, sR]));
+ok('W2 lejos: lo que está a más de 150 m no aparece', !sT.items.some((i) => i.id === wFar), JSON.stringify(sT));
+ok('W3 otro tipo: una alerta de otro tipo en el mismo lugar no aparece',
+   !sT.items.some((i) => i.id === wOtherType) && (await similar(dani, 'traffic', 'accidente', W0)).items.map((i) => i.id).join() === wOtherType);
+ok('W4 cerrados: ni alertas resueltas o vencidas ni reportes resueltos o de hace más de 90 días',
+   ![wResolved, wExpired].some((id) => sT.items.some((i) => i.id === id))
+   && ![reqResolved, reqOld].some((id) => sR.items.some((i) => i.id === id)), JSON.stringify([sT, sR]));
+ok('W5 privados de otra persona: no aparecen (ni la alerta pendiente ni el reporte sin publicar)',
+   !sT.items.some((i) => i.id === wPendingBeto) && ![reqPrivate, reqApprovedHidden].some((id) => sR.items.some((i) => i.id === id)));
+const sBetoT = await similar(U.beto, 'traffic', 'bache', W0);
+const sBetoR = await similar(U.beto, 'incident', 'alumbrado', W0);
+ok('W6 los propios sí aparecen, marcados como propios y sin "Apoyarlo" (el autor no vota su reporte)',
+   sBetoT.items.map((i) => i.id).join() === [wPendingBeto, wNear].join() && sBetoT.items[0].mine === true
+   && sBetoR.items.map((i) => i.id).join() === [reqPrivate, reqApprovedHidden, reqPublic].join()
+   && sBetoR.items.every((i) => i.mine === true && i.can_support === false), JSON.stringify([sBetoT, sBetoR]));
+// Borde entre Sabaneta (lng ≥ -71,40) y Villa Los Almácigos (lng ≤ -71,405): cada punto del hueco va al más cercano.
+const border = await addTraffic(U.beto, [19.4400, -71.4020], 'semaforo');
+const fromVla = await similar(dani, 'traffic', 'semaforo', [19.4400, -71.4032]);
+const fromSab = await similar(dani, 'traffic', 'semaforo', [19.4400, -71.4010]);
+const gap = await one(`select round(st_distance(private.make_point(19.44, -71.4020)::geography, private.make_point(19.44, -71.4032)::geography))::int m,
+                              (select m.code from private.locate(private.make_point(19.44, -71.4032)) l join public.municipalities m on m.id = l.municipality_id) muni`);
+ok('W7 otro municipio: a menos de 150 m pero en otro municipio (otra bandeja) no aparece',
+   gap.m < 150 && gap.muni === 'VLA' && fromVla.items.length === 0 && fromSab.items.map((i) => i.id).join() === border,
+   JSON.stringify({ gap, fromVla, fromSab }));
+const obras = [];
+for (const m of [100, 15, 60, 35]) obras.push(await addTraffic(U.beto, north(m), 'obra'));
+const sObra = await similar(dani, 'traffic', 'obra', W0);
+ok('W8 como mucho 3 resultados, del más cercano al más lejano',
+   sObra.items.length === 3 && sObra.items.map((i) => i.id).join() === [obras[1], obras[3], obras[2]].join()
+   && sObra.items[0].distance_m < sObra.items[1].distance_m, JSON.stringify(sObra));
+const allowedKeys = new Set(['id', 'kind', 'type', 'distance_m', 'support_count', 'mine', 'can_support', 'supported']);
+const keys = [...sT.items, ...sR.items, ...sBetoR.items].flatMap((i) => Object.keys(i));
+ok('W9 sin datos personales: ni autor, ni título, ni descripción, ni fotos, ni coordenadas',
+   keys.every((k) => allowedKeys.has(k)) && !JSON.stringify([sT, sR, sBetoR]).includes(U.beto), keys.join(','));
+await rpc(dani, `public.toggle_request_vote($1)`, [reqPublic]);
+const sVoted = await similar(dani, 'incident', 'alumbrado', W0);
+ok('W10 si ya lo apoyó, lo dice (así "Apoyarlo" no quita el apoyo) y cuenta el voto nuevo',
+   sVoted.items[0].supported === true && sVoted.items[0].support_count === 3, JSON.stringify(sVoted));
+const sBad = [];
+for (const [k, t, pt] of [['inquiry', 'consulta', W0], ['traffic', 'no_existe', W0], ['traffic', 'bache', [95, -71]], ['traffic', 'bache', P.SANTO_DOMINGO]]) {
+  sBad.push(await similar(dani, k, t, pt));
+}
+ok('W11 entradas inválidas se rechazan y fuera de la provincia no hay resultados',
+   sBad[0].reason === 'invalid_kind' && sBad[1].reason === 'invalid_type' && sBad[2].reason === 'invalid_coordinates'
+   && sBad[3].status === 'ok' && sBad[3].items.length === 0, JSON.stringify(sBad));
+await expectError('W12 un visitante sin sesión no puede ejecutarla', () => similar(null, 'traffic', 'bache', W0), /permission denied/);
+const fnSig = 'public.find_similar_reports(text, text, double precision, double precision)';
+const wGrants = await one(`select has_function_privilege('authenticated', '${fnSig}', 'execute') a,
+                                  has_function_privilege('anon', '${fnSig}', 'execute') b,
+                                  exists (select 1 from pg_proc p, aclexplode(p.proacl) x where p.oid = '${fnSig}'::regprocedure and x.grantee = 0) c`);
+ok('W13 EXECUTE explícito: solo authenticated (ni anon ni PUBLIC)', wGrants.a === true && wGrants.b === false && wGrants.c === false, JSON.stringify(wGrants));
+let evaLast;
+for (let i = 0; i < 61; i++) evaLast = await similar(eva, 'traffic', 'bache', W0);
+ok('W14 límite de uso: 60 consultas por hora, la 61 se rechaza', evaLast.reason === 'rate_limited', JSON.stringify(evaLast));
+
+// ---------------------------------------------------------------------------------------------
 // L. Mantenimiento y privacidad
 // ---------------------------------------------------------------------------------------------
 // Foto de perfil (bucket avatars): un archivo por persona, sin listar, versión solo por RPC

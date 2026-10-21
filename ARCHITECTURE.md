@@ -435,7 +435,7 @@ Resumen. El detalle (columnas, índices, políticas, matriz de grants) está en 
 | Seguridad | 31 políticas RLS + 3 de Storage; grants por columna; `EXECUTE` explícito por función |
 | Índices | 109 al 07/10, incluidos GiST, GIN y parciales |
 | Triggers | 16 |
-| Pruebas | 176 de base de datos, todas pasan (§14.1) |
+| Pruebas | 190 de base de datos, todas pasan (§14.1) |
 
 ### 8.2 Esquemas y roles de base de datos
 
@@ -1059,6 +1059,7 @@ Los consumen el mapa, la cola offline, el worker y los cron. Son todos los Route
 | `GET /api/v1/search?q=` | anon | RPC `search_all` |
 | `POST /api/v1/engagement` | anon | RPC `track_engagement` |
 | `POST /api/v1/reports` | ciudadano | RPC `create_traffic_report` (idempotente; lo usa la cola offline) |
+| `POST /api/v1/reports/similar` | ciudadano | RPC `find_similar_reports` (aviso de reporte parecido; responde lista vacía ante cualquier fallo, DATABASE.md §5.23) |
 | `POST /api/v1/requests` | ciudadano | RPC `create_citizen_request` (idempotente) |
 | `POST /api/v1/requests/:id/vote` | ciudadano | RPC `toggle_request_vote` |
 | `POST /api/v1/uploads/sign` | ciudadano | URL de subida firmada en `incoming/{uid}/` |

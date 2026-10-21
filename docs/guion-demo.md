@@ -19,6 +19,7 @@ Demo en vivo del 28 al 30/11/2026, con datos reales. Este guion reparte el tiemp
 - [ ] Iniciar la sesión en los dos teléfonos y en la computadora. El código del correo puede tardar: no lo dejes para el momento de la demo.
 - [ ] Generar el informe PDF de la semana anterior (**Panel → Informes → Generar ahora**) y comprobar que se descarga.
 - [ ] Ver que la bandeja tenga al menos un reporte real pendiente, para mostrar cómo se atiende.
+- [ ] Comprobar que la migración del aviso de reporte parecido (`20261022130000_similar_reports`) está aplicada en la base de la demo (`npx supabase migration list`). Sin ella la app funciona igual, pero el aviso del minuto 13 no sale.
 - [ ] Llevar el teléfono cargado y un punto de acceso móvil propio. No dependas del wifi del lugar.
 - [ ] Probar el video de respaldo en el proyector.
 
@@ -30,7 +31,8 @@ Demo en vivo del 28 al 30/11/2026, con datos reales. Este guion reparte el tiemp
 | 2–6 | **Mapa** y luego **Negocios / Lugares / Rutas** en lista: filtrar por municipio, abrir una ficha, **Llamar** y **Cómo llegar** | "Datos reales de la provincia: 84 negocios, presas y parques, rutas trazadas sobre caminos reales. Y en lista, para quien no se maneja con mapas" | MVP (F1–F3), UX |
 | 6–10 | **Reportar** un bache en 3 toques, con foto | "Sin escribir mucho. La foto se limpia sola: no guarda dónde vives" | MVP (F4–F5), UX |
 | 10–13 | **Teléfono B (moderador):** llega el aviso. Bandeja → **Publicar en el mapa**. En el teléfono A aparece la alerta **en vivo**, sin recargar | "Tiempo real: el vecino de al lado ya lo ve" | Innovación |
-| 13–15 | Teléfono A: **Actividad**. El reporte cambió de estado y llega la notificación | "El vecino sabe qué pasó con lo que reportó" | MVP, UX |
+| 13–14 | Teléfono A: **Reportar** otra vez un bache en el mismo lugar. Antes de escribir nada sale **"Ya hay un reporte parecido aquí"** con **Ver el reporte** y **Crear el mío igual** (en un reporte al municipio, también **Apoyarlo**) | "La app avisa si alguien ya lo reportó a menos de 150 metros: en vez de diez reportes repetidos, el ayuntamiento ve uno con diez apoyos. Y nunca impide enviar el tuyo" | Innovación, UX |
+| 14–15 | Teléfono A: **Actividad**. El reporte cambió de estado y llega la notificación | "El vecino sabe qué pasó con lo que reportó" | MVP, UX |
 | 15–19 | **Computadora:** Panel → Resumen (indicadores), Bandeja (asignar responsable), Validaciones (aprobar un negocio) | "El ayuntamiento opera solo, sin el equipo técnico" | Sostenibilidad |
 | 19–21 | **Informes → Descargar PDF**. Auditoría | "Cada lunes se genera solo. Cada descarga queda registrada" | MVP (F6), innovación |
 | 21–22 | **Catálogos:** agregar un tipo de reporte en vivo y mostrarlo en el teléfono | "Si mañana necesitan reportar 'animales en la vía', lo agregan ellos" | Sostenibilidad |
@@ -67,3 +69,4 @@ Grábalo **después** de la última corrección, siguiendo este guion completo (
 | 5 | Sin señal: reportar | Se guarda. Al volver la señal se envía solo y aparece el aviso "Enviamos el reporte…" |
 | 6 | Administración provincial: **Generar ahora** el informe | En segundos aparece la versión nueva y se descarga |
 | 7 | Push: **Perfil → Activar** en Android y cambiar el estado de un reporte | Llega la notificación con la app cerrada |
+| 8 | Con otra cuenta, reportar el mismo tipo a pocos metros de una alerta publicada o de un reporte público del municipio | Tras **El pin está en el lugar** sale "Ya hay un reporte parecido aquí". **Apoyarlo** suma un apoyo; **Crear el mío igual** sigue al paso 3 |

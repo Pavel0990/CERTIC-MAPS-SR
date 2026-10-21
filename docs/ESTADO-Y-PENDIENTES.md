@@ -33,9 +33,9 @@ Quedan unas **5 semanas**. Casi todo lo que falta ya no es código: contenido, p
 
 | Criterio (puntos) | Qué lo respalda | Qué falta para el máximo |
 |---|---|---|
-| **Funcionalidad (25)** | F1–F6, panel, PDF, PWA; 176 pruebas de base de datos, 102 unitarias, 15 recorridos E2E | Contenido real en turismo y rutas; base de producción separada |
+| **Funcionalidad (25)** | F1–F6, panel, PDF, PWA; 190 pruebas de base de datos, 127 unitarias, 17 recorridos E2E | Contenido real en turismo y rutas; base de producción separada |
 | **UX/UI para baja alfabetización digital (20)** | Lenguaje sencillo, letra Lexend/Nunito, áreas táctiles de 44 px, contraste WCAG AA en claro y oscuro (axe en 16 pantallas), sin conexión | **Pruebas con vecinos** (dos rondas) y sus cifras en la presentación |
-| **Innovación (20)** | Confirmación comunitaria de alertas, reputación, datos abiertos (OSM), costo casi cero | Ideas opcionales en §5.4 |
+| **Innovación (20)** | Confirmación comunitaria de alertas, reputación, aviso de reporte parecido cercano antes de enviar (`ST_DWithin`, 150 m), datos abiertos (OSM), costo casi cero | Ideas opcionales que quedan en §5.4 |
 | **Impacto territorial (15)** | Los 3 municipios, límites oficiales de OSM, indicadores por municipio | Contenido de Monción y Villa Los Almácigos; testimonios de la prueba con vecinos |
 | **Sostenibilidad (10)** | Planes gratuitos, copia diaria cifrada, manual administrativo, traspaso documentado | Cuentas a nombre de la organización (§5.2) |
 | **Código y documentación (10)** | Monolito modular con fronteras verificadas, RLS en todo, auditoría de seguridad repetible, ADR, manuales | Mantenerlo al día hasta el cierre |
@@ -105,7 +105,7 @@ Recorrido de todas las pantallas a 360 y 1280 px, en claro y oscuro (público, v
 
 Solo si sobra tiempo después de §5.1–§5.3:
 
-- Avisar de un reporte parecido cercano antes de enviar uno nuevo (`ST_DWithin`), para evitar duplicados.
+- ✅ **Hecho:** avisar de un reporte parecido cercano antes de enviar uno nuevo (`ST_DWithin`), para evitar duplicados. Después de elegir tipo y lugar, si hay una alerta o un reporte al municipio abierto del mismo tipo a menos de 150 m, el asistente pregunta "Ya hay un reporte parecido aquí. ¿Quieres apoyarlo en lugar de crear otro?" con **Apoyarlo**, **Ver el reporte** y **Crear el mío igual**; nunca bloquea el envío ([DATABASE.md §5.23](../DATABASE.md#523-aviso-de-reporte-parecido-cercano--20261022130000_similar_reportssql)). **Falta aplicar** la migración `20261022130000_similar_reports` (sin ella la app funciona igual, sin aviso).
 - Frases de "aspectos destacados" también en el PDF semanal.
 - Capa de "puntos calientes" con los reportes más frecuentes.
 
