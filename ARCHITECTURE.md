@@ -201,7 +201,7 @@ Lo que está instalado y en uso. Las versiones exactas están en `package.json`.
 | Navegación | Enlace "Cómo llegar" (`google.com/maps/dir/?api=1&destination=…`) | Abre la app de navegación del teléfono; sin API ni clave |
 | Base de datos | Supabase PostgreSQL 17 + PostGIS + `pg_trgm` + `unaccent` + `pgcrypto` | Las pruebas corren en PGlite (PostgreSQL 18 + PostGIS 3.6) |
 | Lógica crítica | RPC PL/pgSQL + RLS + grants por columna | ADR-018 |
-| Auth | Supabase Auth: código de un solo uso o enlace por correo | Sin contraseñas. Captcha pendiente ([SECURITY.md](SECURITY.md)) |
+| Auth | Supabase Auth: código de un solo uso o enlace por correo | Sin contraseñas. Captcha Turnstile listo, falta activarlo ([SECURITY.md](SECURITY.md)) |
 | Correo | SMTP propio en Supabase Auth (hoy Gmail; Resend con dominio al publicar) | El SMTP por defecto de Supabase solo envía 2 por hora |
 | Archivos | Supabase Storage: `report-evidence` (privado), `public-media` (público), `reports-pdf` (privado) | §10.5 |
 | Fotos | `sharp` en el worker: WebP, sin EXIF, máximo 4 096 px | §10.5 |
@@ -730,7 +730,7 @@ Vercel Cron DIARIO 10:00 UTC (06:00 America/Santo_Domingo)
 
 - **Registro e inicio de sesión:**
   - método: código de un solo uso o enlace por correo, sin contraseñas. El correo sale por el SMTP propio con plantillas en español;
-  - captcha: **pendiente** antes de abrir al público (Turnstile nativo de Supabase Auth, [SECURITY.md](SECURITY.md));
+  - captcha: **listo, falta activarlo** (Cloudflare Turnstile con la integración nativa de Supabase Auth, [SECURITY.md](SECURITY.md)). Con `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `/entrar` muestra el recuadro (`entrar/human-check.tsx`, tema claro u oscuro según la app, compacto en pantallas de 320 px) y `requestAccess` pasa el token como `captchaToken` a `signInWithOtp`; Supabase lo valida con la clave secreta. `verifyOtp` («Ya tengo un código») no lo lleva: Supabase no exige captcha en `/verify`. Sin la variable no se carga nada de Cloudflare;
   - al registrarse, el trigger `on_auth_user_created` crea el perfil y el rol `citizen`. Si falla, el registro falla.
 - **Sesión:**
   - `@supabase/ssr` con cookies `Secure` y `SameSite=Lax`;
@@ -849,6 +849,7 @@ Ventana fija por usuario y acción. Las reglas están en `private.rate_limit_rul
 
 - **CSP estricta con nonce:**
   - permite solo el propio origen, Supabase (API, Storage y Realtime) y las teselas de OpenFreeMap;
+  - con el captcha activado (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`), también `https://challenges.cloudflare.com` en `script-src` (detrás del nonce y `'strict-dynamic'`) y en `frame-src`, en todas las pantallas porque al navegar dentro de la app la CSP es la del primer documento; el script solo se carga en `/entrar`. La política se arma en `src/lib/csp.ts`;
   - sin `unsafe-inline` en scripts;
   - `frame-ancestors 'none'`.
 - **Resto de cabeceras:**
@@ -1186,6 +1187,7 @@ Se validan al arrancar con Zod (`config/env.ts`); si falta una, la aplicación n
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Cliente y servidor | Sí | Anon o publishable key; RLS la protege |
 | `SUPABASE_SERVICE_ROLE_KEY` | Solo worker y cron | **No** | Solo en `lib/supabase/admin.ts` (`server-only`) |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Cliente | Sí | Suscripción Web Push |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | `/entrar` y `proxy.ts` (opcional) | Sí | Clave pública de Cloudflare Turnstile. Vacía = sin captcha. La secreta va en Supabase → *Attack Protection*, no en Vercel |
 | `VAPID_PRIVATE_KEY` | Worker | **No** | Firma de los push |
 | `VAPID_SUBJECT` | Worker | No | `mailto:` de la organización |
 | `CRON_SECRET` | Vercel Cron → `/api/v1/cron/weekly-report` | **No** | Vercel lo envía en `Authorization: Bearer` |
@@ -1549,7 +1551,7 @@ Lo que las pruebas locales no podían confirmar se comprobó en el proyecto `sta
 | 4–5 | Metadatos y carpetas de Storage, límites de los buckets | ✅ Subida, registro y procesamiento de fotos de punta a punta |
 | 6 | La Data API expone solo `public`, con los grants por defecto cerrados | ✅ Migración 240 (hallazgo con `supabase db advisors`) |
 | 7 | Validación de sesión en `@supabase/ssr` | ✅ `getClaims()` |
-| 8 | Captcha nativo de Supabase Auth | ⏳ Pendiente ([SECURITY.md](SECURITY.md)) |
+| 8 | Captcha nativo de Supabase Auth | ⏳ Código listo, falta activarlo con la cuenta de Cloudflare ([SECURITY.md](SECURITY.md)) |
 | 9 | Límites del SMTP por defecto | ✅ 2 por hora: se usa SMTP propio |
 | 10 | Conexión de los runners de GitHub por el pooler | ⏳ Al activar `backup.yml` |
 | 11 | Supabase Branching | ⏳ Fase 2 (requiere Pro) |

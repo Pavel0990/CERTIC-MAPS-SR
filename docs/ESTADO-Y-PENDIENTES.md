@@ -52,7 +52,7 @@ La revisión del 17/10 y la del 21/10 están detalladas en [SECURITY.md](../SECU
 
 | Tarea | Por qué | Hecho cuando |
 |---|---|---|
-| **Captcha** en `/entrar` (Cloudflare Turnstile) | Frenar el envío masivo de correos de acceso | Requiere la cuenta de Cloudflare (§5.2). Widget en `/entrar`, `challenges.cloudflare.com` en la CSP de `src/proxy.ts` y activado en *Supabase → Authentication → Attack Protection* |
+| **Captcha** en `/entrar` (Cloudflare Turnstile) | Frenar el envío masivo de correos de acceso | ⏳ Código listo: recuadro en `/entrar`, token a Supabase y CSP abierta a `challenges.cloudflare.com` solo si existe `NEXT_PUBLIC_TURNSTILE_SITE_KEY`. **Falta** la cuenta de Cloudflare (§5.2): crear el widget, la clave pública en Vercel y luego la secreta en *Supabase → Authentication → Attack Protection*, en ese orden ([DEPLOYMENT.md §4](../DEPLOYMENT.md#4-vercel)) |
 | **E2E sin limpieza manual** | Que las pruebas se puedan correr varias veces seguidas | ⏳ Código listo: `tests/e2e/global-setup.ts` reinicia los límites por hora y la reputación de las cuentas de prueba con `e2e_reset_rate_limits`. **Falta aplicar** la migración `20261021130000_e2e_rate_limit_reset` en staging (§7) |
 | **E2E en la CI** | Hoy Playwright y axe se corren a mano antes de subir | ⏳ `.github/workflows/e2e.yml` listo (construye la app en el runner y prueba con Chromium contra staging). **Falta** crear el entorno `e2e-staging` con sus 3 secretos y la variable `E2E_ENABLED=true` ([ADR-025](decisions/ADR-025-e2e-contra-staging.md)) |
 | **Simulacro de restauración** | La copia diaria nunca se ha restaurado de prueba | Cargar la última copia en PGlite con todas las migraciones y comparar conteos; procedimiento en [DEPLOYMENT.md §8.1](../DEPLOYMENT.md#81-copias-de-seguridad) |
@@ -64,7 +64,7 @@ La revisión del 17/10 y la del 21/10 están detalladas en [SECURITY.md](../SECU
 |---|---|
 | **Supabase de producción** | Hoy la app publicada usa la base de staging. Pasos: [DEPLOYMENT.md §3](../DEPLOYMENT.md#3-supabase-de-producción) |
 | **Correo con Resend y dominio propio** | Hoy los correos de acceso salen por un Gmail personal |
-| **Cloudflare** | Para el captcha (gratis) |
+| **Cloudflare** | Para el captcha (gratis). El código ya está; pasos en [DEPLOYMENT.md §4](../DEPLOYMENT.md#4-vercel) |
 | **Traspaso de cuentas** | Al menos dos dueños en GitHub, Supabase y Vercel: [DEPLOYMENT.md §9](../DEPLOYMENT.md#9-traspaso-a-cuentas-de-la-organización). El segundo administrador tiene que entrar una vez a la app antes de darle el rol |
 | **Supabase despierto** | Dos veces por semana, abrir https://sr-conecta.vercel.app/api/v1/health (debe decir `"ok"`) y ver que *Actions → backup* esté en verde |
 

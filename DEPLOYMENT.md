@@ -96,10 +96,19 @@ Hazlo en un proyecto **separado** de `staging`, para que la demo y los datos rea
    | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | `npx web-push generate-vapid-keys` (una sola vez; si cambian, cada persona debe reactivar las notificaciones) | La privada, **sí** |
    | `VAPID_SUBJECT` | `mailto:equipo@<tu-dominio>` | No |
    | `NEXT_PUBLIC_GOOGLE_MAPS_KEY`, `NEXT_PUBLIC_GOOGLE_MAP_ID` | Opcional (§7) | No, pero restringida |
+   | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Opcional: captcha de `/entrar`. Cloudflare → *Turnstile* → el widget → *Site Key*. La *Secret Key* **no** va en Vercel: va en Supabase → *Authentication → Attack Protection* (pasos abajo) | No |
 
    ```bash
    node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
    ```
+   **Captcha (Cloudflare Turnstile), en este orden** para que nadie quede sin poder entrar:
+   1. En Cloudflare → *Turnstile → Add widget*: modo *Managed*, dominios `sr-conecta.vercel.app` y `localhost` (y el dominio propio cuando exista). Copia la *Site Key* y la *Secret Key*.
+   2. En Vercel, agrega `NEXT_PUBLIC_TURNSTILE_SITE_KEY` con la *Site Key* y **vuelve a desplegar** (las variables `NEXT_PUBLIC_` se fijan al construir). Abre `/entrar`: debe salir el recuadro. Todavía nadie lo exige, así que quien tenga la página vieja abierta sigue entrando.
+   3. Solo entonces, en Supabase → *Authentication → Attack Protection*: activa *Enable Captcha protection*, elige *Turnstile* y pega la *Secret Key*. Desde ese momento Supabase rechaza los pedidos de correo sin token válido.
+   4. Prueba entrar con tu correo. Si algo falla, desactiva el captcha en Supabase (paso 3) y todo vuelve a funcionar sin tocar Vercel.
+
+   Las pruebas E2E entran por «Ya tengo un código» (`verifyOtp`), que Supabase no protege con captcha: siguen funcionando con el captcha activado.
+
 3. **Dominio.** *Settings → Domains* → agrega `<tu-dominio>` y crea en tu DNS el registro que indique Vercel.
 4. **Cron del informe.** Ya está en [`vercel.json`](vercel.json): todos los días a las 10:00 UTC (06:00 en RD). Vercel le envía `CRON_SECRET` solo.
 5. **Despliegue automático (ADR-019).** El despliegue de `main` lo hace el workflow [`deploy.yml`](.github/workflows/deploy.yml): primero migra la base y después publica. Cuando se active, hay que desactivar el despliegue automático de `main` en Vercel (`"git": { "deploymentEnabled": { "main": false } }` en `vercel.json`) para que solo publique el workflow; las vistas previas de los PR siguen funcionando.
