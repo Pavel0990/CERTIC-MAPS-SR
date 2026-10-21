@@ -2,6 +2,7 @@
 // Ejecuta las migraciones reales y prueba seguridad (RLS, grants, ataques directos), integridad,
 // concurrencia (compare-and-set, idempotencia), PostGIS, KPIs/PDF y mantenimiento.
 // Uso:  cd supabase/tests && npm install && npm test
+import { readFileSync } from 'node:fs';
 import { createDb, as } from './db.mjs';
 
 const results = [];
@@ -694,6 +695,13 @@ const capped = await one(`select count from public.engagement_daily where entity
 ok('U2 las métricas anónimas tienen techo diario por ficha: no se pueden inflar sin límite', capped.count === 2000, JSON.stringify(capped));
 ok('U3 al reemplazar la función de métricas se conserva el permiso anónimo',
    (await one(`select has_function_privilege('anon', 'public.track_engagement(text, uuid, text)', 'execute') a`)).a === true);
+const auditProblems = await q(readFileSync(new URL('../ops/security_audit.sql', import.meta.url), 'utf8'));
+ok('U4 la auditoría de seguridad (supabase/ops/security_audit.sql) no encuentra problemas en las migraciones',
+   auditProblems.length === 0, JSON.stringify(auditProblems));
+await db.query(`create table public.zz_sin_rls (id int)`);
+const caught = await q(readFileSync(new URL('../ops/security_audit.sql', import.meta.url), 'utf8'));
+await db.query(`drop table public.zz_sin_rls`);
+ok('U5 la auditoría detecta una tabla nueva sin RLS', caught.some((r) => r.object === 'zz_sin_rls'), JSON.stringify(caught));
 
 // ---------------------------------------------------------------------------------------------
 // L. Mantenimiento y privacidad

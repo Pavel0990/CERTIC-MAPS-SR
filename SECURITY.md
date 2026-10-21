@@ -16,7 +16,14 @@ El detalle completo está en [ARCHITECTURE.md §10](ARCHITECTURE.md#10-seguridad
 - **Navegador:**
   - CSP con nonce por request;
   - HSTS y `X-Frame-Options: DENY`;
-  - redirecciones solo a rutas internas.
+  - aislamiento entre sitios (`Cross-Origin-Opener-Policy` y `Cross-Origin-Resource-Policy: same-origin`);
+  - redirecciones solo a rutas internas;
+  - la API que cambia datos solo acepta peticiones de la propia web (comprobación de `Origin`, además de las cookies `SameSite=Lax`).
+- **Vigilancia automática:**
+  - `npm audit` en cada PR y cada semana;
+  - Dependabot con alertas y actualizaciones de seguridad;
+  - escaneo de secretos y bloqueo de push con secretos en GitHub;
+  - auditoría semanal de la base en línea (`.github/workflows/security.yml`).
 - **Fotos:** se re-codifican en el servidor. El EXIF (ubicación GPS) se elimina siempre, y la evidencia de reportes nunca es pública.
 - **Auditoría** inmutable de las acciones del personal. El PDF solo se descarga si la descarga quedó auditada ([ADR-021](docs/decisions/ADR-021-descarga-pdf-auditada.md)).
 - **Secretos:** solo en `.env.local` (fuera de git), en Vercel y en Supabase Vault. El historial del repositorio se revisó el 05/10/2026: no contiene claves.
@@ -53,6 +60,19 @@ Revisión completa contra la **base en línea** (consultas al catálogo de Postg
 - *Authentication → Rate Limits*: comprobar que los límites de envío de correos y de verificación de códigos están activos (valores por defecto).
 - *Settings → API*: no añadir más esquemas expuestos que `public`.
 
+### Endurecimiento del 20/10/2026
+
+Para que la seguridad no dependa de volver a revisar a mano:
+
+| Qué | Dónde | Cómo se comprueba |
+|---|---|---|
+| **Auditoría repetible de la base:** 11 comprobaciones, entre ellas tablas sin RLS, funciones `SECURITY DEFINER` sin `search_path`, funciones ejecutables por `anon` fuera de la lista permitida, funciones del worker abiertas a clientes, buckets privados marcados como públicos y listado de `public-media` | `supabase/ops/security_audit.sql` | `npm run db:audit` contra la base en línea; prueba U4–U5 en cada push (`npm run test:db`), que además detecta una tabla nueva sin RLS; y cada lunes en `security.yml` |
+| **Protección CSRF** de la API con sesión (`/api/v1/reports`, `requests`, `requests/:id/vote`, `uploads/sign`, `attachments`): una petición desde otro sitio recibe 403 | `src/lib/same-origin.ts`, usada por `requireApiUser` | `src/lib/same-origin.test.ts` |
+| **Cabeceras** `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy` y `X-Permitted-Cross-Domain-Policies` | `next.config.ts` | `curl -I https://sr-conecta.vercel.app` |
+| **Dependencias:** `npm audit --omit=dev --audit-level=high` en cada PR, push a `main` y cada lunes; Dependabot (npm y GitHub Actions) con alertas y actualizaciones de seguridad activadas | `security.yml`, `.github/dependabot.yml` | *Security → Dependabot* en GitHub |
+
+La auditoría semanal de la base usa el mismo secreto que la copia de seguridad (`SUPABASE_DB_URL`) y solo lee el catálogo. Si algún día se agrega a propósito algo que marca (por ejemplo, una función pública nueva para visitantes), se actualiza la lista permitida en `security_audit.sql` con su justificación.
+
 ## Pendientes conocidos
 
 | Pendiente | Riesgo | Plan |
@@ -60,4 +80,4 @@ Revisión completa contra la **base en línea** (consultas al catálogo de Postg
 | **Sin captcha** en el inicio de sesión | Alguien podría pedir muchos correos de acceso. Hoy lo frenan los límites de Supabase Auth (correos por hora, intentos por IP) | Antes de abrir al público: Cloudflare Turnstile con la integración nativa de Supabase Auth (*Authentication → Attack Protection*) y el widget en `/entrar` (añadir `challenges.cloudflare.com` a la CSP) |
 | **Cuentas a nombre de una persona** (Supabase, SMTP de Gmail, Vercel) | Si esa persona pierde el acceso, se pierde el control | Traspaso a cuentas de la organización: [DEPLOYMENT.md §9](DEPLOYMENT.md#9-traspaso-a-cuentas-de-la-organización) |
 | **Base de staging compartida** entre la demo y las pruebas | Datos de prueba mezclados con reales | Supabase de producción separado ([DEPLOYMENT.md §3](DEPLOYMENT.md#3-supabase-de-producción)) |
-| **Copias de seguridad** dependen de activar el workflow | Sin copia no hay recuperación (el plan gratuito no tiene PITR) | Activar `backup.yml` ([DEPLOYMENT.md §8.1](DEPLOYMENT.md#81-copias-de-seguridad)) y `npm run backup` antes de cambios grandes |
+| **Restauración de la copia sin ensayar** | La copia diaria cifrada está activa, pero nunca se ha restaurado de prueba | Simulacro de restauración (tarea B11 del [reparto](docs/REPARTO-DE-TRABAJO.md)) y `npm run backup` antes de cambios grandes ([DEPLOYMENT.md §8.1](DEPLOYMENT.md#81-copias-de-seguridad)) |

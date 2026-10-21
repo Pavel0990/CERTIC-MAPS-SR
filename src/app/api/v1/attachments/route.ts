@@ -11,7 +11,7 @@ const body = z.object({
 
 // POST /api/v1/attachments — vincula una foto subida a su entidad (register_attachment, §10.5).
 export async function POST(request: Request) {
-  const auth = await requireApiUser();
+  const auth = await requireApiUser(request);
   if ('error' in auth) return auth.error;
   const parsed = body.safeParse(await readJson(request));
   if (!parsed.success) return errorResponse(400, 'invalid_body', 'Datos de la foto inválidos.');

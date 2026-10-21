@@ -7,7 +7,7 @@ const body = z.object({ mime: z.enum(['image/jpeg', 'image/png', 'image/webp']) 
 
 // POST /api/v1/uploads/sign — URL de subida firmada en incoming/{uid}/ (§10.5).
 export async function POST(request: Request) {
-  const auth = await requireApiUser();
+  const auth = await requireApiUser(request);
   if ('error' in auth) return auth.error;
   const parsed = body.safeParse(await readJson(request));
   if (!parsed.success) return errorResponse(400, 'invalid_body', 'Tipo de imagen no permitido.');

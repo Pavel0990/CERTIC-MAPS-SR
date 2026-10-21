@@ -1,0 +1,54 @@
+# Seguridad automática (SECURITY.md · Auditoría del 17/10/2026).
+#   - dependencias: npm audit en cada PR, en cada push a main y cada semana (aparecen avisos nuevos sin cambiar nada).
+#   - base de datos: supabase/ops/security_audit.sql contra la base en línea, cada semana y a mano.
+#     Usa el mismo secreto que backup.yml (SUPABASE_DB_URL: URL completa o solo la contraseña). Solo lee el catálogo.
+name: security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 12 * * 1' # lunes, 08:00 en República Dominicana
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependencies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      # Solo lo que llega a producción y solo gravedad alta o crítica: lo demás lo propone Dependabot
+      - run: npm audit --omit=dev --audit-level=high
+
+  database:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Auditoría de la base en línea
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          POOLER_USER: postgres.${{ vars.SUPABASE_PROJECT_REF || 'sdhhuacuevkfvefesapu' }}
+          POOLER_HOST: ${{ vars.SUPABASE_POOLER_HOST || 'aws-0-us-east-1.pooler.supabase.com' }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SUPABASE_DB_URL" ]; then echo "::warning::Falta el secreto SUPABASE_DB_URL: no se audita la base"; exit 0; fi
+          url=$(printf '%s' "$SUPABASE_DB_URL" | tr -d '\r\n' | sed -E "s/^[[:space:]\"']+//; s/[[:space:]\"']+$//")
+          case "$url" in
+            postgres://*@*|postgresql://*@*) ;;
+            *)
+              pw=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$url")
+              echo "::add-mask::$pw"
+              url="postgresql://$POOLER_USER:$pw@$POOLER_HOST:5432/postgres"
+              ;;
+          esac
+          echo "::add-mask::$url"
+          DATABASE_URL="$url" node scripts/db-audit.mjs

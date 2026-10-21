@@ -5,7 +5,7 @@ import { readJson, requireApiUser } from '@/lib/api-auth';
 
 // POST /api/v1/requests — incidencia o consulta municipal (F5). Idempotente (§12.2).
 export async function POST(request: Request) {
-  const auth = await requireApiUser();
+  const auth = await requireApiUser(request);
   if ('error' in auth) return auth.error;
   const body = (await readJson(request)) as Record<string, unknown> | null;
   const parsed = citizenRequestInput.safeParse({ ...body, idempotencyKey: request.headers.get('Idempotency-Key') ?? body?.idempotencyKey });

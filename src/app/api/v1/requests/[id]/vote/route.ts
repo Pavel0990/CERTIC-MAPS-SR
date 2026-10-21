@@ -4,10 +4,10 @@ import { NO_STORE, errorResponse, rpcResponse } from '@/lib/http';
 import { requireApiUser } from '@/lib/api-auth';
 
 // POST /api/v1/requests/:id/vote — apoya o quita el apoyo a una consulta pública (F5 "voten prioridades").
-export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) return errorResponse(400, 'invalid_id', 'Identificador inválido.');
-  const auth = await requireApiUser();
+  const auth = await requireApiUser(request);
   if ('error' in auth) return auth.error;
   try {
     return rpcResponse(await toggleVote(auth.supabase, id), 200, NO_STORE);

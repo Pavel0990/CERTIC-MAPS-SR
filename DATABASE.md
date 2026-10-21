@@ -13,7 +13,7 @@
 |---|---|---|
 | Migraciones | **25**, todas aplicadas en el Supabase de staging | `ls supabase/migrations` · `npx supabase migration list` |
 | Funciones en `public` | **47** (§6) | `grep -ohE "function public\.[a-z_]+" supabase/migrations/*.sql \| sort -u \| wc -l` |
-| Pruebas de la base | **153**, en 21 secciones (A–U), todas pasan en cada push (CI) | `npm run test:db` |
+| Pruebas de la base | **155**, en 21 secciones (A–U), todas pasan en cada push (CI) | `npm run test:db` |
 | Motor de las pruebas | PostgreSQL 18.3 + PostGIS 3.6.2 en PGlite. Staging: PostgreSQL 17 + PostGIS 3.3 | — |
 
 Las pruebas cubren seguridad (con ataques directos), integridad, concurrencia, PostGIS, fotos, alertas, KPIs, descarga auditada del PDF, entrega del worker, push, catálogos y mantenimiento. Lo que no se puede verificar fuera de Supabase está en §14 y en [ARCHITECTURE.md §20](ARCHITECTURE.md#20-verificaciones-en-el-servicio-real).

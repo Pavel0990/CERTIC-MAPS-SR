@@ -9,6 +9,10 @@ const securityHeaders = [
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Permissions-Policy', value: 'geolocation=(self), camera=(self), microphone=(), payment=()' },
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+  // Aislamiento: ninguna ventana de otro sitio conserva referencia a la app, y otros sitios no pueden incrustar sus recursos
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+  { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
+  { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
 ];
 
 // Solo en desarrollo: permitir abrir el servidor local desde un túnel de VS Code (Puertos → Reenviar,

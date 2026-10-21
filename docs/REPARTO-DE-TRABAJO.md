@@ -46,10 +46,10 @@ Guías: [prueba con vecinos](prueba-con-vecinos.md), [SECURITY.md](../SECURITY.m
 
 **Seguridad**
 - [ ] **B8 · Captcha en el inicio de sesión** (Cloudflare Turnstile). — **22/10** · 2 h
-- [ ] **B9 · Seguridad automática en GitHub:** auditoría de dependencias en la CI, Dependabot y escaneo de secretos. — **19/10** · 1 h
+- [x] **B9 · Seguridad automática en GitHub:** auditoría de dependencias en la CI, Dependabot y escaneo de secretos. — **hecho el 20/10** (`security.yml`, `dependabot.yml`)
 
 **Base de datos**
-- [ ] **B10 · Auditoría de la base repetible** (`npm run db:audit`), también en GitHub Actions. — **24/10** · 2 h
+- [x] **B10 · Auditoría de la base repetible** (`npm run db:audit`), también en GitHub Actions. — **hecho el 20/10** (`supabase/ops/security_audit.sql`, pruebas U4–U5)
 - [ ] **B11 · Simulacro de restauración** de la copia de seguridad. — **25/10** · 1 h
 - [ ] **B12 · Pulido final:** tipos al día y las pruebas E2E sin limpieza manual. — **26/10** · 1 h
 
