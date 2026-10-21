@@ -10,7 +10,7 @@ updates:
       day: monday
     open-pull-requests-limit: 5
     # Las versiones mayores (TypeScript 7, ESLint 10…) cambian APIs: se planean a mano, no llegan solas.
-    # Los avisos de seguridad siguen llegando aunque sean de versión mayor.
+    # Las alertas de seguridad siguen apareciendo en Security → Dependabot; si una corrección exige versión mayor, se hace a mano.
     ignore:
       - dependency-name: '*'
         update-types: [version-update:semver-major]
