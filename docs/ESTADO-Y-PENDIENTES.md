@@ -1,6 +1,6 @@
 # Estado del proyecto y lo que falta
 
-> **Al 21/10/2026 (revisión de UX incluida).** Documento único de seguimiento: reemplaza al antiguo reparto de trabajo (que planeaba con fechas equivocadas, de octubre) y deja fuera todo lo ya resuelto. Lo resuelto se ve en el historial de git y en el [cambio de versiones de ARCHITECTURE.md](../ARCHITECTURE.md).
+> **Al 21/10/2026, con los PR #7 a #14 integrados** (diapositivas, simulacro de restauración, navegación rápida, contenido de lugares, E2E repetibles, captcha, revisión de UX y aviso de reporte parecido) y la limpieza de código. Documento único de seguimiento: reemplaza al antiguo reparto de trabajo (que planeaba con fechas equivocadas, de octubre) y deja fuera todo lo ya resuelto. Lo resuelto se ve en el historial de git y en el [cambio de versiones de ARCHITECTURE.md](../ARCHITECTURE.md).
 
 ## 1. Fechas oficiales
 
@@ -33,7 +33,7 @@ Quedan unas **5 semanas**. Casi todo lo que falta ya no es código: contenido, p
 
 | Criterio (puntos) | Qué lo respalda | Qué falta para el máximo |
 |---|---|---|
-| **Funcionalidad (25)** | F1–F6, panel, PDF, PWA; 195 pruebas de base de datos, 127 unitarias, 17 recorridos E2E | Contenido real en turismo y rutas; base de producción separada |
+| **Funcionalidad (25)** | F1–F6, panel, PDF, PWA; 195 pruebas de base de datos, 127 unitarias, 23 pruebas E2E en 9 archivos (17 sin la clave de prueba del captcha) | Contenido real en turismo y rutas; base de producción separada |
 | **UX/UI para baja alfabetización digital (20)** | Lenguaje sencillo, letra Lexend/Nunito, áreas táctiles de 44 px, contraste WCAG AA en claro y oscuro (axe en 16 pantallas), sin conexión | **Pruebas con vecinos** (dos rondas) y sus cifras en la presentación |
 | **Innovación (20)** | Confirmación comunitaria de alertas, reputación, aviso de reporte parecido cercano antes de enviar (`ST_DWithin`, 150 m), datos abiertos (OSM), costo casi cero | Ideas opcionales que quedan en §5.4 |
 | **Impacto territorial (15)** | Los 3 municipios, límites oficiales de OSM, indicadores por municipio | Contenido de Monción y Villa Los Almácigos; testimonios de la prueba con vecinos |
@@ -53,11 +53,13 @@ La revisión del 17/10 y la del 21/10 están detalladas en [SECURITY.md](../SECU
 | Tarea | Por qué | Hecho cuando |
 |---|---|---|
 | **Captcha** en `/entrar` (Cloudflare Turnstile) | Frenar el envío masivo de correos de acceso | ⏳ Código listo: recuadro en `/entrar`, token a Supabase y CSP abierta a `challenges.cloudflare.com` solo si existe `NEXT_PUBLIC_TURNSTILE_SITE_KEY`. **Falta** la cuenta de Cloudflare (§5.2): crear el widget, la clave pública en Vercel y luego la secreta en *Supabase → Authentication → Attack Protection*, en ese orden ([DEPLOYMENT.md §4](../DEPLOYMENT.md#4-vercel)) |
-| **E2E sin limpieza manual** | Que las pruebas se puedan correr varias veces seguidas | ⏳ Código listo: `tests/e2e/global-setup.ts` reinicia los límites por hora y la reputación de las cuentas de prueba con `e2e_reset_rate_limits`. **Falta aplicar** la migración `20261021130000_e2e_rate_limit_reset` en staging (§7) |
+| **E2E sin limpieza manual** | Que las pruebas se puedan correr varias veces seguidas | ⏳ Código listo: `tests/e2e/global-setup.ts` reinicia los límites por hora y la reputación de las cuentas de prueba con `e2e_reset_rate_limits`. **Falta aplicar** la migración `20261021130000_e2e_rate_limit_reset` en staging (§5.1.2) |
 | **E2E en la CI** | Hoy Playwright y axe se corren a mano antes de subir | ⏳ `.github/workflows/e2e.yml` listo (construye la app en el runner y prueba con Chromium contra staging). **Falta** crear el entorno `e2e-staging` con sus 3 secretos y la variable `E2E_ENABLED=true` ([ADR-025](decisions/ADR-025-e2e-contra-staging.md)) |
 | ✅ ~~**Simulacro de restauración**~~ | Hecho el 21/10/2026: la copia diaria cifrada del 20/10 y la última copia local se restauraron en PGlite con todas las migraciones, con los mismos conteos por tabla y sin claves foráneas huérfanas | Repetirlo con `npm run backup:check` antes de la demo; procedimiento en [DEPLOYMENT.md §8.1](../DEPLOYMENT.md#81-copias-de-seguridad) |
 | **Correcciones de la prueba con vecinos** | Lo que salga de la ronda 1 | Un *issue* `ux` por problema, corregido antes de la ronda 2 |
 | **Propuestas de la revisión de UX del 21/10** | Lo que cambia un flujo o la estructura de una pantalla y no se tocó en esa revisión (§5.1.1) | Decidir cuáles entran antes de la ronda 1 con vecinos |
+| **Aplicar 3 migraciones en staging** | El código ya las usa, pero funciona sin ellas (sin aviso de reporte parecido, sin reinicio de límites en las E2E) | `npx supabase migration list` muestra las 30 aplicadas (§5.1.2) |
+| **Propuestas de la limpieza de código** | Cambios de organización que mueven muchos archivos y no se hicieron para no arriesgar (§5.1.3) | Decidir después de la demo |
 
 ### 5.1.1 Revisión de UX del 21/10
 
@@ -73,6 +75,27 @@ Recorrido de todas las pantallas a 360 y 1280 px, en claro y oscuro (público, v
 6. **Tarjetas del panel en dos columnas en el teléfono.** Hoy son 12 tarjetas a lo ancho y el resumen mide unas 9 pantallas.
 7. **"Lo más visto" sin tabla en el teléfono.** Las columnas *Cómo llegar* y *WhatsApp* quedan ocultas a la derecha.
 8. **Contenido:** la ruta "De Monción a la Presa" dice en público "conviene validarlo con el municipio antes de recomendarlo" (es una nota interna; va con la validación de rutas de §5.3).
+
+### 5.1.2 Migraciones por aplicar en staging
+
+Staging tiene 27 de las 30 migraciones. Faltan estas, **en este orden**:
+
+| # | Migración | Qué trae | Sin ella |
+|---|---|---|---|
+| 1 | `20261021130000_e2e_rate_limit_reset` | `e2e_reset_rate_limits`, para que las E2E se puedan repetir ([DATABASE.md §5.22](../DATABASE.md#522-e2e-repetibles--20261021130000_e2e_rate_limit_resetsql)) | `global-setup.ts` avisa y sigue; tras varias corridas en una hora, el límite de 5 alertas corta la prueba |
+| 2 | `20261022120000_attachment_credit` | Columna `attachments.credit` para el crédito de las fotos libres. Es una **propuesta** ([DATABASE.md §5.24](../DATABASE.md#524-crédito-de-las-fotos-con-licencia-libre--20261022120000_attachment_creditsql-propuesta-sin-aplicar)) | Nada cambia: el crédito sigue al final de la descripción |
+| 3 | `20261022130000_similar_reports` | `find_similar_reports`, el aviso de reporte parecido ([DATABASE.md §5.23](../DATABASE.md#523-aviso-de-reporte-parecido-cercano--20261022130000_similar_reportssql)) | `/reportar` sigue sin aviso y sin error |
+
+Pasos (§7): `npm run backup` → `npx supabase db push --dry-run` (debe listar solo estas 3) → `npx supabase db push` → `npm run db:audit`.
+
+### 5.1.3 Propuestas de la limpieza de código
+
+La limpieza del 21/10 quitó código muerto, unificó ayudas repetidas y puso al día comentarios y cifras sin cambiar el comportamiento. Esto quedó como propuesta porque mueve muchos archivos o toca el diseño:
+
+1. **Pasar `src/app/(app)/_contenido/` a inglés (`_content/`)** o el resto de carpetas privadas a español: hoy conviven `_components`, `_dashboard` y `_contenido`. Toca unos 20 archivos.
+2. **Colores fijos que quedan fuera de los tokens:** el degradado de "Descubre" (`#0f172a`), el punto apagado de las capas (`#c9cdd3`), la sombra del botón Reportar y el texto blanco sobre `bg-danger`. En modo oscuro se ven igual a propósito; pasarlos a tokens (`--color-on-danger`, por ejemplo) es un cambio de diseño, no de limpieza.
+3. **Hora de "Se actualiza sola"** del panel: usa la hora del dispositivo y la barra del panel la de la provincia; unificarlas en `utils/format` cambia lo que ve alguien con el teléfono en otra zona horaria.
+4. **Mapeo de las RPC de lectura:** las consultas de `server/queries.ts` repiten `if (error) throw …; return data ?? []`. Una ayuda como `asRpcResult` para lecturas lo acortaría, pero cambia 22 lecturas en 9 archivos de 7 módulos.
 
 ### 5.2 Cuentas externas (las hace una persona del equipo)
 
@@ -109,7 +132,7 @@ Recorrido de todas las pantallas a 360 y 1280 px, en claro y oscuro (público, v
 | **Ronda 1 con 5 vecinos** | [Guía](prueba-con-vecinos.md): no ayudar, tomar tiempos, anotar palabras que no entienden | 08/11 |
 | **Ronda 2 con 3 vecinos distintos** | Después de las correcciones; anotar la comparación (p. ej. "de 22/35 a 31/35 tareas sin ayuda") | 18/11 |
 | **Contenido de la demo** | 2–3 negocios con promoción y fotos, un reporte real en la bandeja | 20/11 |
-| **Diapositivas** (5–6) | Problema, solución, arquitectura, seguridad, costos, datos abiertos, resultados de los vecinos y captura del panel | 20/11 |
+| **Diapositivas** (6) | ✅ Borrador hecho (presentación de claude.ai) y ubicado en el [guion](guion-demo.md), con el tiempo repartido según la rúbrica. Falta la diapositiva 6 con los resultados de los vecinos | 20/11 |
 | **Ensayos** | Dos ensayos de 25 minutos con cronómetro | 21 y 24/11 |
 | **Video de respaldo** | Unos 12 minutos con la versión final, no listado y copiado en una memoria USB | 26/11 |
 | **Congelar** | `main` en verde, copia del día, salud "ok", sesiones abiertas en los teléfonos de la demo | 27/11 |

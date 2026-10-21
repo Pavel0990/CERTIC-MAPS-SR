@@ -93,6 +93,16 @@ Revisión línea por línea de todas las rutas de la API, las Server Actions, `s
 
 Verificado como correcto: CSRF por origen en toda escritura, `getClaims()` (firma del JWT), validación zod en cada entrada, secretos de máquina comparados en tiempo constante, redirecciones solo internas, las 59 funciones `SECURITY DEFINER` con `search_path` fijo, RLS en todas las tablas, columnas personales ocultas por grants, roles sin escalada posible, sin `dangerouslySetInnerHTML`, fotos re-codificadas sin metadatos, PDF con descarga auditada y 0 vulnerabilidades en las dependencias de producción.
 
+### Funciones agregadas después de la revisión
+
+Las tres migraciones posteriores (todavía sin aplicar en staging, [DATABASE.md](DATABASE.md#estado-verificado)) siguen las mismas reglas y tienen sus pruebas de ataque en `npm run test:db`:
+
+| Pieza | Quién la ejecuta | Protección |
+|---|---|---|
+| `find_similar_reports` (aviso de reporte parecido) | Solo `authenticated` | 60 consultas por hora; solo devuelve lo que la persona ya ve por RLS y nunca autor, texto, fotos ni coordenadas (pruebas W5, W9, W12–W14) |
+| `e2e_reset_rate_limits` (E2E repetibles) | Solo `service_role` | Solo toca cuentas `@example.com`; `security_audit.sql` marca cualquier `e2e_*` ejecutable por clientes (V1–V3) |
+| `attachments.credit` (crédito de fotos, propuesta) | Lectura pública, como el resto del adjunto | Nadie la escribe desde la API, ni el personal (AC4) |
+
 ## Pendientes conocidos
 
 | Pendiente | Riesgo | Plan |

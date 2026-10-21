@@ -1,6 +1,6 @@
 # SR Conecta — Arquitectura
 
-> **Versión 3.1 · 21 de octubre de 2026 · arquitectura tal como está construida.**
+> **Versión 3.3 · 21 de octubre de 2026 · arquitectura tal como está construida.**
 > Plataforma geográfica para la provincia Santiago Rodríguez (República Dominicana), para el reto TechEmprende SR Conecta 2026.
 > Describe el sistema que funciona hoy en https://sr-conecta.vercel.app. Las decisiones y sus alternativas están en [`docs/decisions/`](docs/decisions); lo que cambió respecto del diseño inicial, en §18.1. Las cifras verificadas (migraciones, funciones, pruebas) viven solo en [DATABASE.md](DATABASE.md#estado-verificado), para que no se desincronicen.
 
@@ -429,9 +429,9 @@ Resumen. El detalle (columnas, índices, políticas, matriz de grants) está en 
 
 | | |
 |---|---|
-| Migraciones | 27 (`20260924120000` a `20261021120000`) |
+| Migraciones | 30 (`20260924120000` a `20261022130000`); 27 aplicadas en staging, 3 por aplicar ([ESTADO-Y-PENDIENTES §7](docs/ESTADO-Y-PENDIENTES.md)) |
 | Tablas | 27 en `public` (todas con RLS) y 7 en `private` |
-| Funciones | 49 en `public` (detalle y conteo verificado en [DATABASE.md](DATABASE.md)) |
+| Funciones | 51 en `public` (detalle y conteo verificado en [DATABASE.md](DATABASE.md)) |
 | Seguridad | 31 políticas RLS + 3 de Storage; grants por columna; `EXECUTE` explícito por función |
 | Índices | 109 al 07/10, incluidos GiST, GIN y parciales |
 | Triggers | 16 |
@@ -1076,7 +1076,8 @@ Lo que solo se hace desde la interfaz es una **Server Action**, no un endpoint p
 | Pantalla | Acciones | RPC o tabla |
 |---|---|---|
 | Entrar (`entrar/actions.ts`) | `requestAccess`, `verifyCode`, `signOut` | Supabase Auth |
-| Perfil (`perfil/actions.ts`) | `saveProfile`, `savePreferences`, `enablePush`, `disablePush` | 4 columnas de `profiles`; `notification_preferences`; `register_push_device` / `unregister_push_device` |
+| Perfil (`perfil/actions.ts`) | `saveAvatar`, `saveProfile`, `savePreferences`, `enablePush`, `disablePush` | `set_avatar`; 4 columnas de `profiles`; `notification_preferences`; `register_push_device` / `unregister_push_device` |
+| Notificaciones (`notificaciones/page.tsx`) | `markAll` | `read_at` de las propias `notifications` (RLS) |
 | Registrar negocio (`negocios/registrar`) | `registerBusiness` | `submit_business` |
 | Panel del comercio (`negocio/[id]`) | `saveBusiness`, `saveHours`, `addPromotion` | `update_business`, `set_business_hours`, `create_promotion` |
 | Proponer (`proponer`) | `submitPlace`, `submitRoute` | `propose_place`, `propose_route` (el GPX se convierte en el cliente) |
@@ -1237,9 +1238,9 @@ cd supabase/tests && npm install && npm test
 
 | Nivel | Herramienta | Qué cubre | Dónde corre |
 |---|---|---|---|
-| Unitarias | Vitest (`npm test`) | Mapeo de `reason` a HTTP, redirecciones seguras, rejilla de bbox, horario y "abierto ahora", lector de GPX, esquemas de negocio, procesamiento de fotos (EXIF, formato, tamaño), semanas ISO y periodos del informe, enlaces de notificaciones, secreto del worker | CI |
+| Unitarias | Vitest (`npm test`) | Mapeo de `reason` a HTTP, redirecciones seguras, rejilla de bbox, horario y "abierto ahora", lector de GPX, esquemas de negocio, procesamiento de fotos (EXIF, formato, tamaño), semanas ISO y periodos del informe, enlaces de notificaciones, secreto del worker, CSP y captcha, aviso de reporte parecido, indicadores del panel, foto de perfil (127 pruebas) | CI |
 | Fronteras | `node:test` (`npm run test:boundaries`) | Que el lint detecte importaciones prohibidas, incluido el alias `@/` | CI |
-| E2E | Playwright (`npm run test:e2e`) | Listados y filtros públicos, búsqueda sin tildes, fichas, foto de perfil, panel de indicadores, axe (WCAG 2.1 AA) en claro y oscuro, reacción inmediata de la navegación, y el recorrido central: vecino reporta → moderador publica → aparece en el mapa público. Limpia lo que crea y, antes de cada corrida, reinicia los límites por hora y la reputación de las cuentas de prueba (`global-setup.ts`), así se puede repetir | A mano y en `e2e.yml` (si `E2E_ENABLED=true`), contra staging ([ADR-025](docs/decisions/ADR-025-e2e-contra-staging.md)) |
+| E2E | Playwright (`npm run test:e2e`) | 23 pruebas en 9 archivos: listados y filtros públicos, búsqueda sin tildes, fichas, foto de perfil, panel de indicadores, axe (WCAG 2.1 AA) en claro y oscuro, reacción inmediata de la navegación, aviso de reporte parecido (y que el asistente siga si la consulta falla), captcha (6, solo con su clave de prueba) y el recorrido central: vecino reporta → moderador publica → aparece en el mapa público. Limpia lo que crea y, antes de cada corrida, reinicia los límites por hora y la reputación de las cuentas de prueba (`global-setup.ts`), así se puede repetir | A mano y en `e2e.yml` (si `E2E_ENABLED=true`), contra staging ([ADR-025](docs/decisions/ADR-025-e2e-contra-staging.md)) |
 | Manual | Teléfonos reales | GPS, cámara, push, modo sin conexión, iPhone instalado | [Guion de la demo](docs/guion-demo.md#prueba-completa-a-mano-teléfono-real) |
 | Personas | Vecinos | Baja alfabetización digital (20 puntos) | [Guía](docs/prueba-con-vecinos.md) |
 
@@ -1298,10 +1299,12 @@ sr-conecta/
 │  ├─ templates/  config.toml   correo en español y configuración de Auth
 │  └─ seed.sql                  semilla de pruebas locales
 ├─ data/                        datos de OpenStreetMap e importadores (data/README.md)
-├─ scripts/                     cuentas de prueba, copia de seguridad, copia del worker del mapa
+├─ scripts/                     cuentas de prueba, copia de seguridad y simulacro de restauración, auditoría de la base,
+│                               carga del contenido de lugares, copia del worker del mapa
 ├─ tests/boundaries/  tests/e2e/
 ├─ public/                      sw.js, íconos, vendor/ (worker de MapLibre)
-├─ .github/workflows/           ci.yml · backup.yml (diario, cifrado) · uptime.yml (cada hora) · deploy.yml (apagado)
+├─ .github/workflows/           ci.yml · security.yml (npm audit y auditoría de la base) · backup.yml (diario, cifrado)
+│                               uptime.yml (cada hora) · e2e.yml (apagado hasta E2E_ENABLED) · deploy.yml (apagado)
 ├─ vercel.json                  cron diario del informe
 └─ src/
    ├─ app/
@@ -1582,3 +1585,4 @@ Lo que las pruebas locales no podían confirmar se comprobó en el proyecto `sta
 | **3.0** | 07/10/2026 | **Documento de lo construido.** Stack real (§4), una sola carpeta de rutas (§6.1), MapLibre + OpenFreeMap (§7, ADR-022), API real: Route Handlers + Server Actions (§12, ADR-023), CI/CD y operación reales (§13), pruebas E2E (§14), estructura real (§15), ejecución (§16.3), riesgos sin Google (§17), ADR-023 a 025, verificaciones resueltas (§20). Las cifras pasan a vivir solo en DATABASE.md |
 | **3.1** | 21/10/2026 | Fechas oficiales corregidas (desarrollo hasta el 27/11, demo del 28 al 30/11), cifras al día (27 migraciones, 49 funciones, 173 pruebas), panel de indicadores explorable, modo oscuro, foto de perfil, revisión de seguridad del 21/10 ([SECURITY.md](SECURITY.md)) y seguimiento único en [docs/ESTADO-Y-PENDIENTES.md](docs/ESTADO-Y-PENDIENTES.md) |
 | **3.2** | 21/10/2026 | E2E repetibles (reinicio de límites de las cuentas de prueba, migración `20261021130000`) y workflow `e2e.yml` contra staging, apagado por defecto (§13.3, §14.2, ADR-025 revisada) |
+| **3.3** | 21/10/2026 | Integra los PR #7 a #14 (aviso de reporte parecido, captcha, navegación rápida, crédito de fotos propuesto, simulacro de restauración) y la limpieza de código: cifras al día (30 migraciones, 51 funciones, 195 pruebas de base, 23 E2E), §8.1, §12.3 (foto de perfil y notificaciones), §14.2 y §15 (workflows y scripts) |
