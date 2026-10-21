@@ -35,11 +35,11 @@ export function Skeleton({ className }: { className?: string }) {
 }
 
 /** Estado vacío: explica por qué no hay nada y qué hacer (§6.3). */
-export function EmptyState({ icon, title, children, action }: { icon?: ReactNode; title: string; children?: ReactNode; action?: ReactNode }) {
+export function EmptyState({ icon, title, titleAs: Title = 'p', children, action }: { icon?: ReactNode; title: string; titleAs?: 'p' | 'h1' | 'h2'; children?: ReactNode; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
       {icon && <div className="flex size-14 items-center justify-center rounded-full bg-brand-soft text-brand-strong">{icon}</div>}
-      <p className="text-lg font-semibold">{title}</p>
+      <Title className="text-lg font-semibold">{title}</Title>
       {children && <div className="max-w-sm text-[15px] text-muted">{children}</div>}
       {action}
     </div>

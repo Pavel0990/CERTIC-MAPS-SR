@@ -93,7 +93,7 @@ function RailLink({ href, label, active, primary, badge = 0, children }: { href:
       href={href}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'press relative flex w-[72px] flex-col items-center gap-1 rounded-[14px] py-2 text-[14px] font-semibold',
+        'press relative flex w-[76px] flex-col items-center gap-1 rounded-[14px] px-1 py-2 text-center text-[14px] font-semibold leading-tight',
         primary ? 'text-danger-strong hover:bg-danger-soft' : active ? 'bg-brand-soft text-brand-strong' : 'text-muted hover:bg-canvas',
       )}
     >

@@ -11,6 +11,7 @@ export default function NoPermissionPage() {
       <Card>
         <EmptyState
           icon={<ShieldAlert className="size-7" />}
+          titleAs="h1"
           title="Esta sección es para el personal del municipio"
           action={<Link href="/" className="mt-2 inline-flex h-12 items-center rounded-full bg-ink px-5 font-semibold text-on-ink">Volver al mapa</Link>}
         >
