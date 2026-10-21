@@ -33,7 +33,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
     return (
       <Card className="p-6">
         <Notice tone="danger">No pudimos cargar los indicadores.</Notice>
-        <Link href={`/admin?periodo=${range.days}`} className="press mt-4 inline-flex min-h-11 items-center rounded-[12px] bg-ink px-4 font-semibold text-white">Reintentar</Link>
+        <Link href={`/admin?periodo=${range.days}`} className="press mt-4 inline-flex min-h-11 items-center rounded-[12px] bg-ink px-4 font-semibold text-on-ink">Reintentar</Link>
       </Card>
     );
   }
@@ -214,7 +214,7 @@ function Kpi({ icon, label, value, detail, delta: dl, help, href, tone }: {
 }) {
   const body = (
     <>
-      <span className="grid size-11 shrink-0 place-items-center rounded-[12px] bg-ink text-white [&>svg]:size-5" aria-hidden>{icon}</span>
+      <span className="grid size-11 shrink-0 place-items-center rounded-[12px] bg-ink text-on-ink [&>svg]:size-5" aria-hidden>{icon}</span>
       <p className="mt-4 pr-6 text-[14px] font-semibold text-muted">{label}</p>
       <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
         <p className={cn('text-[32px] font-extrabold leading-none tracking-tight tabular-nums', tone && TONE[tone])}>{typeof value === 'number' ? formatNumber(value) : value}</p>
@@ -243,7 +243,7 @@ function Help({ text, label }: { text: string; label: string }) {
   return (
     <details className="group/help absolute right-4 top-4 print:hidden">
       <summary aria-label={`Qué mide «${label}»`} className="press grid size-8 cursor-pointer list-none place-items-center rounded-full border border-line text-sm font-bold text-muted hover:bg-canvas [&::-webkit-details-marker]:hidden">?</summary>
-      <p className="animate-fade-in absolute right-0 top-10 z-20 w-64 rounded-[14px] bg-ink p-3 text-sm leading-snug text-white shadow-[var(--shadow-float)]">{text}</p>
+      <p className="animate-fade-in absolute right-0 top-10 z-20 w-64 rounded-[14px] bg-ink p-3 text-sm leading-snug text-on-ink shadow-[var(--shadow-float)]">{text}</p>
     </details>
   );
 }
@@ -305,7 +305,7 @@ function Empty({ children }: { children: React.ReactNode }) {
 function Pill({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
   return (
     <Link href={href} scroll={false} aria-current={active ? 'page' : undefined}
-      className={cn('press inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-[15px] font-semibold md:min-h-10', active ? 'bg-ink text-white' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
+      className={cn('press inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-[15px] font-semibold md:min-h-10', active ? 'bg-ink text-on-ink' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
       {children}
     </Link>
   );

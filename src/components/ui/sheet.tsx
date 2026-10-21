@@ -37,7 +37,7 @@ export function Sheet({
       onClick={(e) => e.target === ref.current && onClose()}
       aria-label={title}
       className={cn(
-        'm-0 mt-auto max-h-[92dvh] w-full max-w-none bg-transparent p-0 backdrop:bg-ink/40 backdrop:backdrop-blur-[2px] open:animate-sheet-in',
+        'm-0 mt-auto max-h-[92dvh] w-full max-w-none bg-transparent p-0 backdrop:bg-black/50 backdrop:backdrop-blur-[2px] open:animate-sheet-in',
         side === 'right' ? 'md:mt-0 md:ml-auto md:h-dvh md:max-h-dvh md:w-[440px]' : 'md:m-auto md:w-[520px]',
       )}
     >

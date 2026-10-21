@@ -19,7 +19,7 @@ export function FilterChips({ label, options, active, hrefFor }: {
           aria-current={active === o.value ? 'true' : undefined}
           className={cn(
             'press inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-[15px] font-semibold',
-            active === o.value ? 'bg-brand text-white' : 'bg-surface text-ink shadow-[var(--shadow-card)] hover:bg-canvas',
+            active === o.value ? 'bg-brand text-on-brand' : 'bg-surface text-ink shadow-[var(--shadow-card)] hover:bg-canvas',
           )}
         >
           {o.icon}

@@ -15,7 +15,7 @@ export function LayerChips({ layers, onToggle }: { layers: LayerId[]; onToggle: 
             onClick={() => onToggle(l.id)}
             className={cn(
               'press inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-3.5 text-[15px] font-semibold shadow-[var(--shadow-card)]',
-              on ? 'bg-ink text-white' : 'bg-surface text-muted',
+              on ? 'bg-ink text-on-ink' : 'bg-surface text-muted',
             )}
           >
             <span className="size-2.5 rounded-full" style={{ background: on ? l.color : '#c9cdd3' }} aria-hidden />

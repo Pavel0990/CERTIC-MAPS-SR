@@ -40,7 +40,7 @@ export function RequestTimeline({ status, history, rejectionReason }: { status: 
         return (
           <li key={s} className="relative flex gap-3 pb-5 last:pb-0">
             {!last && <span className={cn('absolute left-[15px] top-8 h-[calc(100%-24px)] w-0.5', done && i < currentIndex ? 'bg-brand' : 'bg-line-strong')} aria-hidden />}
-            <span className={cn('relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border-2', done ? 'border-brand bg-brand text-white' : 'border-line-strong bg-surface text-subtle', current && 'ring-4 ring-brand/20')}>
+            <span className={cn('relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border-2', done ? 'border-brand bg-brand text-on-brand' : 'border-line-strong bg-surface text-subtle', current && 'ring-4 ring-brand/20')}>
               {done ? <Check className="size-4" aria-hidden /> : <span className="text-sm font-bold">{i + 1}</span>}
             </span>
             <div className="min-w-0 pt-1">

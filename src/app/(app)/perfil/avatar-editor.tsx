@@ -61,7 +61,7 @@ export function AvatarEditor({ userId, name, src }: { userId: string; name: stri
     <Card className="flex flex-col items-center gap-4 p-5 text-center sm:flex-row sm:text-left">
       <div className="relative">
         <Avatar src={shown} name={name} size={88} priority className={pending ? 'opacity-60 transition-opacity' : 'transition-opacity'} />
-        <span className="absolute -bottom-1 -right-1 grid size-8 place-items-center rounded-full border-2 border-surface bg-brand text-white" aria-hidden>
+        <span className="absolute -bottom-1 -right-1 grid size-8 place-items-center rounded-full border-2 border-surface bg-brand text-on-brand" aria-hidden>
           <Camera className="size-4" />
         </span>
       </div>

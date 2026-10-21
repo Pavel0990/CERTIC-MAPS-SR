@@ -90,7 +90,7 @@ export function BusinessWizard({ categories }: { categories: { slug: string; nam
                     onClick={() => setCategory(c.slug)}
                     className={cn('flex min-h-[96px] flex-col items-start justify-between gap-3 rounded-[18px] border-2 p-4 text-left transition', active ? 'border-brand bg-brand-soft' : 'border-transparent bg-surface shadow-[var(--shadow-card)] hover:-translate-y-0.5')}
                   >
-                    <span className={cn('flex size-11 items-center justify-center rounded-[12px]', active ? 'bg-brand text-white' : 'bg-brand-soft text-brand-strong')}>
+                    <span className={cn('flex size-11 items-center justify-center rounded-[12px]', active ? 'bg-brand text-on-brand' : 'bg-brand-soft text-brand-strong')}>
                       <Icon className="size-6" aria-hidden />
                     </span>
                     <span className="text-[16px] font-bold leading-tight">{c.name}</span>

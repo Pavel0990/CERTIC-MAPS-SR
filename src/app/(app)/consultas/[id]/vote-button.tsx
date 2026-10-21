@@ -42,7 +42,7 @@ export function VoteButton({ requestId, initialVoted, initialCount, signedIn }: 
       aria-pressed={voted}
       className={cn(
         'inline-flex h-13 min-h-[52px] shrink-0 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-5 text-[16px] font-bold transition',
-        voted ? 'bg-brand text-white hover:bg-brand-strong' : 'bg-brand-soft text-brand-strong hover:bg-[#dce8ff]',
+        voted ? 'bg-brand text-on-brand hover:bg-brand-strong' : 'bg-brand-soft text-brand-strong hover:bg-brand-soft-strong',
       )}
     >
       <ThumbsUp className={cn('size-5', voted && 'fill-current')} aria-hidden />

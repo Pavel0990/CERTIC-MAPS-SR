@@ -34,8 +34,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               key={t.id}
               role={t.tone === 'error' ? 'alert' : 'status'}
               className={cn(
-                'pointer-events-auto flex w-full max-w-md animate-sheet-in items-center gap-3 rounded-[14px] px-4 py-3 text-[15px] font-medium text-white shadow-[var(--shadow-float)]',
-                t.tone === 'error' ? 'bg-danger-strong' : 'bg-ink',
+                'pointer-events-auto flex w-full max-w-md animate-sheet-in items-center gap-3 rounded-[14px] px-4 py-3 text-[15px] font-medium shadow-[var(--shadow-float)]',
+                t.tone === 'error' ? 'bg-danger text-white' : 'bg-ink text-on-ink',
               )}
             >
               <I className="size-5 shrink-0" aria-hidden />

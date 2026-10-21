@@ -44,10 +44,10 @@ export function AdminNav({ isAdmin, isProvincialAdmin, counts }: { isAdmin: bool
           return (
             <Link key={i.href} href={i.href} aria-current={active ? 'page' : undefined}
               className={cn('press inline-flex h-11 shrink-0 items-center gap-2 rounded-[12px] px-3.5 text-[15px] font-semibold',
-                active ? 'bg-ink text-white' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
+                active ? 'bg-ink text-on-ink' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
               <i.icon className="size-4" aria-hidden />
               {i.label}
-              {badge > 0 && <span className={cn('rounded-full px-2 font-mono text-[13px] font-bold', active ? 'bg-white/20' : 'bg-danger text-white')}>{badge}</span>}
+              {badge > 0 && <span className={cn('rounded-full px-2 font-mono text-[13px] font-bold', active ? 'bg-on-ink/20' : 'bg-danger text-white')}>{badge}</span>}
             </Link>
           );
         })}

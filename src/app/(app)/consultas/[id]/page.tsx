@@ -87,7 +87,7 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
             <RequestTimeline status={r.status} history={r.history} rejectionReason={r.rejection_reason} />
           </Card>
           {r.point && (
-            <a href={directionsUrl(r.point.lat, r.point.lng)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-[18px] bg-surface p-4 font-semibold shadow-[var(--shadow-card)] hover:bg-[#fafbfc]">
+            <a href={directionsUrl(r.point.lat, r.point.lng)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-[18px] bg-surface p-4 font-semibold shadow-[var(--shadow-card)] hover:bg-canvas">
               <span className="flex size-10 items-center justify-center rounded-full bg-brand-soft text-brand"><MapPin className="size-5" aria-hidden /></span>
               Ver el lugar en el mapa
             </a>

@@ -13,16 +13,26 @@
   --color-canvas: #f3f4f6;
   --color-surface: #ffffff;
   --color-sand: #f2efe9;
+  --color-track: #e9ebee;        /* fondo de selectores segmentados y esqueletos */
+  --color-neutral-soft: #f1f2f4; /* etiqueta neutra */
+  /* Texto sobre fondos de color: blanco en claro; en oscuro esos fondos se aclaran y el texto pasa a oscuro */
+  --color-on-ink: #ffffff;
+  --color-on-brand: #ffffff;
+  --color-on-ok: #ffffff;
+  --color-ink-strong: #000000;   /* hover de botones oscuros */
 
   --color-brand: #2563eb; /* 5,2:1 sobre blanco y 4,7:1 sobre el fondo (WCAG AA) */
   --color-brand-strong: #1d4ed8;
   --color-brand-soft: #eaf1ff;
+  --color-brand-soft-strong: #dce8ff;
 
   --color-ok: #15803d;
   --color-ok-soft: #dcfce7;
   --color-danger: #d92d33; /* texto blanco encima: 4,8:1 (WCAG AA) */
   --color-danger-strong: #b42318;
   --color-danger-soft: #fee4e2;
+  --color-danger-soft-strong: #fdd5d2;
+  --color-danger-line: #f5c2c0;
   --color-warn: #8a5a00;
   --color-warn-bright: #f2b01e;
   --color-warn-soft: #fef3c7;
@@ -35,6 +45,8 @@
   --color-layer-route: #0e9f9a;
   --color-layer-traffic: #d92d33;
   --color-layer-request: #7c3aed;
+  --color-route-soft: #ccfbf1;
+  --color-route-strong: #0f766e;
 
   --radius-sm: 10px;
   --radius-md: 14px;
@@ -49,6 +61,83 @@
   --animate-pulse-ring: pulse-ring 1.8s ease-out infinite;
   --animate-step-in: step-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
   --animate-pop-in: pop-in 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Modo oscuro ──────────────────────────────────────────────────────────────
+   Automático según el teléfono (prefers-color-scheme) o elegido en Perfil → Apariencia (data-theme en <html>,
+   guardado en una cookie y aplicado en el servidor: sin parpadeo al cargar). Mismos tokens, otros valores:
+   los textos mantienen contraste WCAG AA sobre surface (#171b21) y canvas (#0e1114). El mapa base sigue claro. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --color-ink: #eceef2;
+    --color-muted: #aab2bd;
+    --color-subtle: #8f98a4;
+    --color-line: #262b33;
+    --color-line-strong: #353b45;
+    --color-canvas: #0e1114;
+    --color-surface: #171b21;
+    --color-sand: #1c1b19;
+    --color-track: #232830;
+    --color-neutral-soft: #232830;
+    --color-on-ink: #0e1114;
+    --color-on-brand: #07112a;
+    --color-on-ok: #052e16;
+    --color-ink-strong: #ffffff;
+    --color-brand: #7aa7ff;
+    --color-brand-strong: #a9c6ff;
+    --color-brand-soft: #182641;
+    --color-brand-soft-strong: #20325a;
+    --color-ok: #4ade80;
+    --color-ok-soft: #10291a;
+    --color-danger-strong: #ff8f8a;
+    --color-danger-soft: #34161a;
+    --color-danger-soft-strong: #4a1d22;
+    --color-danger-line: #5c2529;
+    --color-warn: #f5b942;
+    --color-warn-soft: #2f240b;
+    --color-violet: #b9a2ff;
+    --color-violet-soft: #241d3d;
+    --color-route-soft: #0f2e2b;
+    --color-route-strong: #5eead4;
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 16px rgb(0 0 0 / 0.25);
+    --shadow-float: 0 10px 32px rgb(0 0 0 / 0.5);
+  }
+}
+:root[data-theme='dark'] {
+    color-scheme: dark;
+    --color-ink: #eceef2;
+    --color-muted: #aab2bd;
+    --color-subtle: #8f98a4;
+    --color-line: #262b33;
+    --color-line-strong: #353b45;
+    --color-canvas: #0e1114;
+    --color-surface: #171b21;
+    --color-sand: #1c1b19;
+    --color-track: #232830;
+    --color-neutral-soft: #232830;
+    --color-on-ink: #0e1114;
+    --color-on-brand: #07112a;
+    --color-on-ok: #052e16;
+    --color-ink-strong: #ffffff;
+    --color-brand: #7aa7ff;
+    --color-brand-strong: #a9c6ff;
+    --color-brand-soft: #182641;
+    --color-brand-soft-strong: #20325a;
+    --color-ok: #4ade80;
+    --color-ok-soft: #10291a;
+    --color-danger-strong: #ff8f8a;
+    --color-danger-soft: #34161a;
+    --color-danger-soft-strong: #4a1d22;
+    --color-danger-line: #5c2529;
+    --color-warn: #f5b942;
+    --color-warn-soft: #2f240b;
+    --color-violet: #b9a2ff;
+    --color-violet-soft: #241d3d;
+    --color-route-soft: #0f2e2b;
+    --color-route-strong: #5eead4;
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 16px rgb(0 0 0 / 0.25);
+    --shadow-float: 0 10px 32px rgb(0 0 0 / 0.5);
 }
 
 @keyframes sheet-in {

@@ -13,6 +13,8 @@ import { AvatarEditor } from './avatar-editor';
 import { PreferencesForm, ProfileForm } from './forms';
 import { PushToggle } from './push-toggle';
 import { SignOutButton } from './sign-out-button';
+import { ThemePicker } from '@/components/shared/theme-picker';
+import { cookies } from 'next/headers';
 
 export const metadata: Metadata = { title: 'Perfil' };
 
@@ -24,6 +26,8 @@ export default async function ProfilePage() {
     getPreferences(supabase, viewer.id),
     countUnread(supabase),
   ]);
+  const tema = (await cookies()).get('tema')?.value;
+  const theme = tema === 'dark' || tema === 'light' ? tema : 'auto';
   const roleLabel = viewer.isProvincialAdmin ? 'Administración provincial' : viewer.isAdmin ? 'Administración municipal' : viewer.isStaff ? 'Moderación' : viewer.isEntrepreneur ? 'Emprendedor' : 'Ciudadano';
 
   return (
@@ -61,6 +65,9 @@ export default async function ProfilePage() {
             <MenuLink href="/proponer?que=ruta" icon={<Route className="size-5" />} label="Proponer una ruta" />
           </Card>
           <Card className="p-5">
+            <ThemePicker initial={theme} />
+          </Card>
+          <Card className="p-5">
             <Eyebrow>Tu privacidad</Eyebrow>
             <p className="mt-2 text-[15px] text-muted">
               Tu nombre nunca sale en el mapa público. Solo usamos tu ubicación cuando tú la pides para un reporte, y quitamos los datos ocultos de tus fotos.
@@ -75,7 +82,7 @@ export default async function ProfilePage() {
 
 function MenuLink({ href, icon, label, badge = 0 }: { href: string; icon: React.ReactNode; label: string; badge?: number }) {
   return (
-    <Link href={href} className="flex items-center gap-3 border-b border-line px-5 py-4 font-semibold last:border-0 hover:bg-[#fafbfc]">
+    <Link href={href} className="flex items-center gap-3 border-b border-line px-5 py-4 font-semibold last:border-0 hover:bg-canvas">
       <span className="text-muted" aria-hidden>{icon}</span>
       <span className="flex-1">{label}</span>
       {badge > 0 && <span className="whitespace-nowrap rounded-full bg-danger px-2 py-0.5 text-[14px] font-bold text-white">{badge} sin leer</span>}

@@ -55,7 +55,7 @@ export function PhotoPicker({ state, hint, capture }: { state: ReturnType<typeof
           <div key={p.url} className="relative size-24 overflow-hidden rounded-[14px] bg-canvas">
             {/* eslint-disable-next-line @next/next/no-img-element -- vista previa local (blob:) */}
             <img src={p.url} alt={`Foto ${i + 1}`} className="size-full object-cover" />
-            <button type="button" onClick={() => state.remove(p)} aria-label={`Quitar foto ${i + 1}`} className="absolute right-1 top-1 flex size-8 items-center justify-center rounded-full bg-ink/70 text-white">
+            <button type="button" onClick={() => state.remove(p)} aria-label={`Quitar foto ${i + 1}`} className="absolute right-1 top-1 flex size-8 items-center justify-center rounded-full bg-black/65 text-white">
               <X className="size-4" />
             </button>
           </div>

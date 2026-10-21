@@ -9,7 +9,7 @@ export function Card({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
 }
 
 const tones: Record<Tone, string> = {
-  neutral: 'bg-[#f1f2f4] text-[#4b5563]',
+  neutral: 'bg-neutral-soft text-muted',
   brand: 'bg-brand-soft text-brand-strong',
   ok: 'bg-ok-soft text-ok',
   warn: 'bg-warn-soft text-warn',
@@ -31,7 +31,7 @@ export function Eyebrow({ className, children }: { className?: string; children:
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div aria-hidden className={cn('animate-pulse rounded-[12px] bg-[#e9ebee]', className)} />;
+  return <div aria-hidden className={cn('animate-pulse rounded-[12px] bg-track', className)} />;
 }
 
 /** Estado vacío: explica por qué no hay nada y qué hacer (§6.3). */
@@ -49,7 +49,7 @@ export function EmptyState({ icon, title, children, action }: { icon?: ReactNode
 /** Mensaje de error recuperable, sin detalles internos (§6.3). */
 export function ErrorNote({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div role="alert" className="flex items-start gap-3 rounded-[14px] border border-[#f5c2c0] bg-danger-soft p-4 text-[15px] text-danger-strong">
+    <div role="alert" className="flex items-start gap-3 rounded-[14px] border border-danger-line bg-danger-soft p-4 text-[15px] text-danger-strong">
       <div className="flex-1">{children}</div>
       {action}
     </div>

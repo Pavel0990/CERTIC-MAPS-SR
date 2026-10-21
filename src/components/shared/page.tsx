@@ -43,7 +43,7 @@ export function PageShell({
 /** Pestañas por enlace (estado en la URL, compartible y accesible). */
 export function LinkTabs({ tabs, active }: { tabs: { href: string; label: string; count?: number }[]; active: string }) {
   return (
-    <nav aria-label="Secciones" className="mb-5 flex gap-1 rounded-[14px] bg-[#e9ebee] p-1">
+    <nav aria-label="Secciones" className="mb-5 flex gap-1 rounded-[14px] bg-track p-1">
       {tabs.map((t) => (
         <Link
           key={t.href}

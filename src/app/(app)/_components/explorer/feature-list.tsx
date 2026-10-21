@@ -25,7 +25,7 @@ export function FeatureList({ items, catalogs, userLocation, onSelect }: {
           const L = LAYER_BY_ID[f.properties.layer];
           return (
             <li key={f.properties.id}>
-              <button type="button" onClick={() => onSelect(f)} className="press-soft flex w-full items-center gap-3 rounded-[16px] bg-surface p-3 text-left shadow-[var(--shadow-card)] hover:bg-[#fafbfc] active:bg-canvas">
+              <button type="button" onClick={() => onSelect(f)} className="press-soft flex w-full items-center gap-3 rounded-[16px] bg-surface p-3 text-left shadow-[var(--shadow-card)] hover:bg-canvas active:bg-canvas">
                 <LayerDot color={L.color} path={L.icon} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{f.properties.title}</span>

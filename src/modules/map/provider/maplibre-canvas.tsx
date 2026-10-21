@@ -256,7 +256,7 @@ export default function MaplibreCanvas({
             <path d="M22 54s18-18.5 18-32A18 18 0 0 0 4 22c0 13.5 18 32 18 32z" fill="#d92d33" stroke="#fff" strokeWidth="3" />
             <circle cx="22" cy="22" r="7" fill="#fff" />
           </svg>
-          <span className="absolute left-1/2 top-full h-1.5 w-4 -translate-x-1/2 rounded-full bg-ink/25 blur-[1px]" />
+          <span className="absolute left-1/2 top-full h-1.5 w-4 -translate-x-1/2 rounded-full bg-black/25 blur-[1px]" />
         </div>
       )}
     </div>

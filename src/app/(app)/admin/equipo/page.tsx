@@ -56,7 +56,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
             <form className="mb-4 flex gap-2" action="/admin/equipo">
               <label htmlFor="buscar-persona" className="sr-only">Buscar por nombre</label>
               <input id="buscar-persona" name="q" defaultValue={q} placeholder="Buscar por nombre" className="h-11 min-w-0 flex-1 rounded-[12px] border border-line-strong px-3 text-[16px] focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15" />
-              <button type="submit" className="h-11 rounded-[12px] bg-ink px-4 font-semibold text-white">Buscar</button>
+              <button type="submit" className="h-11 rounded-[12px] bg-ink px-4 font-semibold text-on-ink">Buscar</button>
             </form>
             {q && people.length === 0 && <p className="text-[15px] text-muted">No encontramos a nadie con «{q}».</p>}
             {people.length > 0 && (

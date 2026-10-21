@@ -11,7 +11,7 @@ type Entity = 'business' | 'tourism_place' | 'eco_route';
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const primaryLink =
-  'inline-flex min-h-[52px] w-full select-none items-center justify-center gap-2.5 rounded-[14px] bg-brand px-5 text-base font-semibold text-white shadow-sm transition-colors hover:bg-brand-strong sm:w-auto';
+  'inline-flex min-h-[52px] w-full select-none items-center justify-center gap-2.5 rounded-[14px] bg-brand px-5 text-base font-semibold text-on-brand shadow-sm transition-colors hover:bg-brand-strong sm:w-auto';
 const secondaryLink =
   'inline-flex min-h-[52px] w-full select-none items-center justify-center gap-2 rounded-[14px] border border-line-strong bg-surface px-5 text-base font-semibold text-ink transition-colors hover:bg-canvas sm:w-auto';
 

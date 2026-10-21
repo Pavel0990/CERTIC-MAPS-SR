@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Lexend, Nunito } from 'next/font/google';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { ServiceWorker } from '@/components/shared/service-worker';
 import { ToastProvider } from '@/components/ui/toast';
 import './globals.css';
@@ -17,11 +17,14 @@ export const metadata: Metadata = {
   applicationName: 'SR Conecta',
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, title: 'SR Conecta', statusBarStyle: 'default' },
-  icons: { icon: '/icons/icon.svg', apple: '/icons/icon-192.png' },
+  icons: { icon: [{ url: '/icons/icon.svg', type: 'image/svg+xml' }, { url: '/icons/favicon-32.png', sizes: '32x32' }], apple: '/icons/apple-touch-icon.png' },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#111418',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f3f4f6' },
+    { media: '(prefers-color-scheme: dark)', color: '#0e1114' },
+  ],
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
@@ -30,10 +33,13 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Leer las cabeceras hace el render dinámico, requisito para que Next aplique el nonce de la CSP (src/proxy.ts).
   await headers();
+  // Apariencia elegida en Perfil (cookie "tema"). Sin cookie: la del teléfono (prefers-color-scheme).
+  const tema = (await cookies()).get('tema')?.value;
+  const theme = tema === 'dark' || tema === 'light' ? tema : undefined;
   return (
-    <html lang="es-DO" className={`${body.variable} ${display.variable}`}>
+    <html lang="es-DO" data-theme={theme} className={`${body.variable} ${display.variable}`}>
       <body className="min-h-dvh font-sans antialiased">
-        <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded-lg focus:bg-ink focus:px-4 focus:py-2 focus:text-white">
+        <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded-lg focus:bg-ink focus:px-4 focus:py-2 focus:text-on-ink">
           Saltar al contenido
         </a>
         <ToastProvider>{children}</ToastProvider>

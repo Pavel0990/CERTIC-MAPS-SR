@@ -37,7 +37,7 @@ export default async function RoutesPage({ searchParams }: { searchParams: Promi
                 key={r.id}
                 href={`/rutas/${r.id}`}
                 icon={<Footprints className="size-6" />}
-                iconClass="bg-[#ccfbf1] text-[#0f766e]"
+                iconClass="bg-route-soft text-route-strong"
                 title={r.name}
                 subtitle={[km(r.distance_km), ROUTE_KIND[r.kind], r.municipality].filter(Boolean).join(' · ')}
                 badge={

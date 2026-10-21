@@ -40,7 +40,7 @@ export function ServiceWorker() {
 
   if (!waiting) return null;
   return (
-    <div role="status" className="fixed inset-x-3 bottom-[calc(80px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-md items-center gap-3 rounded-[16px] bg-ink p-3 pl-4 text-white shadow-lg md:bottom-6">
+    <div role="status" className="fixed inset-x-3 bottom-[calc(80px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-md items-center gap-3 rounded-[16px] bg-ink p-3 pl-4 text-on-ink shadow-lg md:bottom-6">
       <Sparkles className="size-5 shrink-0 text-warn-bright" aria-hidden />
       <span className="flex-1 text-[15px]">Hay una versión nueva de SR Conecta.</span>
       <Button size="sm" variant="soft" onClick={() => { updateRequested.current = true; waiting.postMessage({ type: 'SKIP_WAITING' }); }}>

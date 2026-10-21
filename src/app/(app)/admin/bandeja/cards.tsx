@@ -77,7 +77,7 @@ function EscalateButton({ id, categories }: { id: string; categories: { code: st
           setOpen(false);
           router.refresh();
         })}
-        className="h-10 rounded-[10px] bg-ink px-3 text-sm font-semibold text-white"
+        className="h-10 rounded-[10px] bg-ink px-3 text-sm font-semibold text-on-ink"
       >
         Crear reporte municipal
       </button>
