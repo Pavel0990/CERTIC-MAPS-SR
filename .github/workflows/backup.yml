@@ -53,7 +53,7 @@ jobs:
           rm "$name"
           echo "BACKUP_FILE=$name.enc" >> "$GITHUB_ENV"
           ls -la "$name.enc"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ env.BACKUP_FILE }}
           path: ${{ env.BACKUP_FILE }}
