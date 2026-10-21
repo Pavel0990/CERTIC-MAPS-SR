@@ -9,6 +9,11 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    # Las versiones mayores (TypeScript 7, ESLint 10…) cambian APIs: se planean a mano, no llegan solas.
+    # Los avisos de seguridad siguen llegando aunque sean de versión mayor.
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
     groups:
       dependencias:
         patterns: ['*']
@@ -18,3 +23,6 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
