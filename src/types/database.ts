@@ -836,6 +836,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_version: number | null
           created_at: string
           display_name: string
           home_municipality_id: string | null
@@ -846,6 +847,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          avatar_version?: number | null
           created_at?: string
           display_name: string
           home_municipality_id?: string | null
@@ -856,6 +858,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          avatar_version?: number | null
           created_at?: string
           display_name?: string
           home_municipality_id?: string | null
@@ -1639,6 +1642,10 @@ export type Database = {
       }
       set_business_hours: {
         Args: { p_business_id: string; p_hours: Json }
+        Returns: Json
+      }
+      set_avatar: {
+        Args: { p_present: boolean }
         Returns: Json
       }
       set_request_public: {

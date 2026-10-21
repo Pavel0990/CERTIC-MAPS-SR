@@ -8,6 +8,7 @@ type AttachmentInfo = { id: string; bucket: string; path: string; status: string
 
 const PRIVATE_BUCKET = 'report-evidence';
 const PUBLIC_BUCKET = 'public-media';
+const AVATAR_BUCKET = 'avatars'; // fotos de perfil: se borran al dar de baja la cuenta
 
 async function attachmentInfo(supabase: ServiceSupabase, id: string) {
   const { data, error } = await supabase.rpc('worker_attachment_info', { p_id: id });
@@ -88,7 +89,7 @@ export function mediaJobHandlers(supabase: ServiceSupabase): JobHandlers {
     async delete_storage_object(job) {
       const { bucket, path } = job.payload as { bucket?: unknown; path?: unknown };
       if (typeof bucket !== 'string' || typeof path !== 'string' || !path) throw new PermanentJobError('payload sin bucket/path');
-      if (![PRIVATE_BUCKET, PUBLIC_BUCKET].includes(bucket)) throw new PermanentJobError(`bucket no permitido: ${bucket}`);
+      if (![PRIVATE_BUCKET, PUBLIC_BUCKET, AVATAR_BUCKET].includes(bucket)) throw new PermanentJobError(`bucket no permitido: ${bucket}`);
       const { error } = await supabase.storage.from(bucket).remove([path]); // borrar algo que ya no existe no es error
       if (error) throw new Error(`borrado ${bucket}/${path}: ${error.message}`);
     },

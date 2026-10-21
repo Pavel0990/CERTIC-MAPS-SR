@@ -11,6 +11,7 @@ export interface Viewer {
   email: string | null;
   displayName: string;
   homeMunicipalityId: string | null;
+  avatarVersion: number | null;
   roles: RoleScope[];
   isStaff: boolean;
   isAdmin: boolean;
@@ -30,7 +31,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   if (!claims?.sub) return null;
 
   const [{ data: profile }, { data: roles }] = await Promise.all([
-    supabase.from('profiles').select('display_name, home_municipality_id').eq('id', claims.sub).maybeSingle(),
+    supabase.from('profiles').select('display_name, home_municipality_id, avatar_version').eq('id', claims.sub).maybeSingle(),
     supabase.from('user_roles').select('role, municipality_id').eq('user_id', claims.sub),
   ]);
   const scopes = (roles ?? []) as RoleScope[];
@@ -40,6 +41,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     email: (claims.email as string | undefined) ?? null,
     displayName: profile?.display_name || (claims.email as string | undefined)?.split('@')[0] || 'Vecino',
     homeMunicipalityId: profile?.home_municipality_id ?? null,
+    avatarVersion: profile?.avatar_version ?? null,
     roles: scopes,
     isStaff: has('moderator') || has('municipal_admin'),
     isAdmin: has('municipal_admin'),

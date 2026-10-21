@@ -8,6 +8,8 @@ import { requireViewer } from '@/lib/auth';
 import { getCatalogs } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
 import { publicEnv } from '@/config/env';
+import { avatarUrl } from '@/modules/media';
+import { AvatarEditor } from './avatar-editor';
 import { PreferencesForm, ProfileForm } from './forms';
 import { PushToggle } from './push-toggle';
 import { SignOutButton } from './sign-out-button';
@@ -28,6 +30,7 @@ export default async function ProfilePage() {
     <PageShell title={viewer.displayName} eyebrow={roleLabel} description={viewer.email}>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_300px]">
         <div className="flex flex-col gap-4">
+          <AvatarEditor userId={viewer.id} name={viewer.displayName} src={avatarUrl(viewer.id, viewer.avatarVersion)} />
           <Card className="p-5">
             <h2 className="mb-4 text-lg font-bold">Tus datos</h2>
             <ProfileForm name={viewer.displayName} municipalityId={viewer.homeMunicipalityId} municipalities={catalogs.municipalities} />
@@ -75,7 +78,7 @@ function MenuLink({ href, icon, label, badge = 0 }: { href: string; icon: React.
     <Link href={href} className="flex items-center gap-3 border-b border-line px-5 py-4 font-semibold last:border-0 hover:bg-[#fafbfc]">
       <span className="text-muted" aria-hidden>{icon}</span>
       <span className="flex-1">{label}</span>
-      {badge > 0 && <span className="rounded-full bg-danger px-2 py-0.5 text-[13px] font-bold text-white">{badge} sin leer</span>}
+      {badge > 0 && <span className="whitespace-nowrap rounded-full bg-danger px-2 py-0.5 text-[13px] font-bold text-white">{badge} sin leer</span>}
       <ChevronRight className="size-4 text-subtle" aria-hidden />
     </Link>
   );

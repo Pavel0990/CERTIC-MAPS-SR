@@ -1,4 +1,5 @@
 import { AppNav } from '@/components/shared/app-nav';
+import { avatarUrl } from '@/modules/media';
 import { countUnread } from '@/modules/notifications/server';
 import { getViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
@@ -10,7 +11,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-dvh md:pl-[88px]">
       {viewer && <OutboxSync />}
-      <AppNav signedIn={!!viewer} isStaff={!!viewer?.isStaff} isEntrepreneur={!!viewer?.isEntrepreneur} unread={unread} />
+      <AppNav signedIn={!!viewer} isStaff={!!viewer?.isStaff} isEntrepreneur={!!viewer?.isEntrepreneur} unread={unread}
+        avatar={viewer ? { src: avatarUrl(viewer.id, viewer.avatarVersion), name: viewer.displayName } : null} />
       <main id="contenido" className="pb-[calc(68px+env(safe-area-inset-bottom))] md:pb-0">
         {children}
       </main>

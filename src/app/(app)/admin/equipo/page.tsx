@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import { listTeam, scopeMunicipalities, searchPeople } from '@/modules/admin/server';
 import { Card, Eyebrow, Notice } from '@/components/ui/primitives';
 import { Badge } from '@/components/ui/primitives';
+import { Avatar } from '@/components/ui/avatar';
+import { avatarUrl } from '@/modules/media';
 import { requireStaff } from '@/lib/auth';
 import { getCatalogs } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
@@ -33,6 +35,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
           <ul>
             {team.map((t) => (
               <li key={t.id} className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3 last:border-0">
+                <Avatar src={avatarUrl(t.user_id, t.avatar_version)} name={t.name} size={40} />
                 <span className="min-w-0 flex-1">
                   <span className="block font-semibold">{t.name}{t.user_id === viewer.id ? ' (tú)' : ''}</span>
                   <span className="text-sm text-muted">{t.municipality_id ? muni.get(t.municipality_id) : 'Toda la provincia'}</span>

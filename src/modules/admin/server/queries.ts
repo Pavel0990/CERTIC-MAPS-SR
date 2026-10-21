@@ -115,9 +115,9 @@ export async function listAudit(supabase: ServerSupabase, opts: { action?: strin
 export async function listTeam(supabase: ServerSupabase) {
   const { data: roles } = await supabase.from('user_roles').select('id, user_id, role, municipality_id, created_at').in('role', ['moderator', 'municipal_admin']).order('created_at');
   const ids = [...new Set((roles ?? []).map((r) => r.user_id))];
-  const { data: profiles } = ids.length ? await supabase.from('profiles').select('id, display_name').in('id', ids) : { data: [] };
-  const names = new Map((profiles ?? []).map((p) => [p.id, p.display_name]));
-  return (roles ?? []).map((r) => ({ ...r, name: names.get(r.user_id) ?? 'Usuario' }));
+  const { data: profiles } = ids.length ? await supabase.from('profiles').select('id, display_name, avatar_version').in('id', ids) : { data: [] };
+  const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
+  return (roles ?? []).map((r) => ({ ...r, name: byId.get(r.user_id)?.display_name ?? 'Usuario', avatar_version: byId.get(r.user_id)?.avatar_version ?? null }));
 }
 
 /** Buscar personas registradas por nombre (el personal puede leer perfiles, §10.2). */

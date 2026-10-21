@@ -29,14 +29,14 @@ create table storage.buckets (
 create table storage.objects (
   id uuid primary key default gen_random_uuid(),
   bucket_id text references storage.buckets (id), name text not null, owner uuid, metadata jsonb,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(), updated_at timestamptz default now()
 );
 alter table storage.objects enable row level security;
 create function storage.foldername(name text) returns text[] language sql immutable as $$
   select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1]
 $$;
 grant usage on schema storage to anon, authenticated, service_role;
-grant select, insert on storage.objects to anon, authenticated;
+grant select, insert, update, delete on storage.objects to anon, authenticated;  -- como en Supabase: decide RLS
 grant execute on function storage.foldername(text) to anon, authenticated;
 
 create schema realtime;

@@ -4,9 +4,25 @@ import { headers } from 'next/headers';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { registerPushDevice, savePreferences as storePreferences, TOPICS, unregisterPushDevice } from '@/modules/notifications/server';
+import { setAvatar } from '@/modules/media/server';
 import { updateOwnProfile } from '@/lib/auth';
+import type { RpcResult } from '@/lib/http';
 
 export type FormState = { ok?: boolean; error?: string };
+
+/** Foto de perfil: el archivo ya se subió (o borró) desde el teléfono; aquí se registra su versión (RPC set_avatar). */
+export async function saveAvatar(present: boolean): Promise<RpcResult> {
+  if (typeof present !== 'boolean') return { status: 'rejected', reason: 'invalid_input' };
+  try {
+    const r = await setAvatar(await createClient(), present);
+    if (r.status === 'ok') {
+      revalidatePath('/', 'layout'); // la foto también aparece en la barra de navegación
+    }
+    return r;
+  } catch {
+    return { status: 'rejected', reason: 'upload_failed' };
+  }
+}
 
 const profileSchema = z.object({
   display_name: z.string().trim().min(2, 'Escribe tu nombre (al menos 2 letras).').max(80),

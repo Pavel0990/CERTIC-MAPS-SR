@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Activity, Home, LayoutDashboard, Map, Plus, Store, User } from 'lucide-react';
+import { Avatar } from '@/components/ui/avatar';
 import { cn } from '@/utils/cn';
 import { Logo } from './logo';
 
@@ -10,6 +11,7 @@ interface NavProps {
   isStaff: boolean;
   isEntrepreneur: boolean;
   unread: number;
+  avatar: { src: string | null; name: string } | null;
 }
 
 const TABS = [
@@ -20,7 +22,9 @@ const TABS = [
   { href: '/perfil', label: 'Perfil', icon: User, match: (p: string) => p.startsWith('/perfil') || p.startsWith('/notificaciones') || p.startsWith('/entrar') },
 ];
 
-export function AppNav({ signedIn, isStaff, isEntrepreneur, unread }: NavProps) {
+export function AppNav({ signedIn, isStaff, isEntrepreneur, unread, avatar }: NavProps) {
+  // Con sesión, la pestaña Perfil lleva la foto de la persona (o sus iniciales)
+  const profileIcon = (size: number) => (avatar ? <Avatar src={avatar.src} name={avatar.name} size={size} priority /> : null);
   const pathname = usePathname();
   const tabs = TABS.map((t) => (t.href === '/perfil' && !signedIn ? { ...t, href: '/entrar', label: 'Entrar' } : t));
 
@@ -33,7 +37,7 @@ export function AppNav({ signedIn, isStaff, isEntrepreneur, unread }: NavProps) 
         </Link>
         {tabs.map((t) => (
           <RailLink key={t.href} href={t.href} label={t.label} active={t.match(pathname)} primary={t.primary} badge={t.href === '/perfil' ? unread : 0}>
-            <t.icon className="size-[22px]" aria-hidden />
+            {(t.href === '/perfil' && profileIcon(24)) || <t.icon className="size-[22px]" aria-hidden />}
           </RailLink>
         ))}
         <div className="mt-auto flex flex-col items-center gap-1">
@@ -68,7 +72,7 @@ export function AppNav({ signedIn, isStaff, isEntrepreneur, unread }: NavProps) 
                     </span>
                   ) : (
                     <span className={cn('flex h-8 w-14 items-center justify-center rounded-full transition-colors duration-200', active && 'bg-brand-soft text-brand-strong')}>
-                      <t.icon className="size-[22px]" aria-hidden />
+                      {(t.href === '/perfil' && profileIcon(26)) || <t.icon className="size-[22px]" aria-hidden />}
                     </span>
                   )}
                   <span className={t.primary ? 'text-danger-strong' : undefined}>{t.label}</span>

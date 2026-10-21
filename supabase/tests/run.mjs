@@ -706,6 +706,33 @@ ok('U5 la auditoría detecta una tabla nueva sin RLS', caught.some((r) => r.obje
 // ---------------------------------------------------------------------------------------------
 // L. Mantenimiento y privacidad
 // ---------------------------------------------------------------------------------------------
+// Foto de perfil (bucket avatars): un archivo por persona, sin listar, versión solo por RPC
+lastStep = 'avatares';
+await as(db, U.ana, `insert into storage.objects (bucket_id, name) values ('avatars', $1)`, [`${U.ana}.webp`]);
+const av1 = await rpc(U.ana, `public.set_avatar(true)`);
+const av2 = await rpc(U.ana, `public.set_avatar(true)`);
+ok('AV1 la persona sube su foto y la versión sube con cada cambio', av1.status === 'ok' && av1.avatar_version === 1 && av2.avatar_version === 2,
+   JSON.stringify([av1, av2]));
+await expectError('AV2 no se escribe la foto de otra persona',
+  () => as(db, U.ana, `insert into storage.objects (bucket_id, name) values ('avatars', $1)`, [`${U.beto}.webp`]), /row-level security/);
+await expectError('AV3 solo la ruta {uid}.webp (sin carpetas ni otros nombres)',
+  () => as(db, U.ana, `insert into storage.objects (bucket_id, name) values ('avatars', $1)`, [`${U.ana}/otra.webp`]), /row-level security/);
+const avMissing = await rpc(U.beto, `public.set_avatar(true)`);
+ok('AV4 sin archivo subido no hay versión (avatar_missing)', avMissing.reason === 'avatar_missing', JSON.stringify(avMissing));
+await expectError('AV5 la versión no se cambia directamente en la tabla',
+  () => as(db, U.ana, `update public.profiles set avatar_version = 99 where id = $1`, [U.ana]), /permission denied/);
+const fast = await as(db, U.ana, `update storage.objects set metadata = '{}'::jsonb where bucket_id = 'avatars' and name = $1 returning name`, [`${U.ana}.webp`]);
+await db.query(`update storage.objects set updated_at = now() - interval '1 minute' where bucket_id = 'avatars' and name = $1`, [`${U.ana}.webp`]);
+const slow = await as(db, U.ana, `update storage.objects set metadata = '{}'::jsonb where bucket_id = 'avatars' and name = $1 returning name`, [`${U.ana}.webp`]);
+ok('AV6 reemplazar la foto: como máximo una vez cada 10 segundos', fast.rows.length === 0 && slow.rows.length === 1);
+const listAnon = await as(db, null, `select name from storage.objects where bucket_id = 'avatars'`);
+const listOther = await as(db, U.beto, `select name from storage.objects where bucket_id = 'avatars'`);
+ok('AV7 nadie puede listar el bucket de fotos de perfil', listAnon.rows.length === 0 && listOther.rows.length === 0);
+const avOff = await rpc(U.ana, `public.set_avatar(false)`);
+const avOn = await rpc(U.ana, `public.set_avatar(true)`);
+ok('AV8 quitar la foto deja la versión vacía; volver a ponerla funciona', avOff.status === 'ok' && avOff.avatar_version === null && avOn.status === 'ok');
+
+// ---------------------------------------------------------------------------------------------
 await db.query(`update public.traffic_reports set expires_at = created_at + interval '1 second' where id = $1`, [t1.id]);
 await db.query(`select pg_sleep(1.1)`);
 const expired = await one(`select private.expire_traffic_reports() n`);
@@ -722,6 +749,8 @@ const afterDel = await one(`select
 ok('L3 borrar la cuenta: perfil eliminado, reportes anonimizados, historial intacto',
    afterDel.profiles === 0 && afterDel.anon_traffic === 1 && afterDel.anon_request === 1 && afterDel.history === 5,
    JSON.stringify(afterDel));
+const avDel = await one(`select count(*)::int n from private.jobs where kind = 'delete_storage_object' and payload->>'bucket' = 'avatars' and payload->>'path' = $1`, [`${U.ana}.webp`]);
+ok('AV9 al borrar la cuenta se encola el borrado de su foto de perfil', avDel.n === 1, JSON.stringify(avDel));
 const ret = await one(`select private.apply_retention() r`);
 ok('L4 la retención se ejecuta sin errores', typeof ret.r === 'object', JSON.stringify(ret.r));
 

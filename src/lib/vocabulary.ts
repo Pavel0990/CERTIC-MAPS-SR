@@ -116,6 +116,12 @@ const REASON_MESSAGE: Record<string, string> = {
   already_registered: 'Esa foto ya estaba guardada.',
   last_active: 'Tiene que quedar al menos una opción activa.',
   invalid_catalog: 'Ese catálogo no existe.',
+  avatar_missing: 'La foto no terminó de subir. Inténtalo otra vez.',
+  not_image: 'Ese archivo no es una foto. Elige una imagen de tu galería.',
+  no_webp: 'Tu navegador no puede preparar la foto. Prueba desde Chrome o actualiza el navegador.',
+  too_large: 'Esa foto tiene demasiado detalle. Prueba con otra.',
+  upload_failed: 'No se pudo subir la foto. Revisa tu conexión e inténtalo otra vez.',
+  delete_failed: 'No se pudo quitar la foto. Inténtalo otra vez.',
 };
 
 export const reasonMessage = (reason?: string | null) =>
