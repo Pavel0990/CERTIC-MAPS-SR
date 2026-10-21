@@ -64,6 +64,8 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
   const incidents = catalogs.requestCategories.filter((c) => c.kind === 'incident');
   const inquiries = catalogs.requestCategories.filter((c) => c.kind === 'inquiry');
   const isInquiry = choice?.flow === 'request' && choice.kind === 'inquiry';
+  // "No es en un lugar" solo existe para consultas: si se cambia a tránsito o incidencia, vuelve a pedirse el punto
+  const noPlaceEff = isInquiry && noPlace;
 
   function pick(c: Choice) {
     setChoice(c);
@@ -80,11 +82,11 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
     } else if (s.status !== 'idle' && s.status !== 'locating') toast.show(GEO_MESSAGE[s.status], 'error');
   }
 
-  const locationOk = noPlace ? !!municipalityId : !!point;
+  const locationOk = noPlaceEff ? !!municipalityId : !!point;
   const detailsOk = choice?.flow === 'traffic' || (title.trim().length >= 3 && description.trim().length >= 10);
 
   async function submit() {
-    if (!choice) return;
+    if (!choice || (!noPlaceEff && !point)) return;
     setBusy(true);
     setError(null);
     const payload =
@@ -92,19 +94,25 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
         ? { type: choice.code, lat: point!.lat, lng: point!.lng, severity, description: description.trim() || undefined }
         : {
             kind: choice.kind, category: choice.code, title: title.trim(), description: description.trim(),
-            ...(noPlace ? { municipalityId } : { lat: point!.lat, lng: point!.lng }),
+            ...(noPlaceEff ? { municipalityId } : { lat: point!.lat, lng: point!.lng }),
           };
-    const r = await sendOrQueue(
-      { id: key, kind: choice.flow, payload, photos: photos.photos.map((p) => p.blob) },
-      (entity, id, blobs) => uploadPhotos(entity, id, blobs),
-    );
-    setBusy(false);
-    if (r.outcome === 'rejected') {
-      setError(reasonMessage(r.reason));
-      if (['out_of_area', 'invalid_coordinates', 'location_required'].includes(r.reason)) setStep(2);
-      return;
+    try {
+      const r = await sendOrQueue(
+        { id: key, kind: choice.flow, payload, photos: photos.photos.map((p) => p.blob) },
+        (entity, id, blobs) => uploadPhotos(entity, id, blobs),
+      );
+      if (r.outcome === 'rejected') {
+        setError(reasonMessage(r.reason));
+        if (['out_of_area', 'invalid_coordinates', 'location_required'].includes(r.reason)) setStep(2);
+        return;
+      }
+      setResult(r);
+    } catch {
+      // Sin IndexedDB (modo privado) o fallo inesperado: se avisa y se puede reintentar; el botón nunca queda girando
+      setError(reasonMessage('unavailable'));
+    } finally {
+      setBusy(false);
     }
-    setResult(r);
   }
 
   if (result) return <Done result={result} flow={choice!.flow} headingRef={heading} />;
@@ -145,7 +153,7 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
               <span className="text-[16px] font-semibold">No es en un lugar específico</span>
             </label>
           )}
-          {noPlace ? (
+          {noPlaceEff ? (
             <div className="mt-4">
               <Field label="¿De qué municipio es?">
                 {(a) => (
@@ -178,7 +186,7 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
             </>
           )}
           <Button size="lg" className="mt-5" disabled={!locationOk} onClick={() => { setError(null); setStep(3); }}>
-            {noPlace ? 'Seguir' : 'El pin está en el lugar'}
+            {noPlaceEff ? 'Seguir' : 'El pin está en el lugar'}
           </Button>
         </section>
       )}

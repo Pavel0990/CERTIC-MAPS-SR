@@ -1,6 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { Camera, Trash2 } from 'lucide-react';
 import { cropAvatar, deleteAvatar, uploadAvatar } from '@/modules/media';
 import { Avatar } from '@/components/ui/avatar';
@@ -18,6 +18,8 @@ export function AvatarEditor({ userId, name, src }: { userId: string; name: stri
   const [preview, setPreview] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const shown = preview ?? src;
+  // La vista previa (blob:) se libera al cambiarla y al salir de la pantalla
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
 
   const fail = (e: unknown) => toast.show(reasonMessage(e instanceof Error ? e.message : 'upload_failed'), 'error');
 
@@ -27,7 +29,7 @@ export function AvatarEditor({ userId, name, src }: { userId: string; name: stri
       try {
         const blob = await cropAvatar(file);
         const url = URL.createObjectURL(blob);
-        setPreview((old) => { if (old) URL.revokeObjectURL(old); return url; }); // se ve al instante, mientras sube
+        setPreview(url); // se ve al instante, mientras sube
         await uploadAvatar(userId, blob);
         const r = await saveAvatar(true);
         if (r.status === 'rejected') throw new Error(r.reason);
@@ -45,9 +47,10 @@ export function AvatarEditor({ userId, name, src }: { userId: string; name: stri
   function remove() {
     start(async () => {
       try {
-        await deleteAvatar(userId);
+        // Primero se deja de mostrar (perfil sin versión) y después se borra el archivo: nunca queda una imagen rota
         const r = await saveAvatar(false);
         if (r.status === 'rejected') throw new Error(r.reason);
+        await deleteAvatar(userId).catch(() => undefined); // si fallara, el archivo queda huérfano pero invisible
         setPreview(null);
         toast.show('Quitamos tu foto.', 'ok');
         router.refresh();

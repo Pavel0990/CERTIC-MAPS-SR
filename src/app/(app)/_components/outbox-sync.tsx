@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { uploadPhotos } from '@/modules/media';
 import { useToast } from '@/components/ui/toast';
 import { flushOutbox } from '@/lib/outbox';
+import { reasonMessage } from '@/lib/vocabulary';
 
 let flushing = false; // una sola ejecución a la vez (StrictMode monta dos veces; 'online' puede repetirse)
 
@@ -20,11 +21,13 @@ export function OutboxSync() {
       if (flushing || !navigator.onLine) return;
       flushing = true;
       try {
-        const { sent } = await flushOutbox((entity, id, blobs) => uploadPhotos(entity, id, blobs));
+        const { sent, rejected } = await flushOutbox((entity, id, blobs) => uploadPhotos(entity, id, blobs));
         if (sent > 0) {
           toast.show(sent === 1 ? 'Enviamos el reporte que tenías pendiente.' : `Enviamos ${sent} reportes que tenías pendientes.`);
           router.refresh();
         }
+        // Un reporte guardado que el municipio no acepta (fuera de la provincia, límite de envíos…) se avisa con el motivo
+        for (const reason of rejected) toast.show(`Un reporte guardado no se pudo enviar: ${reasonMessage(reason)}`, 'error');
       } catch {
         // IndexedDB no disponible (modo privado): no hay cola que enviar
       } finally {

@@ -34,13 +34,17 @@ export async function uploadPhotos(entity: PhotoEntity, entityId: string, photos
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mime: 'image/jpeg' }),
-    });
-    const s = await sign.json();
+    }).catch(() => null);
+    const s = sign ? await sign.json().catch(() => ({})) : {};
+    if (!sign) {
+      errors.push('upload_failed');
+      continue;
+    }
     if (!sign.ok || s.status !== 'ok') {
       errors.push(s.reason ?? 'sign_failed');
       continue;
     }
-    const up = await supabase.storage.from(s.bucket).uploadToSignedUrl(s.path, s.token, photo, { contentType: 'image/jpeg' });
+    const up = await supabase.storage.from(s.bucket).uploadToSignedUrl(s.path, s.token, photo, { contentType: 'image/jpeg' }).catch(() => ({ error: true }));
     if (up.error) {
       errors.push('upload_failed');
       continue;
@@ -49,9 +53,9 @@ export async function uploadPhotos(entity: PhotoEntity, entityId: string, photos
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ entity, entityId, path: s.path }),
-    });
-    const r = await reg.json();
-    if (reg.ok && r.status === 'ok') ok++;
+    }).catch(() => null);
+    const r = reg ? await reg.json().catch(() => ({})) : {};
+    if (reg?.ok && r.status === 'ok') ok++;
     else errors.push(r.reason ?? 'register_failed');
   }
   return { ok, errors };

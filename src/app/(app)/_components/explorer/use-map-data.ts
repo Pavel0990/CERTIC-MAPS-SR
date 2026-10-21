@@ -19,6 +19,8 @@ export function useMapData(catalogs: ExplorerCatalogs) {
   const [degraded, setDegraded] = useState(false);
   const [live, setLive] = useState(false);
   const loaded = useRef<{ bbox: BBox; layers: string } | null>(null);
+  const seq = useRef(0); // número de pedido: solo se aplica la respuesta del último
+  const known = useRef(new Set<string>()); // alertas ya vistas (para no anunciar cambios de estado como nuevas)
   const lastView = useRef<{ bbox: BBox; zoom: number } | null>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -34,14 +36,18 @@ export function useMapData(catalogs: ExplorerCatalogs) {
     const key = [...ALL_LAYERS].join(',');
     if (!force && loaded.current && loaded.current.layers === key && containsBBox(loaded.current.bbox, snapped)) return;
     const qs = `bbox=${snapped.minLng},${snapped.minLat},${snapped.maxLng},${snapped.maxLat}&layers=${key}`;
+    const mine = ++seq.current;
     try {
       const r = await fetch(`/api/v1/map/features?${qs}`);
       if (!r.ok) throw new Error(String(r.status));
-      setData((await r.json()) as MapFeatureCollection);
+      const fc = (await r.json()) as MapFeatureCollection;
+      if (mine !== seq.current) return; // llegó tarde: ya hay un pedido más nuevo
+      setData(fc);
+      for (const f of fc.features) if (f.properties.layer === 'traffic') known.current.add(f.properties.id);
       loaded.current = { bbox: snapped, layers: key };
       setDegraded(false);
     } catch {
-      setDegraded(true);
+      if (mine === seq.current) setDegraded(true);
     }
   }, []);
 
@@ -73,7 +79,8 @@ export function useMapData(catalogs: ExplorerCatalogs) {
         };
         return { ...fc, features: [...rest, feature] };
       });
-      if (isLiveStatus(e.status)) toast.show(`Nueva alerta: ${catalogs.trafficTypes[e.type] ?? 'tránsito'}`, 'info');
+      if (isLiveStatus(e.status) && !known.current.has(e.id)) toast.show(`Nueva alerta: ${catalogs.trafficTypes[e.type] ?? 'tránsito'}`, 'info');
+      if (isLiveStatus(e.status)) known.current.add(e.id);
     },
     setLive,
   );

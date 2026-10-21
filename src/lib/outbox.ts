@@ -76,6 +76,8 @@ async function attempt(
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Idempotency-Key': item.id },
       body: JSON.stringify({ ...item.payload, idempotencyKey: item.id }),
+      // Señal débil (hay "red" pero nada pasa): a los 20 s se guarda en la cola en vez de esperar sin fin
+      signal: AbortSignal.timeout(20_000),
     });
   } catch {
     await outbox.add({ ...item, attempts: item.attempts + 1 });
@@ -85,7 +87,8 @@ async function attempt(
     await outbox.add({ ...item, state: 'needs_login' });
     return { outcome: 'needs_login' };
   }
-  if (res.status >= 500) {
+  // Errores pasajeros (servidor, demasiadas solicitudes, tiempo agotado): se reintenta más tarde
+  if (res.status >= 500 || res.status === 408 || res.status === 429) {
     await outbox.add({ ...item, attempts: item.attempts + 1 });
     return { outcome: 'queued' };
   }
@@ -95,8 +98,11 @@ async function attempt(
     return { outcome: 'rejected', reason: String(body.reason ?? (body.error as { code?: string } | undefined)?.code ?? 'unknown') };
   }
   const entityId = String(body.id ?? body.request_id ?? '');
-  const photos = item.photos.length && entityId ? await uploadPhotos(ENTITY[item.kind], entityId, item.photos) : { errors: [] };
+  // El reporte ya existe: sale de la cola ANTES de las fotos, así un corte durante la subida no las duplica
   await outbox.remove(item.id);
+  const photos = item.photos.length && entityId
+    ? await uploadPhotos(ENTITY[item.kind], entityId, item.photos).catch(() => ({ errors: ['upload_failed'] }))
+    : { errors: [] };
   return { outcome: 'sent', entityId, response: body, photoErrors: photos.errors };
 }
 
@@ -104,10 +110,12 @@ async function attempt(
 export async function flushOutbox(uploadPhotos: Parameters<typeof sendOrQueue>[1]) {
   const items = (await outbox.all()).filter((i) => i.state !== 'rejected');
   let sent = 0;
+  const rejected: string[] = []; // motivos, para avisar: un reporte guardado nunca desaparece en silencio
   for (const it of items) {
     const r = await attempt({ ...it, state: 'pending' }, uploadPhotos);
     if (r.outcome === 'sent') sent++;
+    if (r.outcome === 'rejected') rejected.push(r.reason);
     if (r.outcome === 'queued') break; // sigue sin red: no insistir con el resto
   }
-  return { sent, remaining: (await outbox.all()).length };
+  return { sent, rejected, remaining: (await outbox.all()).length };
 }

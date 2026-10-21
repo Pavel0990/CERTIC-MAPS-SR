@@ -1,3 +1,5 @@
+'use client';
+import { useState } from 'react';
 import { cn } from '@/utils/cn';
 
 /** Iniciales para cuando no hay foto: "Ana María Pérez" → "AP". */
@@ -15,11 +17,12 @@ export function initials(name: string) {
  * la foto ya viene en 256×256 WebP desde la CDN de Supabase, así que no hay nada que reprocesar.
  */
 export function Avatar({ src, name, size = 40, className, priority = false }: { src: string | null; name: string; size?: number; className?: string; priority?: boolean }) {
+  const [failed, setFailed] = useState<string | null>(null); // la URL que no cargó: con otra foto se vuelve a intentar
   const style = { width: size, height: size, fontSize: Math.max(11, Math.round(size * 0.38)) };
-  if (src) {
+  if (src && failed !== src) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- archivo pequeño ya optimizado y cacheado por la CDN de Supabase
-      <img src={src} alt="" width={size} height={size} loading={priority ? 'eager' : 'lazy'} decoding="async" style={style}
+      <img src={src} alt="" width={size} height={size} loading={priority ? 'eager' : 'lazy'} decoding="async" style={style} onError={() => setFailed(src)}
         className={cn('shrink-0 rounded-full bg-canvas object-cover', className)} />
     );
   }

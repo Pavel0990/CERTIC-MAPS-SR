@@ -34,12 +34,15 @@ export function BusinessForm({ initial }: { initial: BusinessFormValues }) {
       onSubmit={(e) => {
         e.preventDefault();
         // La versión sube en cada guardado: se toma la que manda el servidor tras refrescar
-        run(() => saveBusiness({ ...v, version: initial.version }), 'Guardamos los datos del negocio.');
+        run(() => saveBusiness({ ...v, version: initial.version }), (r) =>
+          r.extra?.business_status === 'under_review'
+            ? 'Guardamos los cambios. Como cambiaste el nombre o la web, el municipio los revisará antes de volver a mostrar tu negocio en el mapa.'
+            : 'Guardamos los datos del negocio.');
       }}
       className="flex flex-col gap-5"
     >
       {error && <ErrorNote>{error}</ErrorNote>}
-      <Field label="Nombre">{(a) => <Input {...a} value={v.name} maxLength={120} required onChange={set('name')} />}</Field>
+      <Field label="Nombre" hint="Si cambias el nombre o la página web, el municipio lo revisa otra vez antes de mostrarlo.">{(a) => <Input {...a} value={v.name} maxLength={120} required onChange={set('name')} />}</Field>
       <Field label="¿Qué ofreces?" optional>{(a) => <Textarea {...a} value={v.description} maxLength={2000} onChange={set('description')} />}</Field>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="WhatsApp" optional>{(a) => <Input {...a} type="tel" inputMode="tel" value={v.whatsapp} maxLength={20} onChange={set('whatsapp')} />}</Field>

@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { useToast } from '@/components/ui/toast';
 
-type SaveResult = { status: string; message?: string; reason?: string };
+type SaveResult = { status: string; message?: string; reason?: string; extra?: Record<string, unknown> };
 
 /**
  * Guardar con una Server Action del frente de contenido (ActionResult).
@@ -16,16 +16,22 @@ export function useSave() {
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  function run(fn: () => Promise<SaveResult>, ok: string, then?: string | (() => void)) {
+  function run(fn: () => Promise<SaveResult>, ok: string | ((r: SaveResult) => string), then?: string | (() => void)) {
     setError(null);
     start(async () => {
-      const r = await fn();
+      let r: SaveResult;
+      try {
+        r = await fn();
+      } catch {
+        setError('No pudimos guardar. Revisa tu conexión e inténtalo otra vez.');
+        return;
+      }
       if (r.status === 'rejected') {
         setError(r.message ?? 'No se pudo guardar.');
         if (r.reason === 'version_conflict') router.refresh();
         return;
       }
-      toast.show(ok);
+      toast.show(typeof ok === 'function' ? ok(r) : ok);
       if (typeof then === 'string') {
         router.push(then);
       } else {

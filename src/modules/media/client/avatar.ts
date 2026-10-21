@@ -21,11 +21,13 @@ export async function cropAvatar(file: File): Promise<Blob> {
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(bitmap, sx, sy, side, side, 0, 0, AVATAR_SIZE, AVATAR_SIZE);
   bitmap.close();
-  for (const quality of [0.82, 0.7, 0.55]) {
-    const blob = await canvas.convertToBlob({ type: 'image/webp', quality });
-    // Navegadores sin codificador WebP devuelven PNG: el bucket solo acepta WebP
-    if (blob.type !== 'image/webp') throw new Error('no_webp');
-    if (blob.size <= MAX_BYTES) return blob;
+  // WebP donde se puede; en iPhone (Safari no codifica WebP desde el canvas) se usa JPEG. Mismo tope de 64 KB.
+  for (const type of ['image/webp', 'image/jpeg'] as const) {
+    for (const quality of [0.82, 0.7, 0.55]) {
+      const blob = await canvas.convertToBlob({ type, quality });
+      if (blob.type !== type) break; // este navegador no sabe codificarlo: probar el siguiente formato
+      if (blob.size <= MAX_BYTES) return blob;
+    }
   }
   throw new Error('too_large');
 }
@@ -34,7 +36,7 @@ export async function cropAvatar(file: File): Promise<Blob> {
 export async function uploadAvatar(userId: string, blob: Blob) {
   const { error } = await getBrowserClient().storage.from(AVATAR_BUCKET).upload(avatarPath(userId), blob, {
     upsert: true,
-    contentType: 'image/webp',
+    contentType: blob.type === 'image/jpeg' ? 'image/jpeg' : 'image/webp',
     cacheControl: '31536000',
   });
   if (error) throw new Error(/10 seconds|row-level|policy/i.test(error.message) ? 'rate_limited' : 'upload_failed');

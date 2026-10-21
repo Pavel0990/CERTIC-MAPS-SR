@@ -57,7 +57,7 @@ ok('A4 authenticated sin escritura directa en tablas críticas', authWrite.lengt
 const privExec = await q(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
                           where n.nspname = 'private' and has_function_privilege('authenticated', p.oid, 'execute') order by 1`);
 ok('A5 authenticated solo ejecuta los helpers de RLS en private',
-   privExec.map(r => r.proname).join(',') === 'can_read_request,f_unaccent,is_admin,is_any_staff,is_business_member,is_provincial_admin,is_service,is_staff,local_today,reject,report_download_granted,upload_quota_ok',
+   privExec.map(r => r.proname).join(',') === 'attachment_municipality,can_read_evidence,can_read_request,f_unaccent,is_admin,is_any_staff,is_business_member,is_provincial_admin,is_service,is_staff,local_today,reject,report_download_granted,upload_granted,upload_quota_ok',
    privExec.map(r => r.proname).join(','));
 
 const definerNoPath = await q(`select n.nspname || '.' || p.proname f from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -350,8 +350,19 @@ ok('J4 deduplicación de trabajos pendientes',
 // ---------------------------------------------------------------------------------------------
 // K. Storage
 // ---------------------------------------------------------------------------------------------
-await as(db, U.ana, `insert into storage.objects (bucket_id, name) values ('report-evidence', $1)`, [`incoming/${U.ana}/foto.jpg`]);
-ok('K1 ciudadana sube a su carpeta incoming/{uid}', true);
+const grant = await rpc(U.ana, `public.request_upload('jpg')`);
+ok('K1 la ruta de subida la da la base: incoming/{uid}/{uuid}.jpg', grant.status === 'ok' && grant.path.startsWith(`incoming/${U.ana}/`) && grant.path.endsWith('.jpg'), JSON.stringify(grant));
+await as(db, U.ana, `insert into storage.objects (bucket_id, name) values ('report-evidence', $1)`, [grant.path]);
+await expectError('K1b sin permiso de subida no se acepta el archivo, aunque sea en su propia carpeta',
+  () => as(db, U.ana, `insert into storage.objects (bucket_id, name) values ('report-evidence', $1)`, [`incoming/${U.ana}/inventada.jpg`]),
+  /row-level security/);
+await expectError('K1c el permiso es de quien lo pidió: otra persona no lo puede usar',
+  async () => {
+    const g = await rpc(U.ana, `public.request_upload('png')`);
+    await as(db, U.beto, `insert into storage.objects (bucket_id, name) values ('report-evidence', $1)`, [g.path]);
+  }, /row-level security/);
+const extBad = await rpc(U.ana, `public.request_upload('exe')`);
+ok('K1d solo jpg, png o webp', extBad.reason === 'invalid_file', JSON.stringify(extBad));
 await expectError('K2 no puede subir a la carpeta de otro usuario',
   () => as(db, U.ana, `insert into storage.objects (bucket_id, name) values ('report-evidence', $1)`, [`incoming/${U.beto}/x.jpg`]),
   /row-level security/);
@@ -361,15 +372,42 @@ await expectError('K3 no puede escribir en el bucket público',
 // ---------------------------------------------------------------------------------------------
 // M. Fotos (F2), alertas sobre el mapa, edición de lugares y rutas (F3), agregados, salud y baja de cuenta
 // ---------------------------------------------------------------------------------------------
-const upload = (who, name, meta = { mimetype: 'image/jpeg', size: 120000 }) =>
-  as(db, who, `insert into storage.objects (bucket_id, name, metadata) values ('report-evidence', $1, $2::jsonb)`, [name, JSON.stringify(meta)]);
+const upload = async (who, name, meta = { mimetype: 'image/jpeg', size: 120000 }) => {
+  await db.query(`insert into private.upload_grants (path, user_id) values ($1, $2) on conflict do nothing`, [name, who]);
+  return as(db, who, `insert into storage.objects (bucket_id, name, metadata) values ('report-evidence', $1, $2::jsonb)`, [name, JSON.stringify(meta)]);
+};
 const tc = await createTraffic(U.cris, P.MON, 'cris-traffic-0001', 'accidente');
+const bizV = (await one(`select version, status from public.businesses where id = $1`, [biz.id]));
+const phoneEdit = await rpc(U.cris, `public.update_business($1, $2, '{"phone":"809-555-1234"}'::jsonb)`, [biz.id, bizV.version]);
+const afterPhone = await one(`select status, version from public.businesses where id = $1`, [biz.id]);
+const nameEdit = await rpc(U.cris, `public.update_business($1, $2, '{"name":"Café Monción Premium"}'::jsonb)`, [biz.id, afterPhone.version]);
+const afterName = await one(`select status from public.businesses where id = $1`, [biz.id]);
+const hiddenAnon = (await as(db, null, `select id from public.businesses where id = $1`, [biz.id])).rows.length;
+const reappr = await rpc(U.modMon, `public.review_content('business', $1, 'under_review', 'approved')`, [biz.id]);
+ok('SR3 si el dueño cambia el nombre (o la web) de un negocio aprobado, sale del mapa hasta que el municipio lo revise; el teléfono no',
+   bizV.status === 'approved' && phoneEdit.status === 'ok' && afterPhone.status === 'approved'
+   && nameEdit.business_status === 'under_review' && afterName.status === 'under_review' && hiddenAnon === 0 && reappr.status === 'ok',
+   JSON.stringify({ phoneEdit, nameEdit, afterName, hiddenAnon, reappr }));
 const p1 = `incoming/${U.cris}/foto-0001.jpg`;
 await upload(U.cris, p1);
 const a1 = await rpc(U.cris, `public.register_attachment('traffic_report', $1, $2)`, [tc.id, p1]);
 ok('M1 foto subida a su carpeta y registrada en su reporte (encolada para procesar)', a1.status === 'ok'
    && (await one(`select count(*)::int n from private.jobs where kind = 'image_process' and payload->>'attachment_id' = $1`, [a1.id])).n === 1,
    JSON.stringify(a1));
+
+// SR. Revisión de seguridad del 21/10: alcance de la evidencia, límite de firmas, negocio en revisión, push y foto de perfil
+const seenBy = async (who) => ({
+  row: (await as(db, who, `select id from public.attachments where id = $1`, [a1.id])).rows.length,
+  file: (await as(db, who, `select name from storage.objects where bucket_id = 'report-evidence' and name = $1`, [p1])).rows.length,
+});
+const evMon = await seenBy(U.modMon);
+const evSab = await seenBy(U.modSab);
+const evProv = await seenBy(U.admProv);
+ok('SR1 la evidencia privada la ve el personal de SU municipio y la provincia; el de otro municipio, no',
+   evMon.row === 1 && evMon.file === 1 && evProv.row === 1 && evSab.row === 0 && evSab.file === 0, JSON.stringify({ evMon, evSab, evProv }));
+let signs = 0;
+for (let i = 0; i < 25; i++) if ((await rpc(U.beto, `public.request_upload('jpg')`)).status === 'ok') signs++;
+ok('SR2 como máximo 20 permisos de subida por hora (antes se podían pedir URLs firmadas sin límite)', signs === 20, String(signs));
 await upload(U.beto, `incoming/${U.beto}/foto-0002.jpg`);
 const aForeign = await rpc(U.beto, `public.register_attachment('traffic_report', $1, $2)`, [tc.id, `incoming/${U.beto}/foto-0002.jpg`]);
 const aPath = await rpc(U.cris, `public.register_attachment('traffic_report', $1, $2)`, [tc.id, `incoming/${U.beto}/foto-0002.jpg`]);
@@ -570,8 +608,8 @@ ok('P4 entidad desconocida o ya revisada: no avisa a nadie',
 
 await db.query(`insert into public.notification_preferences (user_id, push_enabled, topics) values ($1, true, array['request_status'])
                 on conflict (user_id) do update set push_enabled = true, topics = array['request_status']`, [U.modMon]);
-await as(db, U.modMon, `insert into public.push_subscriptions (user_id, endpoint, p256dh, auth) values ($1, 'https://push.example.com/a', 'k', 'a'),
-                                                                                                      ($1, 'https://push.example.com/b', 'k', 'a')`, [U.modMon]);
+await db.query(`insert into public.push_subscriptions (user_id, endpoint, p256dh, auth) values ($1, 'https://fcm.googleapis.com/fcm/send/a', 'k', 'a'),
+                                                                                                      ($1, 'https://fcm.googleapis.com/fcm/send/b', 'k', 'a')`, [U.modMon]);
 const reqMon2 = await rpc(U.beto, `public.create_citizen_request('inquiry', 'consulta', 'Recogida de escombros', 'Quisiera saber cuándo pasan a recoger escombros.', 'beto-req-00103', null, null, $1)`, [muni.MON]);
 await rpc('service', `public.worker_notify_moderators('citizen_request', $1)`, [reqMon2.id]);
 const pushNotif = await one(`select id, push_status from public.notifications where payload->>'id' = $1 and user_id = $2`, [reqMon2.id, U.modMon]);
@@ -581,11 +619,11 @@ ok('P5 push activo: la notificación queda pendiente, con su job y sus dos dispo
    pushNotif.push_status === 'pending' && pushJob.n === 1 && payload.subscriptions.length === 2, JSON.stringify(payload));
 await expectError('P6 un usuario no puede leer los dispositivos ni el contenido de un push',
   () => rpc(U.modMon, `public.worker_push_payload($1)`, [pushNotif.id]), /permission denied/);
-await rpc('service', `public.worker_push_result($1, true, array['https://push.example.com/a'], array['https://push.example.com/b'])`, [pushNotif.id]);
+await rpc('service', `public.worker_push_result($1, true, array['https://fcm.googleapis.com/fcm/send/a'], array['https://fcm.googleapis.com/fcm/send/b'])`, [pushNotif.id]);
 const subs = await q(`select endpoint, last_success_at from public.push_subscriptions where user_id = $1`, [U.modMon]);
 ok('P7 tras el envío: notificación enviada, dispositivo vivo sellado y dispositivo caído eliminado',
    (await one(`select push_status from public.notifications where id = $1`, [pushNotif.id])).push_status === 'sent'
-   && subs.length === 1 && subs[0].endpoint === 'https://push.example.com/a' && subs[0].last_success_at !== null, JSON.stringify(subs));
+   && subs.length === 1 && subs[0].endpoint === 'https://fcm.googleapis.com/fcm/send/a' && subs[0].last_success_at !== null, JSON.stringify(subs));
 const infoBiz = await rpc('service', `public.worker_attachment_info($1)`, [aBiz.id]);
 ok('P9 el worker sabe dónde está cada foto y si puede publicarse',
    infoBiz.bucket === 'public-media' && infoBiz.public === true
@@ -620,7 +658,12 @@ ok('Q6 un informe terminado no se vuelve a renderizar', (await rpc('service', `p
 // ---------------------------------------------------------------------------------------------
 // R. Dispositivos de push: alta, cambio de cuenta en el mismo navegador y baja
 // ---------------------------------------------------------------------------------------------
-const EP = 'https://push.example.com/telefono-compartido';
+await expectError('SR4 nadie da de alta un dispositivo escribiendo directo en la tabla (solo por register_push_device)',
+  () => as(db, U.beto, `insert into public.push_subscriptions (user_id, endpoint, p256dh, auth) values ($1, 'https://fcm.googleapis.com/fcm/send/x', 'k', 'a')`, [U.beto]),
+  /permission denied|row-level security/);
+await expectError('SR5 los avisos solo van a servicios de push reales (no a cualquier https://)',
+  () => rpc(U.beto, `public.register_push_device('https://atacante.example/recibir', 'k', 'a')`), /push_subscriptions_known_service|check constraint/);
+const EP = 'https://fcm.googleapis.com/fcm/send/telefono-compartido';
 ok('R1 sin sesión no se registra un dispositivo',
    (await rpc(null, `public.register_push_device($1, 'k', 'a')`, [EP]).catch((e) => ({ reason: e.message }))).reason?.match(/not_authenticated|permission denied/));
 ok('R2 una suscripción inválida se rechaza',
@@ -731,6 +774,9 @@ ok('AV7 nadie puede listar el bucket de fotos de perfil', listAnon.rows.length =
 const avOff = await rpc(U.ana, `public.set_avatar(false)`);
 const avOn = await rpc(U.ana, `public.set_avatar(true)`);
 ok('AV8 quitar la foto deja la versión vacía; volver a ponerla funciona', avOff.status === 'ok' && avOff.avatar_version === null && avOn.status === 'ok');
+for (let i = 0; i < 12; i++) await rpc(U.ana, `public.set_avatar(true)`);
+const offAtLimit = await rpc(U.ana, `public.set_avatar(false)`);
+ok('AV10 quitar la foto funciona aunque se haya agotado el límite de cambios (nunca queda una imagen rota)', offAtLimit.status === 'ok' && offAtLimit.avatar_version === null, JSON.stringify(offAtLimit));
 
 // ---------------------------------------------------------------------------------------------
 await db.query(`update public.traffic_reports set expires_at = created_at + interval '1 second' where id = $1`, [t1.id]);

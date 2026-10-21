@@ -51,7 +51,7 @@ export async function getDashboard(supabase: ServerSupabase, range: PeriodRange,
   const [kpis, prev, t, r, res, ot, orq, eng, muni, counts] = await Promise.all([
     getKpis(supabase, range.from, range.to, municipalityId),
     getKpis(supabase, range.prevFrom, range.prevTo, municipalityId),
-    traffic, requests, resolved, oldestTraffic, oldestRequest, engagement, perMuni, getPanelCounts(supabase),
+    traffic, requests, resolved, oldestTraffic, oldestRequest, engagement, perMuni, getPanelCounts(supabase, municipalityId),
   ]);
   if ('status' in kpis || 'status' in prev) return null;
 

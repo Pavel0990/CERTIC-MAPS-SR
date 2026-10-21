@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import type { ServerSupabase } from '@/lib/supabase/server';
 import type { KpiSummary } from '@/types/kpi';
 
@@ -158,15 +159,16 @@ export interface PanelCounts {
 }
 
 /** Trabajo pendiente del personal (menú del panel y resumen de moderación). RLS limita a su alcance. */
-export async function getPanelCounts(supabase: ServerSupabase): Promise<PanelCounts> {
+export const getPanelCounts = cache(async (supabase: ServerSupabase, municipalityId: string | null = null): Promise<PanelCounts> => {
   const head = { count: 'exact', head: true } as const;
+  const m = <T extends { eq: (c: string, v: string) => T }>(q: T) => (municipalityId ? q.eq('municipality_id', municipalityId) : q);
   const [traffic, reqPending, reqReview, biz, places, routes, promos] = await Promise.all([
-    supabase.from('traffic_reports').select('id', head).eq('status', 'pending'),
-    supabase.from('citizen_requests').select('id', head).eq('status', 'pending'),
-    supabase.from('citizen_requests').select('id', head).eq('status', 'under_review'),
-    supabase.from('businesses').select('id', head).in('status', ['pending', 'under_review']),
-    supabase.from('tourism_places').select('id', head).eq('status', 'pending'),
-    supabase.from('eco_routes').select('id', head).eq('status', 'pending'),
+    m(supabase.from('traffic_reports').select('id', head).eq('status', 'pending')),
+    m(supabase.from('citizen_requests').select('id', head).eq('status', 'pending')),
+    m(supabase.from('citizen_requests').select('id', head).eq('status', 'under_review')),
+    m(supabase.from('businesses').select('id', head).in('status', ['pending', 'under_review'])),
+    m(supabase.from('tourism_places').select('id', head).eq('status', 'pending')),
+    m(supabase.from('eco_routes').select('id', head).eq('status', 'pending')),
     supabase.from('promotions').select('id', head).eq('status', 'pending'),
   ]);
   return {
@@ -175,4 +177,4 @@ export async function getPanelCounts(supabase: ServerSupabase): Promise<PanelCou
     requestsInReview: reqReview.count ?? 0,
     validations: (biz.count ?? 0) + (places.count ?? 0) + (routes.count ?? 0) + (promos.count ?? 0),
   };
-}
+});

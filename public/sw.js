@@ -17,7 +17,7 @@ const DATA = `sr-data-${VERSION}`;
 const OFFLINE_URL = '/offline';
 const PRECACHE = [OFFLINE_URL, '/icons/icon-192.png', '/icons/icon.svg', '/manifest.webmanifest'];
 
-const CACHEABLE_PAGES = [/^\/$/, /^\/mapa$/, /^\/reportar$/, /^\/consultas\/[^/]+$/, /^\/turismo\/[^/]+$/, /^\/rutas\/[^/]+$/, /^\/negocios\/(?!registrar$)[^/]+$/];
+const CACHEABLE_PAGES = [/^\/$/, /^\/mapa$/, /^\/reportar$/, /^\/turismo\/[^/]+$/, /^\/rutas\/[^/]+$/, /^\/negocios\/(?!registrar$)[^/]+$/];
 const PUBLIC_DATA = /^\/api\/v1\/map\/(features|aggregates|static-layers)$/;
 const MAX_DATA_ENTRIES = 80;
 // Registrado como /sw.js?dev=1 en `next dev`: sin caché (rompería la recarga en caliente), solo push.

@@ -1644,6 +1644,10 @@ export type Database = {
         Args: { p_business_id: string; p_hours: Json }
         Returns: Json
       }
+      request_upload: {
+        Args: { p_ext: string }
+        Returns: Json
+      }
       set_avatar: {
         Args: { p_present: boolean }
         Returns: Json

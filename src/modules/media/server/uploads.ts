@@ -9,11 +9,14 @@ export type ImageMime = keyof typeof EXT;
 
 /**
  * URL de subida firmada en la carpeta propia del usuario (§10.5, paso 1).
- * El nombre lo genera el servidor; el nombre del archivo del cliente nunca llega a la ruta.
- * La firma se hace con el JWT del usuario: la política de Storage exige incoming/{uid}/ y 20 subidas por hora.
+ * La ruta la genera la base (request_upload): es un permiso de un solo uso, con límite de 20 por hora, que la política
+ * de Storage exige para aceptar el archivo. Así nadie junta cientos de URLs firmadas para llenar el almacenamiento.
+ * El nombre del archivo del cliente nunca llega a la ruta. La firma se hace con el JWT del usuario.
  */
-export async function signUpload(supabase: ServerSupabase, userId: string, mime: ImageMime) {
-  const path = `incoming/${userId}/${crypto.randomUUID()}.${EXT[mime]}`;
+export async function signUpload(supabase: ServerSupabase, _userId: string, mime: ImageMime) {
+  const grant = asRpcResult('request_upload', await supabase.rpc('request_upload', { p_ext: EXT[mime] }));
+  if (grant.status !== 'ok') return { status: 'rejected' as const, reason: grant.status === 'rejected' ? grant.reason : 'rate_limited' };
+  const path = String(grant.path);
   const { data, error } = await supabase.storage.from('report-evidence').createSignedUploadUrl(path);
   if (error || !data) return { status: 'rejected' as const, reason: 'rate_limited' };
   return { status: 'ok' as const, bucket: 'report-evidence', path: data.path, token: data.token };

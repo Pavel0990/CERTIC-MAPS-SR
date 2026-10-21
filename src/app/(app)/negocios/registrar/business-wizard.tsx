@@ -42,17 +42,22 @@ export function BusinessWizard({ categories }: { categories: { slug: string; nam
       return;
     }
     setBusy(true);
-    const r = await registerBusiness(parsed.data);
-    if (r.status === 'rejected') {
+    try {
+      const r = await registerBusiness(parsed.data);
+      if (r.status === 'rejected') {
+        setError(r.message);
+        if (r.reason === 'out_of_area' || r.reason === 'invalid_coordinates') setStep(2);
+        if (r.reason === 'invalid_category' || r.reason === 'invalid_name') setStep(1);
+        return;
+      }
+      // El negocio ya quedó registrado: un fallo de las fotos no lo deshace, solo se avisa
+      const photoError = await photos.upload('business', r.id).catch(() => 'No se pudieron subir las fotos. Agrégalas después desde tu negocio.');
+      setDone({ id: r.id, photoError });
+    } catch {
+      setError('No pudimos enviar el registro. Revisa tu conexión e inténtalo otra vez: no se duplica.');
+    } finally {
       setBusy(false);
-      setError(r.message);
-      if (r.reason === 'out_of_area' || r.reason === 'invalid_coordinates') setStep(2);
-      if (r.reason === 'invalid_category' || r.reason === 'invalid_name') setStep(1);
-      return;
     }
-    const photoError = await photos.upload('business', r.id);
-    setBusy(false);
-    setDone({ id: r.id, photoError });
   }
 
   if (done) {

@@ -94,8 +94,8 @@ function Overview({ d, labels }: { d: Dashboard; labels: { trafficTypes: Record<
         <h2 id="atender" className="text-lg font-bold">Lo que hay que atender</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Kpi icon={<Inbox />} label="Abiertos ahora" value={k.requests.open_now} href="/admin/bandeja?ver=consultas"
-            help="Reportes al municipio que todavía no se resolvieron ni se descartaron, sin importar cuándo llegaron."
-            delta={delta(k.requests.open_now, p.requests.open_now, false)} tone={k.requests.open_now > 0 ? 'warn' : undefined} />
+            help="Reportes al municipio que todavía no se resolvieron ni se descartaron, sin importar cuándo llegaron. Es la cifra de hoy, no del periodo."
+            tone={k.requests.open_now > 0 ? 'warn' : undefined} />
           <Kpi icon={<TrafficCone />} label="Alertas por confirmar" value={d.counts.trafficPending} href="/admin/bandeja?estado=pending"
             help="Alertas de tránsito que mandaron los vecinos y esperan que alguien del municipio las publique o descarte." tone={d.counts.trafficPending > 0 ? 'danger' : undefined} />
           <Kpi icon={<ClipboardCheck />} label="Por validar" value={pendingValidation} href="/admin/validaciones"
@@ -198,7 +198,7 @@ function Overview({ d, labels }: { d: Dashboard; labels: { trafficTypes: Record<
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Kpi icon={<ClipboardCheck />} label="Negocios activos" value={k.businesses.approved_total} href="/negocios" help="Negocios aprobados que hoy aparecen en el mapa." detail={k.businesses.pending_now ? `${k.businesses.pending_now} por aprobar` : 'sin solicitudes pendientes'} />
           <Kpi icon={<Navigation />} label="Turismo publicado" value={k.tourism.places_published + k.tourism.routes_published} href="/turismo" help="Lugares y rutas publicados en el mapa." detail={`${k.tourism.places_published} lugares · ${k.tourism.routes_published} rutas`} />
-          <Kpi icon={<Eye />} label="Visitas a fichas" value={k.engagement.views} delta={delta(k.engagement.views, p.engagement.views, true)} help="Cuántas veces se abrió la ficha de un negocio, lugar o ruta (una por persona y sesión)." />
+          <Kpi icon={<Eye />} label="Visitas a fichas" value={k.engagement.views} delta={delta(k.engagement.views, p.engagement.views, true)} help="Cuántas veces se abrió la ficha de un negocio, lugar o ruta (una por persona y sesión). Siempre de toda la provincia." detail={d.byMunicipality ? undefined : 'de toda la provincia'} />
         </div>
       </section>
     </>
@@ -345,10 +345,10 @@ function csvRows(d: Dashboard, territory: string, trafficTypes: Record<string, s
     ['Reportes al municipio', k.requests.received, p.requests.received],
     ['Resueltos', k.requests.resolved, p.requests.resolved],
     ['Descartados', k.requests.rejected, p.requests.rejected],
-    ['Abiertos al cierre', k.requests.open_now, p.requests.open_now],
+    ['Abiertos hoy', k.requests.open_now, null],
     ['Horas promedio para resolver', k.requests.avg_resolution_hours == null ? null : Math.round(k.requests.avg_resolution_hours * 10) / 10, p.requests.avg_resolution_hours == null ? null : Math.round(p.requests.avg_resolution_hours * 10) / 10],
     ['Personas nuevas', k.users.new, p.users.new],
-    ['Visitas a fichas', k.engagement.views, p.engagement.views],
+    ['Visitas a fichas (toda la provincia)', k.engagement.views, p.engagement.views],
     [],
     ['Tramo', 'Recibidos', 'Resueltos'],
     ...d.series.map((s) => [`${s.from} a ${s.to}`, s.received, s.resolved]),

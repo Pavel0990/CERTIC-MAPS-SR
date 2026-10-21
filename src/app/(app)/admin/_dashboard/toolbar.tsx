@@ -5,6 +5,7 @@ import { useTransition } from 'react';
 import { Download, Printer, RefreshCw } from 'lucide-react';
 import { PERIODS, toCsv } from '@/modules/admin';
 import { cn } from '@/utils/cn';
+import { APP_TIMEZONE } from '@/utils/locale';
 
 /** Periodo (7/30/90 días, en la URL para compartir el enlace), hora de actualización, actualizar, CSV e imprimir. */
 export function DashboardToolbar({ days, municipio, updatedAt, csv, csvName }: {
@@ -17,13 +18,13 @@ export function DashboardToolbar({ days, municipio, updatedAt, csv, csvName }: {
   const router = useRouter();
   const hrefFor = (d: number) => `/admin?periodo=${d}${municipio ? `&municipio=${municipio}` : ''}`;
   const [pending, start] = useTransition();
-  const time = new Intl.DateTimeFormat('es-DO', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Santo_Domingo' }).format(new Date(updatedAt));
+  const time = new Intl.DateTimeFormat('es-DO', { hour: 'numeric', minute: '2-digit', timeZone: APP_TIMEZONE }).format(new Date(updatedAt));
 
   function download() {
     const url = URL.createObjectURL(new Blob([toCsv(csv)], { type: 'text/csv;charset=utf-8' }));
     const a = Object.assign(document.createElement('a'), { href: url, download: csvName });
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000); // liberarla en el mismo instante cancela la descarga en algunos navegadores
   }
 
   return (

@@ -99,6 +99,10 @@ describe('aspectos destacados', () => {
 });
 
 describe('CSV', () => {
+  it('neutraliza fórmulas en texto escrito por usuarios (no en números)', () => {
+    expect(toCsv([['=HYPERLINK("x")', -3]])).toBe('\uFEFF"\'=HYPERLINK(""x"")";-3');
+    expect(toCsv([['@SUM(A1)']])).toBe("\uFEFF'@SUM(A1)");
+  });
   it('separador ;, BOM y comillas cuando hace falta', () => {
     expect(toCsv([['Indicador', 'Valor'], ['Abiertos; ahora', 3], ['Dice "hola"', null]])).toBe('﻿Indicador;Valor\r\n"Abiertos; ahora";3\r\n"Dice ""hola""";');
   });

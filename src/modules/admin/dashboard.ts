@@ -125,8 +125,10 @@ export function insights(i: InsightInput): string[] {
 /** CSV con separador ";" y BOM: Excel en español lo abre bien, con tildes. */
 export function toCsv(rows: (string | number | null)[][]) {
   const cell = (v: string | number | null) => {
-    const s = v == null ? '' : String(v);
-    return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    let s = v == null ? '' : String(v);
+    // Un nombre escrito por alguien que empiece por = + - @ sería una fórmula en Excel: se neutraliza
+    if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+    return /[";\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   return '﻿' + rows.map((r) => r.map(cell).join(';')).join('\r\n');
 }
