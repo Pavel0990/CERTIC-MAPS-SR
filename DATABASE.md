@@ -11,9 +11,9 @@
 
 | Qué | Cifra | Cómo se comprueba |
 |---|---|---|
-| Migraciones | **29**; 27 aplicadas en el Supabase de staging (faltan `20261021130000_e2e_rate_limit_reset` y `20261022130000_similar_reports`) | `ls supabase/migrations` · `npx supabase migration list` |
+| Migraciones | **30**; 27 aplicadas en el Supabase de staging. Faltan, en este orden: `20261021130000_e2e_rate_limit_reset`, `20261022120000_attachment_credit` (propuesta, §5.24) y `20261022130000_similar_reports` | `ls supabase/migrations` · `npx supabase migration list` |
 | Funciones en `public` | **51** (§6) | `grep -ohE "function public\.[a-z_]+" supabase/migrations/*.sql \| sort -u \| wc -l` |
-| Pruebas de la base | **190**, en 25 secciones (A–W, AV y SR), todas pasan en cada push (CI) | `npm run test:db` |
+| Pruebas de la base | **195**, en 26 secciones (A–W, AV, SR y AC), todas pasan en cada push (CI) | `npm run test:db` |
 | Motor de las pruebas | PostgreSQL 18.3 + PostGIS 3.6.2 en PGlite. Staging: PostgreSQL 17 + PostGIS 3.3 | — |
 
 Las pruebas cubren seguridad (con ataques directos), integridad, concurrencia, PostGIS, fotos, alertas, KPIs, descarga auditada del PDF, entrega del worker, push, catálogos y mantenimiento. Lo que no se puede verificar fuera de Supabase está en §14 y en [ARCHITECTURE.md §20](ARCHITECTURE.md#20-verificaciones-en-el-servicio-real).
@@ -405,6 +405,16 @@ Antes de enviar una alerta de tránsito o un reporte al municipio, `/reportar` p
 
 Pruebas W1–W14 (cerca, lejos, otro tipo, cerrados y viejos, privados de otra persona, propios, otro municipio, máximo 3 por distancia, sin datos personales, apoyo ya dado, entradas inválidas, anon sin permiso, `EXECUTE` explícito y límite de uso).
 
+### 5.24 Crédito de las fotos con licencia libre — `20261022120000_attachment_credit.sql` (propuesta, sin aplicar)
+
+Las fotos de Wikimedia Commons que carga [`scripts/load-places-content.mjs`](scripts/load-places-content.mjs) son CC BY o CC BY-SA: hay que mostrar autor y licencia. Hoy el crédito va al final de la descripción de la ficha. La migración propone guardarlo junto a la foto:
+
+| Pieza | Diseño |
+|---|---|
+| `attachments.credit` | `text`, 1–300 caracteres; `NULL` = foto propia. Lectura pública como las demás columnas del adjunto; nadie la escribe desde la API (solo la carga con la clave de servicio) |
+
+Compatible con el código actual. Al aplicarla falta: mostrar el crédito en la galería (`listPhotos` y `PhotoGallery`), que el script lo llene y quitar la línea de la descripción. Pruebas AC1–AC5.
+
 ## 6. Catálogo de RPC
 
 Todas las funciones de `public` (cifra en [Estado verificado](#estado-verificado)) son `SECURITY DEFINER`, salvo las marcadas como **invoker**.
@@ -565,6 +575,7 @@ El panel la llama en vivo. El informe semanal guarda su resultado en `weekly_kpi
 | `20261020120000_profile_avatars` | Foto de perfil (§5.20) |
 | `20261021120000_security_review_fixes` | Revisión de seguridad del 21/10 (§5.21) |
 | `20261021130000_e2e_rate_limit_reset` | E2E repetibles: reinicio de límites de las cuentas de prueba (§5.22) |
+| `20261022120000_attachment_credit` | Crédito de las fotos con licencia libre (§5.24). **Propuesta: no aplicada** |
 | `20261022130000_similar_reports` | Aviso de reporte parecido cercano (§5.23) |
 
 **Reglas:**

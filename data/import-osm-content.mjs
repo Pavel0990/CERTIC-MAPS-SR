@@ -186,7 +186,11 @@ from geo g
 cross join lateral private.locate(extensions.st_startpoint(extensions.st_geometryn(g.geom, 1))) l
 where l.municipality_id is not null
 on conflict (province_id, slug) do update
-  set name = excluded.name, geom = excluded.geom, duration_min = excluded.duration_min, difficulty = excluded.difficulty, description = excluded.description;
+  set name = excluded.name, geom = excluded.geom, duration_min = excluded.duration_min, difficulty = excluded.difficulty,
+      -- solo reemplaza el texto que puso esta misma carga; nunca uno completado por el municipio o por scripts/load-places-content.mjs
+      description = case when public.eco_routes.description is null
+                           or public.eco_routes.description like '%conviene validarlo con el municipio antes de recomendarlo.'
+                         then excluded.description else public.eco_routes.description end;
 
 select (select count(*) from public.businesses where slug like '%-osm%') as negocios_osm,
        (select count(*) from public.tourism_places where slug like '%-osm%') as lugares_osm,

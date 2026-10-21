@@ -33,7 +33,7 @@ Quedan unas **5 semanas**. Casi todo lo que falta ya no es código: contenido, p
 
 | Criterio (puntos) | Qué lo respalda | Qué falta para el máximo |
 |---|---|---|
-| **Funcionalidad (25)** | F1–F6, panel, PDF, PWA; 190 pruebas de base de datos, 127 unitarias, 17 recorridos E2E | Contenido real en turismo y rutas; base de producción separada |
+| **Funcionalidad (25)** | F1–F6, panel, PDF, PWA; 195 pruebas de base de datos, 127 unitarias, 17 recorridos E2E | Contenido real en turismo y rutas; base de producción separada |
 | **UX/UI para baja alfabetización digital (20)** | Lenguaje sencillo, letra Lexend/Nunito, áreas táctiles de 44 px, contraste WCAG AA en claro y oscuro (axe en 16 pantallas), sin conexión | **Pruebas con vecinos** (dos rondas) y sus cifras en la presentación |
 | **Innovación (20)** | Confirmación comunitaria de alertas, reputación, aviso de reporte parecido cercano antes de enviar (`ST_DWithin`, 150 m), datos abiertos (OSM), costo casi cero | Ideas opcionales que quedan en §5.4 |
 | **Impacto territorial (15)** | Los 3 municipios, límites oficiales de OSM, indicadores por municipio | Contenido de Monción y Villa Los Almácigos; testimonios de la prueba con vecinos |
@@ -86,9 +86,22 @@ Recorrido de todas las pantallas a 360 y 1280 px, en claro y oscuro (público, v
 
 ### 5.3 Contenido, vecinos y demo
 
+**Hecho el 21/10 (lugares y rutas):** con fuentes públicas y fotos libres de Wikimedia Commons ([`data/lugares-contenido.json`](../data/lugares-contenido.json), carga repetible con `npm run data:lugares`, ver [data/README.md](../data/README.md#lugares-turísticos-descripciones-y-fotos-libres)):
+
+- **21 lugares** publicados en staging (eran 16): 5 nuevos (Parque Nacional José Armando Bermúdez y Reserva Forestal Río Cana en Sabaneta; Parque Nacional Piky Lora y Monasterio Carmelita en Monción; La Peonía en Villa Los Almácigos).
+- **13 con descripción** con fuente (8 completados y 5 nuevos) y **5 con foto libre** (Presa de Monción, Iglesia y Parque Central de Monción, Armando Bermúdez y La Peonía), con el crédito al final de la descripción.
+- Ruta **De Monción a la Presa**: puntos de referencia y foto.
+- Propuesta sin aplicar: columna `attachments.credit` para el crédito de las fotos ([DATABASE.md §5.24](../DATABASE.md#524-crédito-de-las-fotos-con-licencia-libre--20261022120000_attachment_creditsql-propuesta-sin-aplicar)).
+
+**Lo que falta** (la lista completa está en `por_confirmar` y `sin_fuente` del JSON):
+
+- **Fotos propias:** todo San Ignacio de Sabaneta (no hay ninguna foto libre del municipio), Nalga de Maco, Piky Lora, Alto Mao, Río Cana, Contraembalse, Monasterio, monumentos, parques pequeños y las 2 rutas de Sabaneta.
+- **Ubicar en el mapa** (sin coordenadas en OSM ni Wikidata): Charcos de los Indios, Salto de Jicomé, Cueva de Clavijo, Ruta del Casabe, mirador de la presa, balnearios (Charco de los Chivos, Las Masetas, El Aposento) y los saltos y pozas de La Peonía. Con alguien de la zona y el GPS del teléfono, se agregan al JSON y se vuelve a correr la carga.
+- **Descripción** de 8 lugares sin fuente pública (monumentos y parques de Monción, Capilla San Pedro, paradores fotográficos).
+
 | Tarea | Detalle | Para |
 |---|---|---|
-| **15 lugares principales** completos | Descripción de 2–4 frases, servicios, horario y al menos 1 foto propia ([manual §2.1](manual-administrativo.md#21-completar-las-fichas-de-lugares-rutas-y-negocios)) | 06/11 |
+| **15 lugares principales** completos | Descripción de 2–4 frases, servicios, horario y al menos 1 foto propia ([manual §2.1](manual-administrativo.md#21-completar-las-fichas-de-lugares-rutas-y-negocios)). Ya hay 13 con descripción y 5 con foto libre; faltan horarios, servicios y fotos propias | 06/11 |
 | **Revisar los 84 negocios** | Archivar los que no existen; teléfono y horario a los 20 más conocidos | 06/11 |
 | **Validar las 3 rutas** | Con alguien que las conozca: corregir el trazado o archivarlas | 06/11 |
 | **Catálogos** | Que los tipos de alerta y de negocio sean los que usa la gente de allí | 31/10 |
