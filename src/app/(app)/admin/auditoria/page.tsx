@@ -50,7 +50,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
         <h1 className="text-[28px] font-extrabold md:text-[34px]">Auditoría</h1>
         <p className="mt-1 text-[16px] text-muted">Registro inmutable de las acciones del personal. Últimas 100.</p>
       </header>
-      <nav aria-label="Tipo de acción" className="mb-4 flex flex-wrap gap-1.5">
+      <nav aria-label="Tipo de acción" className="-mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0">
         {GROUPS.map((g) => (
           <Link key={g.id} href={g.id ? `/admin/auditoria?tipo=${g.id}` : '/admin/auditoria'} aria-current={group === g.id ? 'true' : undefined} className={cn('press inline-flex min-h-11 shrink-0 items-center rounded-full px-3.5 md:min-h-8 text-sm font-semibold', group === g.id ? 'bg-ink text-white' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
             {g.label}

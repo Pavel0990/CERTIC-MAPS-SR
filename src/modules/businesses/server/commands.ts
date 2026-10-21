@@ -1,10 +1,10 @@
 import 'server-only';
 import type { ServerSupabase } from '@/lib/supabase/server';
-import type { RpcResult } from '@/lib/http';
+import { asRpcResult } from '@/lib/rpc';
 import type { BusinessInput, BusinessUpdateInput, HoursInput, PromotionInput } from '../schemas';
 
 export async function submitBusiness(supabase: ServerSupabase, input: BusinessInput) {
-  const { data, error } = await supabase.rpc('submit_business', {
+  return asRpcResult('submit_business', await supabase.rpc('submit_business', {
     p_name: input.name,
     p_category_slug: input.categorySlug,
     p_lat: input.lat,
@@ -16,34 +16,26 @@ export async function submitBusiness(supabase: ServerSupabase, input: BusinessIn
     p_email: input.email,
     p_website: input.website,
     p_address: input.address,
-  });
-  if (error) throw new Error(`submit_business: ${error.message}`);
-  return data as unknown as RpcResult;
+  }));
 }
 
 /** Envía todos los campos editables: los vacíos se guardan como "sin valor" (la RPC hace nullif). */
 export async function updateBusiness(supabase: ServerSupabase, input: BusinessUpdateInput) {
   const { id, version, ...fields } = input;
   const changes = Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v ?? '']));
-  const { data, error } = await supabase.rpc('update_business', { p_id: id, p_version: version, p_changes: changes });
-  if (error) throw new Error(`update_business: ${error.message}`);
-  return data as unknown as RpcResult;
+  return asRpcResult('update_business', await supabase.rpc('update_business', { p_id: id, p_version: version, p_changes: changes }));
 }
 
 export async function setBusinessHours(supabase: ServerSupabase, input: HoursInput) {
-  const { data, error } = await supabase.rpc('set_business_hours', { p_business_id: input.businessId, p_hours: input.hours });
-  if (error) throw new Error(`set_business_hours: ${error.message}`);
-  return data as unknown as RpcResult;
+  return asRpcResult('set_business_hours', await supabase.rpc('set_business_hours', { p_business_id: input.businessId, p_hours: input.hours }));
 }
 
 export async function createPromotion(supabase: ServerSupabase, input: PromotionInput) {
-  const { data, error } = await supabase.rpc('create_promotion', {
+  return asRpcResult('create_promotion', await supabase.rpc('create_promotion', {
     p_business_id: input.businessId,
     p_title: input.title,
     p_valid_from: input.validFrom,
     p_valid_until: input.validUntil,
     p_description: input.description,
-  });
-  if (error) throw new Error(`create_promotion: ${error.message}`);
-  return data as unknown as RpcResult;
+  }));
 }

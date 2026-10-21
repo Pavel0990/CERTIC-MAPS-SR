@@ -1,6 +1,6 @@
 import 'server-only';
 import type { ServerSupabase } from '@/lib/supabase/server';
-import type { RpcResult } from '@/lib/http';
+import { asRpcResult } from '@/lib/rpc';
 
 export type AttachmentEntity = 'business' | 'tourism_place' | 'eco_route' | 'traffic_report' | 'citizen_request';
 export const ATTACHMENT_ENTITIES: AttachmentEntity[] = ['business', 'tourism_place', 'eco_route', 'traffic_report', 'citizen_request'];
@@ -21,9 +21,7 @@ export async function signUpload(supabase: ServerSupabase, userId: string, mime:
 
 /** Vincula el archivo subido a su entidad (§10.5, paso 3). La RPC valida ruta, MIME, tamaño, dueño y límite. */
 export async function registerAttachment(supabase: ServerSupabase, entity: AttachmentEntity, entityId: string, path: string) {
-  const { data, error } = await supabase.rpc('register_attachment', { p_entity: entity, p_entity_id: entityId, p_path: path });
-  if (error) throw new Error(`register_attachment: ${error.message}`);
-  return data as unknown as RpcResult;
+  return asRpcResult('register_attachment', await supabase.rpc('register_attachment', { p_entity: entity, p_entity_id: entityId, p_path: path }));
 }
 
 export interface PhotoView { id: string; url: string; status: string }

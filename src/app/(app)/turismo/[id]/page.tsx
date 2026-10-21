@@ -12,7 +12,7 @@ import { getViewer } from '@/lib/auth';
 import { PLACE_KIND } from '@/lib/vocabulary';
 import { createClient } from '@/lib/supabase/server';
 import { formatDate } from '@/utils/format';
-import { DirectionsButton, HeaderActions, InfoRow, RejectedNotice, SecondaryLink, ServicesCard, StatusLine, UUID } from '../../_contenido/detail';
+import { DirectionsButton, HeaderActions, InfoRow, PendingContentCard, RejectedNotice, SecondaryLink, ServicesCard, StatusLine, UUID } from '../../_contenido/detail';
 import { PhotoGallery } from '../../_contenido/photo-gallery';
 import { canEditContent } from '../../_contenido/permissions';
 
@@ -31,6 +31,7 @@ export default async function TourismPlacePage({ params }: { params: Promise<{ i
   if (!p) notFound();
 
   const published = p.status === 'published';
+  const canEdit = canEditContent(viewer, p.municipality_id, p.status);
   const pin: MapFeatureCollection = {
     type: 'FeatureCollection',
     features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [p.point.lng, p.point.lat] }, properties: { id: p.id, layer: 'tourism', title: p.name } }],
@@ -44,7 +45,7 @@ export default async function TourismPlacePage({ params }: { params: Promise<{ i
       actions={
         <HeaderActions>
           <DirectionsButton entity="tourism_place" id={p.id} point={p.point} />
-          {canEditContent(viewer, p.municipality_id, p.status) && <SecondaryLink href={`/turismo/${p.id}/editar`}>Editar</SecondaryLink>}
+          {canEdit && <SecondaryLink href={`/turismo/${p.id}/editar`}>Editar</SecondaryLink>}
         </HeaderActions>
       }
       description={published ? undefined : <StatusLine status={p.status} />}
@@ -54,6 +55,9 @@ export default async function TourismPlacePage({ params }: { params: Promise<{ i
         <div className="flex flex-col gap-4">
           {p.status === 'rejected' && <RejectedNotice reason={p.status_reason} />}
           <PhotoGallery photos={photos} name={p.name} />
+          {!p.description && photos.length === 0 && (
+            <PendingContentCard kindLabel={PLACE_KIND[p.kind] ?? 'Lugar turístico'} municipality={p.municipality} editHref={canEdit ? `/turismo/${p.id}/editar` : undefined} />
+          )}
           {p.description && (
             <Card className="p-5">
               <Eyebrow>Sobre el lugar</Eyebrow>

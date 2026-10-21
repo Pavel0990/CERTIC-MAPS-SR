@@ -101,10 +101,10 @@ export default async function BusinessPage({ params }: { params: Promise<{ id: s
             </Card>
           ) : (
             !member && approved && (
-              <Card className="flex flex-wrap items-center gap-3 border border-dashed border-line-strong p-5 shadow-none">
+              <Card className="flex flex-col items-start gap-3 border border-dashed border-line-strong p-5 shadow-none sm:flex-row sm:items-center">
                 <Store className="size-6 shrink-0 text-brand" aria-hidden />
-                <p className="min-w-0 flex-1 text-[16px]"><strong>¿Es tu negocio?</strong> Regístralo gratis para mostrar tu horario, fotos, WhatsApp y promociones.</p>
-                <Link href="/negocios/registrar" className="inline-flex h-11 items-center rounded-[12px] bg-brand px-4 text-[15px] font-semibold text-white hover:bg-brand-strong">Registrar mi negocio</Link>
+                <p className="min-w-0 text-[16px] sm:flex-1"><strong>¿Es tu negocio?</strong> Regístralo gratis para mostrar tu horario, fotos, WhatsApp y promociones.</p>
+                <Link href="/negocios/registrar" className="press inline-flex h-11 w-full items-center justify-center rounded-[12px] bg-brand px-4 text-[15px] font-semibold text-white hover:bg-brand-strong sm:w-auto">Registrar mi negocio</Link>
               </Card>
             )
           )}

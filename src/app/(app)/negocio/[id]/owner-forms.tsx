@@ -1,6 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { Copy, Plus, Trash2 } from 'lucide-react';
 import { promotionStartMin, type HourRange } from '@/modules/businesses';
 import { Button } from '@/components/ui/button';
@@ -9,29 +9,8 @@ import { ErrorNote } from '@/components/ui/primitives';
 import { useToast } from '@/components/ui/toast';
 import { WEEKDAYS } from '@/lib/vocabulary';
 import { PhotoPicker, usePhotos } from '../../_contenido/photo-picker';
+import { useSave } from '../../_contenido/use-save';
 import { addPromotion, saveBusiness, saveHours } from './actions';
-
-function useSave() {
-  const router = useRouter();
-  const toast = useToast();
-  const [error, setError] = useState<string | null>(null);
-  const [pending, start] = useTransition();
-  function run(fn: () => Promise<{ status: string; message?: string; reason?: string }>, ok: string, after?: () => void) {
-    setError(null);
-    start(async () => {
-      const r = await fn();
-      if (r.status === 'rejected') {
-        setError(r.message ?? 'No se pudo guardar.');
-        if (r.reason === 'version_conflict') router.refresh();
-        return;
-      }
-      toast.show(ok);
-      after?.();
-      router.refresh();
-    });
-  }
-  return { error, pending, run };
-}
 
 export interface BusinessFormValues {
   id: string;

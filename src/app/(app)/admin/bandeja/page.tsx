@@ -56,7 +56,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       </header>
       <LinkTabs active={tab === 'transito' ? '/admin/bandeja' : '/admin/bandeja?ver=consultas'} tabs={[{ href: '/admin/bandeja', label: 'Tránsito' }, { href: '/admin/bandeja?ver=consultas', label: 'Reportes al municipio' }]} />
 
-      <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Filtros">
+      <div className="mb-4 flex flex-col gap-2 md:flex-row md:flex-wrap" role="group" aria-label="Filtros">
         {scope.length > 1 && (
           <FilterGroup label="Municipio">
             <Chip href={qs({ municipio: undefined })} active={!muniFilter}>Todos</Chip>
@@ -105,8 +105,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
 
 function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="mr-1 text-sm font-semibold text-muted">{label}:</span>
+    <div className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0">
+      <span className="mr-1 shrink-0 text-sm font-semibold text-muted">{label}:</span>
       {children}
     </div>
   );

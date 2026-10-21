@@ -1318,9 +1318,10 @@ sr-conecta/
 - `jobs` no conoce reglas de negocio: cada módulo registra sus handlers por `kind`.
 - Las páginas leen y escriben **solo a través de los módulos** (o de `lib/auth` para el propio perfil); ninguna página consulta tablas directamente.
 - `admin` es el backend del panel: reúne lo que el personal necesita de varios dominios, pero cada cambio de estado lo valida la RPC del dominio en la base.
-- `server/queries.ts` y `server/commands.ts` son la frontera con la base; no hay capa "repositorio" adicional.
+- `server/queries.ts` y `server/commands.ts` son la frontera con la base; no hay capa "repositorio" adicional. Cada comando devuelve `asRpcResult('nombre_rpc', await supabase.rpc(...))` (`lib/rpc.ts`): un error de la base lanza una excepción con el nombre de la RPC, y un rechazo de negocio (`{ status: 'rejected', reason }`) se devuelve como resultado normal.
+- **Guardar desde un formulario:** los formularios de contenido usan `useSave()` (`(app)/_contenido/use-save.ts`), que muestra el rechazo en lenguaje simple, recarga si otra persona cambió la ficha (`version_conflict`) y avisa al terminar.
 - **Dónde va cada cosa:** los módulos guardan datos, reglas y validaciones (sin componentes de React, salvo el mapa y los *hooks* de cliente); las pantallas viven en `src/app`. Una pieza visual que usan varias páginas va en `(app)/_contenido/`; si no depende de ningún módulo, en `components/`.
-- **Una sola fuente para lo repetido:** la zona horaria (`utils/locale.ts`), la clave de idempotencia (`lib/schemas.ts`) y los textos para personas (`lib/vocabulary.ts`). No se escriben a mano en otro lugar.
+- **Una sola fuente para lo repetido:** la zona horaria (`utils/locale.ts`), la clave de idempotencia (`lib/schemas.ts`), los textos para personas (`lib/vocabulary.ts`), el resultado de una RPC (`lib/rpc.ts`) y el guardado de formularios (`_contenido/use-save.ts`). No se escriben a mano en otro lugar.
 - **Excepción documentada:** `POST /api/v1/engagement` llama a `track_engagement` directamente: es una métrica de negocios, lugares y rutas a la vez, sin módulo dueño, y la RPC hace toda la validación.
 
 ---

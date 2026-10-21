@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { Check, Navigation, Pencil, X } from 'lucide-react';
+import { Check, ImagePlus, Navigation, Pencil, X } from 'lucide-react';
 import { TrackedLink } from '@/components/shared/engagement';
 import { Badge, Card, Eyebrow, Notice } from '@/components/ui/primitives';
 import { CONTENT_STATUS, type ContentStatus } from '@/lib/vocabulary';
@@ -26,6 +26,20 @@ export function DirectionsButton({ entity, id, point, label = 'Cómo llegar' }: 
 
 export function SecondaryLink({ href, children, icon = <Pencil className="size-4" aria-hidden /> }: { href: string; children: ReactNode; icon?: ReactNode }) {
   return <Link href={href} className={secondaryLink}>{icon}{children}</Link>;
+}
+
+/** Ficha todavía sin descripción ni fotos: lo dice en vez de dejar un hueco, y al personal le ofrece completarla. */
+export function PendingContentCard({ kindLabel, municipality, editHref }: { kindLabel: string; municipality: string | null; editHref?: string }) {
+  return (
+    <Card className="flex flex-col items-start gap-3 p-5">
+      <span className="grid size-12 place-items-center rounded-[14px] bg-canvas text-muted" aria-hidden><ImagePlus className="size-6" /></span>
+      <div>
+        <p className="text-[17px] font-semibold">{kindLabel}{municipality ? ` en ${municipality}` : ''}</p>
+        <p className="mt-1 text-[15px] text-muted">Todavía no hay fotos ni descripción. La ubicación está en el mapa y «Cómo llegar» te lleva hasta aquí.</p>
+      </div>
+      {editHref && <SecondaryLink href={editHref}>Agregar descripción y fotos</SecondaryLink>}
+    </Card>
+  );
 }
 
 /** Acciones del encabezado de una ficha, apiladas en el móvil. */

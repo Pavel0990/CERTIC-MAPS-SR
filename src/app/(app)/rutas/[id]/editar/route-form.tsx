@@ -1,14 +1,13 @@
 'use client';
-import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { DIFFICULTIES, ROUTE_KINDS } from '@/modules/routes';
 import { PLACE_SERVICES } from '@/modules/tourism';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select, Textarea } from '@/components/ui/form';
 import { ErrorNote } from '@/components/ui/primitives';
-import { useToast } from '@/components/ui/toast';
 import { DIFFICULTY, ROUTE_KIND } from '@/lib/vocabulary';
 import { ServicesField } from '../../../_contenido/services-field';
+import { markedServices, useSave } from '../../../_contenido/use-save';
 import { saveRoute } from './actions';
 
 export interface RouteFormValues {
@@ -23,28 +22,13 @@ export interface RouteFormValues {
 }
 
 export function RouteForm({ initial }: { initial: RouteFormValues }) {
-  const router = useRouter();
-  const toast = useToast();
   const [v, setV] = useState(initial);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, start] = useTransition();
+  const { error, pending, run } = useSave();
   const set = <K extends keyof RouteFormValues>(k: K, value: RouteFormValues[K]) => setV((s) => ({ ...s, [k]: value }));
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    start(async () => {
-      // Solo se guardan los servicios marcados: lo no marcado queda "sin dato" en vez de "no hay"
-      const services = Object.fromEntries(Object.entries(v.services).filter(([, on]) => on));
-      const r = await saveRoute({ ...v, services });
-      if (r.status === 'rejected') {
-        setError(r.message);
-        if (r.reason === 'version_conflict') router.refresh();
-        return;
-      }
-      toast.show('Guardamos los cambios.');
-      router.push(`/rutas/${v.id}`);
-    });
+    run(() => saveRoute({ ...v, services: markedServices(v.services) }), 'Guardamos los cambios.', `/rutas/${v.id}`);
   }
 
   return (

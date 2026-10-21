@@ -115,6 +115,10 @@ export default function MaplibreCanvas({
     };
 
     map.on('load', async () => {
+      // En mapas pequeños la atribución (© OpenStreetMap) queda plegada en el botón "i": abierta tapaba media ficha
+      if (container.current && container.current.clientWidth < 640) {
+        container.current.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
+      }
       // Íconos de los marcadores (uno por capa, en alta resolución)
       await Promise.all(
         LAYERS.map(async (l) => {
