@@ -747,6 +747,23 @@ await db.query(`drop table public.zz_sin_rls`);
 ok('U5 la auditoría detecta una tabla nueva sin RLS', caught.some((r) => r.object === 'zz_sin_rls'), JSON.stringify(caught));
 
 // ---------------------------------------------------------------------------------------------
+// AC. Crédito de las fotos con licencia libre (migración 20261022120000, propuesta)
+// ---------------------------------------------------------------------------------------------
+lastStep = 'crédito de fotos';
+const creditText = 'Foto: Autora, CC BY-SA 4.0, Wikimedia Commons.';
+const acId = (await one(`insert into public.attachments (tourism_place_id, bucket, path, mime, bytes, width, height, status, credit)
+  values ($1, 'public-media', 'processed/credito-prueba.webp', 'image/webp', 1000, 800, 600, 'approved', $2) returning id`, [visible.id, creditText])).id;
+const acAnon = (await as(db, null, `select credit from public.attachments where id = $1`, [acId])).rows[0];
+ok('AC1 el público lee el crédito de una foto publicada', acAnon?.credit === creditText, JSON.stringify(acAnon));
+await expectError('AC2 el crédito no puede pasar de 300 caracteres',
+  () => db.query(`update public.attachments set credit = repeat('x', 301) where id = $1`, [acId]), /check constraint/);
+await expectError('AC3 el crédito vacío no vale (NULL = foto propia)',
+  () => db.query(`update public.attachments set credit = '' where id = $1`, [acId]), /check constraint/);
+await expectError('AC4 nadie cambia el crédito desde la API, ni el personal',
+  () => as(db, U.modMon, `update public.attachments set credit = 'otro' where id = $1`, [acId]), /permission denied/);
+ok('AC5 las fotos propias siguen sin crédito', (await one(`select count(*)::int n from public.attachments where credit is null`)).n > 0);
+
+// ---------------------------------------------------------------------------------------------
 // L. Mantenimiento y privacidad
 // ---------------------------------------------------------------------------------------------
 // Foto de perfil (bucket avatars): un archivo por persona, sin listar, versión solo por RPC
