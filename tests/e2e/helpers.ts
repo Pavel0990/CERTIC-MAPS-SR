@@ -37,3 +37,20 @@ export async function resetReputation(email: string) {
   if (error) throw error;
   await admin().from('profiles').update({ reputation: 0 }).eq('id', data.user.id);
 }
+
+/**
+ * Borra los contadores de límites por hora (private.rate_limit_hits) de las cuentas de prueba, y solo de ellas:
+ * cada corrida crea una alerta (5 por hora) y cambia la foto de perfil (10 por hora), así que sin esto
+ * desde la sexta corrida en la misma hora (contando las de cualquier persona) el reporte vuelve con 'rate_limited'. La RPC solo la ejecuta service_role y
+ * solo toca cuentas @example.com (migración 20261021130000). Se llama antes de cada corrida (global-setup.ts).
+ */
+export async function resetRateLimits(emails: readonly string[] = Object.values(ACCOUNTS)) {
+  const { data, error } = await admin().rpc('e2e_reset_rate_limits', { p_emails: [...emails] });
+  if (error?.code === 'PGRST202') {
+    // La migración todavía no está aplicada en esta base: las pruebas siguen, pero sin reinicio
+    console.warn('Aviso: falta public.e2e_reset_rate_limits en Supabase (migración 20261021130000); no se reiniciaron los límites por hora.');
+    return 0;
+  }
+  if (error) throw error;
+  return data as number;
+}

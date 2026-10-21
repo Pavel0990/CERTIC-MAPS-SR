@@ -33,7 +33,7 @@ Quedan unas **5 semanas**. Casi todo lo que falta ya no es código: contenido, p
 
 | Criterio (puntos) | Qué lo respalda | Qué falta para el máximo |
 |---|---|---|
-| **Funcionalidad (25)** | F1–F6, panel, PDF, PWA; 173 pruebas de base de datos, 102 unitarias, 14 recorridos E2E | Contenido real en turismo y rutas; base de producción separada |
+| **Funcionalidad (25)** | F1–F6, panel, PDF, PWA; 176 pruebas de base de datos, 102 unitarias, 15 recorridos E2E | Contenido real en turismo y rutas; base de producción separada |
 | **UX/UI para baja alfabetización digital (20)** | Lenguaje sencillo, letra Lexend/Nunito, áreas táctiles de 44 px, contraste WCAG AA en claro y oscuro (axe en 16 pantallas), sin conexión | **Pruebas con vecinos** (dos rondas) y sus cifras en la presentación |
 | **Innovación (20)** | Confirmación comunitaria de alertas, reputación, datos abiertos (OSM), costo casi cero | Ideas opcionales en §5.4 |
 | **Impacto territorial (15)** | Los 3 municipios, límites oficiales de OSM, indicadores por municipio | Contenido de Monción y Villa Los Almácigos; testimonios de la prueba con vecinos |
@@ -53,8 +53,8 @@ La revisión del 17/10 y la del 21/10 están detalladas en [SECURITY.md](../SECU
 | Tarea | Por qué | Hecho cuando |
 |---|---|---|
 | **Captcha** en `/entrar` (Cloudflare Turnstile) | Frenar el envío masivo de correos de acceso | Requiere la cuenta de Cloudflare (§5.2). Widget en `/entrar`, `challenges.cloudflare.com` en la CSP de `src/proxy.ts` y activado en *Supabase → Authentication → Attack Protection* |
-| **E2E sin limpieza manual** | Que las pruebas se puedan correr varias veces seguidas | `tests/e2e/helpers.ts` reinicia el límite de reportes por hora de las cuentas de prueba |
-| **E2E en la CI** | Hoy Playwright y axe se corren a mano antes de subir | Un workflow que los corra contra la vista previa de Vercel |
+| **E2E sin limpieza manual** | Que las pruebas se puedan correr varias veces seguidas | ⏳ Código listo: `tests/e2e/global-setup.ts` reinicia los límites por hora y la reputación de las cuentas de prueba con `e2e_reset_rate_limits`. **Falta aplicar** la migración `20261021130000_e2e_rate_limit_reset` en staging (§7) |
+| **E2E en la CI** | Hoy Playwright y axe se corren a mano antes de subir | ⏳ `.github/workflows/e2e.yml` listo (construye la app en el runner y prueba con Chromium contra staging). **Falta** crear el entorno `e2e-staging` con sus 3 secretos y la variable `E2E_ENABLED=true` ([ADR-025](decisions/ADR-025-e2e-contra-staging.md)) |
 | **Simulacro de restauración** | La copia diaria nunca se ha restaurado de prueba | Cargar la última copia en PGlite con todas las migraciones y comparar conteos; procedimiento en [DEPLOYMENT.md §8.1](../DEPLOYMENT.md#81-copias-de-seguridad) |
 | **Correcciones de la prueba con vecinos** | Lo que salga de la ronda 1 | Un *issue* `ux` por problema, corregido antes de la ronda 2 |
 

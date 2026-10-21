@@ -747,6 +747,26 @@ await db.query(`drop table public.zz_sin_rls`);
 ok('U5 la auditoría detecta una tabla nueva sin RLS', caught.some((r) => r.object === 'zz_sin_rls'), JSON.stringify(caught));
 
 // ---------------------------------------------------------------------------------------------
+// V. E2E repetibles: reinicio de límites de las cuentas de prueba (migración 20261021130000)
+// ---------------------------------------------------------------------------------------------
+lastStep = 'reinicio de límites E2E';
+const e2eUser = await newUser('ciudadano.e2e@example.com', 'Cuenta de prueba E2E');
+await db.query(`insert into private.rate_limit_hits (user_id, action, window_start, count)
+                values ($1, 'traffic_report_create', date_trunc('hour', now()), 5), ($1, 'avatar_update', date_trunc('hour', now()), 10),
+                       ($2, 'traffic_report_create', date_trunc('hour', now()), 5)
+                on conflict (user_id, action, window_start) do update set count = excluded.count`, [e2eUser, U.beto]);
+await expectError('V1 una persona con sesión no puede reiniciar límites',
+  () => rpc(U.beto, `public.e2e_reset_rate_limits(array['beto@ejemplo.do'])`), /permission denied/);
+await expectError('V2 un visitante sin sesión no puede reiniciar límites',
+  () => rpc(null, `public.e2e_reset_rate_limits(array['ciudadano.e2e@example.com'])`), /permission denied/);
+const resetN = await rpc('service', `public.e2e_reset_rate_limits(array['ciudadano.e2e@example.com', 'beto@ejemplo.do'])`);
+const hitsLeft = await one(`select
+   (select count(*) from private.rate_limit_hits where user_id = $1)::int as e2e,
+   (select count(*) from private.rate_limit_hits where user_id = $2 and action = 'traffic_report_create')::int as beto`, [e2eUser, U.beto]);
+ok('V3 el servicio reinicia solo los límites de cuentas @example.com, aunque le pasen otra cuenta',
+   resetN === 2 && hitsLeft.e2e === 0 && hitsLeft.beto >= 1, JSON.stringify({ resetN, ...hitsLeft }));
+
+// ---------------------------------------------------------------------------------------------
 // L. Mantenimiento y privacidad
 // ---------------------------------------------------------------------------------------------
 // Foto de perfil (bucket avatars): un archivo por persona, sin listar, versión solo por RPC

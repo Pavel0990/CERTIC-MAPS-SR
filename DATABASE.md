@@ -11,9 +11,9 @@
 
 | Qué | Cifra | Cómo se comprueba |
 |---|---|---|
-| Migraciones | **27**, todas aplicadas en el Supabase de staging | `ls supabase/migrations` · `npx supabase migration list` |
-| Funciones en `public` | **49** (§6) | `grep -ohE "function public\.[a-z_]+" supabase/migrations/*.sql \| sort -u \| wc -l` |
-| Pruebas de la base | **173**, en 23 secciones (A–U, AV y SR), todas pasan en cada push (CI) | `npm run test:db` |
+| Migraciones | **28**; 27 aplicadas en el Supabase de staging (falta `20261021130000_e2e_rate_limit_reset`) | `ls supabase/migrations` · `npx supabase migration list` |
+| Funciones en `public` | **50** (§6) | `grep -ohE "function public\.[a-z_]+" supabase/migrations/*.sql \| sort -u \| wc -l` |
+| Pruebas de la base | **176**, en 24 secciones (A–V, AV y SR), todas pasan en cada push (CI) | `npm run test:db` |
 | Motor de las pruebas | PostgreSQL 18.3 + PostGIS 3.6.2 en PGlite. Staging: PostgreSQL 17 + PostGIS 3.3 | — |
 
 Las pruebas cubren seguridad (con ataques directos), integridad, concurrencia, PostGIS, fotos, alertas, KPIs, descarga auditada del PDF, entrega del worker, push, catálogos y mantenimiento. Lo que no se puede verificar fuera de Supabase está en §14 y en [ARCHITECTURE.md §20](ARCHITECTURE.md#20-verificaciones-en-el-servicio-real).
@@ -126,7 +126,7 @@ Tablas con RLS + grants por columna + CHECK/FK       ← CAPA 4: integridad (úl
 |---|---|
 | `anon` | Visitante sin sesión: lectura pública + `map_features`, `map_aggregates`, `search_all`, `track_engagement` |
 | `authenticated` | Usuario con sesión: RPC de negocio, lectura por RLS. Su rol de negocio real sale de `user_roles` |
-| `service_role` | Solo el worker y el cron (servidor). Ejecuta los `worker_*`, `weekly_report_*` y `kpi_summary` |
+| `service_role` | Solo el worker y el cron (servidor). Ejecuta los `worker_*`, `weekly_report_*`, `kpi_summary` y `e2e_reset_rate_limits` (solo para preparar las E2E) |
 
 ## 5. Modelo de datos
 
@@ -381,6 +381,14 @@ Resultado de la [revisión del 21/10/2026](SECURITY.md#revisión-del-21102026). 
 
 Pruebas SR1–SR5, K1–K1d y AV10.
 
+### 5.22 E2E repetibles — `20261021130000_e2e_rate_limit_reset.sql`
+
+| Pieza | Qué hace |
+|---|---|
+| `e2e_reset_rate_limits(correos[])` | Borra los contadores de `private.rate_limit_hits` de las cuentas indicadas **solo si su correo es `@example.com`** (dominio reservado: las cuentas de `scripts/staging-test-users.mjs`). Solo `service_role`; la llama `tests/e2e/global-setup.ts` antes de cada corrida de Playwright para que las E2E se puedan repetir sin llegar al límite de 5 alertas por hora. `security_audit.sql` marca cualquier `e2e_*` ejecutable por clientes |
+
+Pruebas V1–V3.
+
 ## 6. Catálogo de RPC
 
 Todas las funciones de `public` (cifra en [Estado verificado](#estado-verificado)) son `SECURITY DEFINER`, salvo las marcadas como **invoker**.
@@ -422,6 +430,7 @@ Todas las funciones de `public` (cifra en [Estado verificado](#estado-verificado
 | `catalog_admin_list`, `save_catalog_item` | admin provincial | 300/h (`staff_action`) | lista blanca; código estable; nunca sin una opción activa |
 | `register_push_device`, `unregister_push_device` | ciudadano | 20/h (alta) | `ON CONFLICT (endpoint)`; el dispositivo pasa a la cuenta actual |
 | `worker_notify_moderators`, `worker_push_payload`, `worker_push_result`, `worker_attachment_info`, `worker_report_run` | service | — | idempotentes: ignoran estados ya avanzados |
+| `e2e_reset_rate_limits` | service (solo cuentas `@example.com`) | — | idempotente |
 
 Qué endpoint o Server Action consume cada RPC: ARCHITECTURE.md §12.
 

@@ -87,11 +87,17 @@ Quita el reenvío al terminar: cualquiera con la URL ve la app.
 ```bash
 npm run check     # lint (con la regla de fronteras), tipos, pruebas unitarias y de fronteras
 npm run test:db   # pruebas de la base de datos (PostgreSQL + PostGIS en memoria, sin Docker)
-npm run test:e2e  # 14 recorridos (incluido axe en claro y oscuro) en un navegador real contra staging (con npm run dev corriendo)
+npm run test:e2e  # 15 recorridos (incluido axe en claro y oscuro y la velocidad de la navegación) en un navegador real contra staging (con npm run dev corriendo)
 npm run backup    # copia de los datos de staging en backups/ (antes de cambios grandes)
 ```
 
-El CI de GitHub ejecuta las dos primeras en cada pull request. Las de punta a punta (`test:e2e`) usan las cuentas de prueba y se corren a mano; los recorridos que dependen del teléfono están en el [guion de la demo](docs/guion-demo.md#prueba-completa-a-mano-teléfono-real).
+El CI de GitHub ejecuta las dos primeras en cada pull request. Las de punta a punta (`test:e2e`) usan las cuentas de prueba de staging:
+
+- **Se pueden correr varias veces seguidas.** Antes de cada corrida, `tests/e2e/global-setup.ts` reinicia los límites por hora y la reputación de las cuentas de prueba (solo de esas). Necesita la migración `20261021130000_e2e_rate_limit_reset` en staging; sin ella, avisa y sigue, y después de unas 5 corridas en la misma hora el reporte de prueba queda guardado "para cuando vuelva la señal" (límite de 5 alertas por hora).
+- **Con otro puerto:** `E2E_BASE_URL=http://localhost:3101 npm run test:e2e`.
+- **En la CI:** [`.github/workflows/e2e.yml`](.github/workflows/e2e.yml) construye la app en el runner y corre Playwright con Chromium contra staging en cada PR y en `main`. Está apagado hasta que exista la variable `E2E_ENABLED=true` y los secretos del entorno `e2e-staging` ([ADR-025](docs/decisions/ADR-025-e2e-contra-staging.md)). Si falla, deja el reporte y las trazas como artefacto.
+
+Los recorridos que dependen del teléfono están en el [guion de la demo](docs/guion-demo.md#prueba-completa-a-mano-teléfono-real).
 
 ---
 

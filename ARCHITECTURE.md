@@ -435,7 +435,7 @@ Resumen. El detalle (columnas, índices, políticas, matriz de grants) está en 
 | Seguridad | 31 políticas RLS + 3 de Storage; grants por columna; `EXECUTE` explícito por función |
 | Índices | 109 al 07/10, incluidos GiST, GIN y parciales |
 | Triggers | 16 |
-| Pruebas | 173 de base de datos, todas pasan (§14.1) |
+| Pruebas | 176 de base de datos, todas pasan (§14.1) |
 
 ### 8.2 Esquemas y roles de base de datos
 
@@ -1112,10 +1112,11 @@ Las lecturas (actividad, notificaciones, fichas, bandejas, KPIs, catálogos) las
 ```text
 rama de trabajo → push / Pull Request
   CI (.github/workflows/ci.yml): lint (con fronteras) + tipos + unitarias + fronteras + base de datos (PGlite)
+  E2E (.github/workflows/e2e.yml, si E2E_ENABLED=true): next build + next start en el runner → Playwright (Chromium) contra staging
   Vercel: vista previa de la rama
 
 push a main
-  CI
+  CI y E2E
   Vercel: publica en producción (integración Git)
   Las migraciones se aplican ANTES con `npx supabase db push` (regla del equipo, docs/ESTADO-Y-PENDIENTES.md §7)
 
@@ -1124,7 +1125,7 @@ cuando exista el Supabase de producción (ADR-019):
   y se desactiva la publicación automática de main en vercel.json
 ```
 
-Las pruebas E2E (`npm run test:e2e`) se corren a mano contra staging, porque necesitan las cuentas de prueba ([ADR-025](docs/decisions/ADR-025-e2e-contra-staging.md)).
+Las pruebas E2E (`npm run test:e2e`) usan las cuentas de prueba de staging. Se corren a mano antes de subir y, con `E2E_ENABLED=true` y los secretos del entorno `e2e-staging`, también en `e2e.yml`, una corrida a la vez porque las cuentas son compartidas ([ADR-025](docs/decisions/ADR-025-e2e-contra-staging.md)). Si una falla, el reporte HTML y las trazas quedan como artefacto 14 días.
 
 ### 13.4 Migraciones
 
@@ -1235,7 +1236,7 @@ cd supabase/tests && npm install && npm test
 |---|---|---|---|
 | Unitarias | Vitest (`npm test`) | Mapeo de `reason` a HTTP, redirecciones seguras, rejilla de bbox, horario y "abierto ahora", lector de GPX, esquemas de negocio, procesamiento de fotos (EXIF, formato, tamaño), semanas ISO y periodos del informe, enlaces de notificaciones, secreto del worker | CI |
 | Fronteras | `node:test` (`npm run test:boundaries`) | Que el lint detecte importaciones prohibidas, incluido el alias `@/` | CI |
-| E2E | Playwright (`npm run test:e2e`) | Listados y filtros públicos, búsqueda sin tildes, fichas, y el recorrido central: vecino reporta → moderador publica → aparece en el mapa público. Limpia lo que crea | A mano, contra staging ([ADR-025](docs/decisions/ADR-025-e2e-contra-staging.md)) |
+| E2E | Playwright (`npm run test:e2e`) | Listados y filtros públicos, búsqueda sin tildes, fichas, foto de perfil, panel de indicadores, axe (WCAG 2.1 AA) en claro y oscuro, reacción inmediata de la navegación, y el recorrido central: vecino reporta → moderador publica → aparece en el mapa público. Limpia lo que crea y, antes de cada corrida, reinicia los límites por hora y la reputación de las cuentas de prueba (`global-setup.ts`), así se puede repetir | A mano y en `e2e.yml` (si `E2E_ENABLED=true`), contra staging ([ADR-025](docs/decisions/ADR-025-e2e-contra-staging.md)) |
 | Manual | Teléfonos reales | GPS, cámara, push, modo sin conexión, iPhone instalado | [Guion de la demo](docs/guion-demo.md#prueba-completa-a-mano-teléfono-real) |
 | Personas | Vecinos | Baja alfabetización digital (20 puntos) | [Guía](docs/prueba-con-vecinos.md) |
 
@@ -1469,7 +1470,7 @@ Cada ADR tiene su archivo en [`docs/decisions/`](docs/decisions), con contexto, 
 | [022](docs/decisions/ADR-022-maplibre-openfreemap.md) | MapLibre + OpenFreeMap como mapa base definitivo del MVP, detrás del mismo adaptador | Google Maps (ADR-004) | Sin costo ni claves, cacheable sin conexión, coherente con los datos de OSM |
 | [023](docs/decisions/ADR-023-server-actions.md) | Server Actions para lo que solo se hace desde la interfaz; Route Handlers solo para el mapa, la cola offline, el worker y los cron | Una API REST completa `/me/*` | Menos superficie pública; las RPC siguen siendo la barrera |
 | [024](docs/decisions/ADR-024-datos-osm.md) | OpenStreetMap como fuente provisional de límites, negocios, lugares y rutas, con importadores idempotentes | Datos inventados de demostración; esperar los datos oficiales | Datos reales para la demo; los oficiales se cargan encima |
-| [025](docs/decisions/ADR-025-e2e-contra-staging.md) | E2E con Playwright contra staging, a mano; el CI corre lo que no necesita cuentas | Supabase local con Docker en CI | Pruebas reales del recorrido central sin secretos en CI |
+| [025](docs/decisions/ADR-025-e2e-contra-staging.md) | E2E con Playwright contra staging, a mano y en `e2e.yml` (apagado por defecto); repetibles | Supabase local con Docker en CI | Pruebas reales del recorrido central; el `service_role` de staging en un entorno de GitHub |
 
 ### 18.1 Decisiones que cambiaron
 
@@ -1577,3 +1578,4 @@ Lo que las pruebas locales no podían confirmar se comprobó en el proyecto `sta
 | **2.2** | 25/09/2026 | La regla de fronteras de ADR-008 deja de ser solo documento: `package.json`, `tsconfig.json`, ESLint con `eslint-plugin-boundaries` (8 pruebas de regresión, incluido el alias `@/`), los módulos con su `index.ts` y CI en GitHub Actions |
 | **3.0** | 07/10/2026 | **Documento de lo construido.** Stack real (§4), una sola carpeta de rutas (§6.1), MapLibre + OpenFreeMap (§7, ADR-022), API real: Route Handlers + Server Actions (§12, ADR-023), CI/CD y operación reales (§13), pruebas E2E (§14), estructura real (§15), ejecución (§16.3), riesgos sin Google (§17), ADR-023 a 025, verificaciones resueltas (§20). Las cifras pasan a vivir solo en DATABASE.md |
 | **3.1** | 21/10/2026 | Fechas oficiales corregidas (desarrollo hasta el 27/11, demo del 28 al 30/11), cifras al día (27 migraciones, 49 funciones, 173 pruebas), panel de indicadores explorable, modo oscuro, foto de perfil, revisión de seguridad del 21/10 ([SECURITY.md](SECURITY.md)) y seguimiento único en [docs/ESTADO-Y-PENDIENTES.md](docs/ESTADO-Y-PENDIENTES.md) |
+| **3.2** | 21/10/2026 | E2E repetibles (reinicio de límites de las cuentas de prueba, migración `20261021130000`) y workflow `e2e.yml` contra staging, apagado por defecto (§13.3, §14.2, ADR-025 revisada) |
