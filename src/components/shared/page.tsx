@@ -52,7 +52,7 @@ export function LinkTabs({ tabs, active }: { tabs: { href: string; label: string
           className={cn('flex h-10 flex-1 items-center justify-center gap-1.5 rounded-[11px] px-3 text-[15px] font-semibold transition', active === t.href ? 'bg-surface shadow-sm' : 'text-muted hover:text-ink')}
         >
           {t.label}
-          {t.count !== undefined && <span className="rounded-full bg-canvas px-1.5 text-[12px]">{t.count}</span>}
+          {t.count !== undefined && <span className="rounded-full bg-canvas px-1.5 text-[13px]">{t.count}</span>}
         </Link>
       ))}
     </nav>

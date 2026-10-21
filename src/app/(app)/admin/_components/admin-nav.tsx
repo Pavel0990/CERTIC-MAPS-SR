@@ -35,7 +35,7 @@ export function AdminNav({ isAdmin, isProvincialAdmin, counts }: { isAdmin: bool
             <i.icon className="size-4" aria-hidden />
             {i.label}
             {badge > 0 && (
-              <span className={cn('rounded-full px-1.5 text-[12px] font-bold', active ? 'bg-white/20' : 'bg-danger text-white')}>{badge}</span>
+              <span className={cn('rounded-full px-2 text-[13px] font-bold', active ? 'bg-white/20' : 'bg-danger text-white')}>{badge}</span>
             )}
           </Link>
         );

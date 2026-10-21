@@ -41,7 +41,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
             <EmptyState
               icon={<Inbox className="size-7" />}
               title="Todavía no has reportado nada"
-              action={<Link href="/reportar" className="mt-2 inline-flex h-12 items-center rounded-[14px] bg-ink px-5 font-semibold text-white">Hacer mi primer reporte</Link>}
+              action={<Link href="/reportar" className="mt-2 inline-flex h-12 items-center rounded-full bg-ink px-5 font-semibold text-white">Hacer mi primer reporte</Link>}
             >
               Cuando reportes un bache, basura o una consulta al municipio, aquí verás cómo avanza.
             </EmptyState>

@@ -57,7 +57,7 @@ function EscalateButton({ id, categories }: { id: string; categories: { code: st
   const [open, setOpen] = useState(false);
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="press inline-flex h-11 items-center gap-1.5 rounded-[10px] px-3 text-sm font-semibold text-muted hover:bg-canvas hover:text-ink md:h-9">
+      <button type="button" onClick={() => setOpen(true)} className="press inline-flex h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-muted hover:bg-canvas hover:text-ink md:h-9">
         <ArrowUpRight className="size-4" aria-hidden /> Pasar a obra municipal
       </button>
     );

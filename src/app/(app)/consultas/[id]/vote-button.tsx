@@ -41,7 +41,7 @@ export function VoteButton({ requestId, initialVoted, initialCount, signedIn }: 
       disabled={pending}
       aria-pressed={voted}
       className={cn(
-        'inline-flex h-13 min-h-[52px] shrink-0 items-center justify-center gap-2.5 whitespace-nowrap rounded-[14px] px-5 text-[16px] font-bold transition',
+        'inline-flex h-13 min-h-[52px] shrink-0 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-5 text-[16px] font-bold transition',
         voted ? 'bg-brand text-white hover:bg-brand-strong' : 'bg-brand-soft text-brand-strong hover:bg-[#dce8ff]',
       )}
     >

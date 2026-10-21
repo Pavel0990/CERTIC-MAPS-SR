@@ -64,7 +64,7 @@ export function AppNav({ signedIn, isStaff, isEntrepreneur, unread, avatar }: Na
                 <Link
                   href={t.href}
                   aria-current={active ? 'page' : undefined}
-                  className={cn('press relative flex flex-1 flex-col items-center justify-center gap-0.5 text-[13px] font-semibold', active ? 'text-ink' : 'text-subtle')}
+                  className={cn('press relative flex flex-1 flex-col items-center justify-center gap-0.5 text-[14px] font-semibold', active ? 'text-ink' : 'text-subtle')}
                 >
                   {t.primary ? (
                     <span className="flex size-11 items-center justify-center rounded-full bg-danger text-white shadow-[0_6px_16px_rgb(229_72_77/0.35)]">
@@ -93,7 +93,7 @@ function RailLink({ href, label, active, primary, badge = 0, children }: { href:
       href={href}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'press relative flex w-[72px] flex-col items-center gap-1 rounded-[14px] py-2 text-[13px] font-semibold',
+        'press relative flex w-[72px] flex-col items-center gap-1 rounded-[14px] py-2 text-[14px] font-semibold',
         primary ? 'text-danger-strong hover:bg-danger-soft' : active ? 'bg-brand-soft text-brand-strong' : 'text-muted hover:bg-canvas',
       )}
     >
@@ -106,7 +106,7 @@ function RailLink({ href, label, active, primary, badge = 0, children }: { href:
 
 function Dot({ n }: { n: number }) {
   return (
-    <span className="absolute right-3 top-1 flex min-w-5 items-center justify-center rounded-full bg-danger px-1 text-[11px] font-bold text-white" aria-label={`${n} sin leer`}>
+    <span className="absolute right-3 top-1 flex min-w-5 items-center justify-center rounded-full bg-danger px-1 text-[12px] font-bold text-white" aria-label={`${n} sin leer`}>
       {n > 9 ? '9+' : n}
     </span>
   );

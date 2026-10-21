@@ -50,7 +50,7 @@ export default async function MyBusinessesPage() {
         </Card>
       )}
       {businesses.length > 0 && (
-        <Link href="/negocios/registrar" className="mt-4 inline-flex h-12 items-center justify-center rounded-[14px] px-4 font-semibold text-brand hover:bg-surface">
+        <Link href="/negocios/registrar" className="mt-4 inline-flex h-12 items-center justify-center rounded-full px-4 font-semibold text-brand hover:bg-surface">
           Registrar otro negocio
         </Link>
       )}

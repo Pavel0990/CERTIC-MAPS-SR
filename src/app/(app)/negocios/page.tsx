@@ -7,7 +7,7 @@ import { PageShell } from '@/components/shared/page';
 import { Badge, Card, EmptyState } from '@/components/ui/primitives';
 import { getCatalogs } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
-import { FilterChips, ListRow, OsmCredit } from '../_contenido/list';
+import { FilterChips, ListGrid, ListRow, OsmCredit } from '../_contenido/list';
 
 export const metadata: Metadata = { title: 'Negocios', description: 'Comercios y servicios de Santiago Rodríguez: colmados, comida, salud, alojamiento y más.' };
 
@@ -37,7 +37,7 @@ export default async function BusinessesPage({ searchParams }: { searchParams: P
         {cat && <input type="hidden" name="tipo" value={cat.slug} />}
         <label htmlFor="buscar-negocio" className="sr-only">Buscar por nombre</label>
         <input id="buscar-negocio" name="q" defaultValue={q} placeholder="Buscar por nombre" className="h-12 min-w-0 flex-1 rounded-[14px] border border-line-strong bg-surface px-4 text-[17px] focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15" />
-        <button type="submit" className="inline-flex h-12 items-center gap-2 rounded-[14px] bg-ink px-4 text-[16px] font-semibold text-white">
+        <button type="submit" className="inline-flex h-12 items-center gap-2 rounded-full bg-brand px-5 text-[16px] font-semibold text-white hover:bg-brand-strong">
           <Search className="size-5" aria-hidden /> Buscar
         </button>
       </form>
@@ -60,7 +60,7 @@ export default async function BusinessesPage({ searchParams }: { searchParams: P
         </Card>
       ) : (
         <Card className="overflow-hidden">
-          <ul>
+          <ListGrid>
             {items.map((b) => {
               const Icon = catalogIcon(b.category?.icon, Store);
               return (
@@ -72,19 +72,19 @@ export default async function BusinessesPage({ searchParams }: { searchParams: P
                   subtitle={[b.category?.name, b.municipality].filter(Boolean).join(' · ')}
                   badge={b.openNow === true ? <Badge tone="ok">Abierto ahora</Badge> : b.openNow === false ? <Badge tone="neutral">Cerrado ahora</Badge> : undefined}
                   action={b.phone ? (
-                    <a href={`tel:${b.phone.replace(/[^\d+]/g, '')}`} className="inline-flex h-11 items-center gap-1.5 rounded-[12px] border border-line-strong px-3 text-[15px] font-semibold hover:bg-canvas" aria-label={`Llamar a ${b.name}`}>
+                    <a href={`tel:${b.phone.replace(/[^\d+]/g, '')}`} className="inline-flex h-11 items-center gap-1.5 rounded-full border border-line-strong px-3 text-[15px] font-semibold hover:bg-canvas" aria-label={`Llamar a ${b.name}`}>
                       <Phone className="size-4" aria-hidden /> Llamar
                     </a>
                   ) : undefined}
                 />
               );
             })}
-          </ul>
+          </ListGrid>
         </Card>
       )}
       <Card className="mt-4 flex flex-wrap items-center gap-3 p-4">
         <span className="min-w-0 flex-1 text-[15px]"><strong>¿Tienes un negocio?</strong> Regístralo gratis para que aparezca con tu horario, fotos y WhatsApp.</span>
-        <Link href="/negocios/registrar" className="inline-flex h-11 items-center rounded-[12px] bg-brand px-4 text-[15px] font-semibold text-white hover:bg-brand-strong">Registrar mi negocio</Link>
+        <Link href="/negocios/registrar" className="inline-flex h-11 items-center rounded-full bg-brand px-4 text-[15px] font-semibold text-white hover:bg-brand-strong">Registrar mi negocio</Link>
       </Card>
       <OsmCredit />
     </PageShell>

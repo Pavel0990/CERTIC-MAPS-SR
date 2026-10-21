@@ -7,7 +7,7 @@ import { Card, EmptyState } from '@/components/ui/primitives';
 import { getCatalogs } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
 import { PLACE_KIND } from '@/lib/vocabulary';
-import { FilterChips, ListRow, OsmCredit } from '../_contenido/list';
+import { FilterChips, ListGrid, ListRow, OsmCredit } from '../_contenido/list';
 
 export const metadata: Metadata = { title: 'Lugares para visitar', description: 'Presas, parques, miradores y áreas protegidas de Santiago Rodríguez.' };
 
@@ -39,12 +39,12 @@ export default async function PlacesPage({ searchParams }: { searchParams: Promi
         <Card><EmptyState icon={<Palmtree className="size-7" />} title="No hay lugares con estos filtros" action={<Link href="/turismo" className="font-semibold text-brand underline">Ver todos</Link>} /></Card>
       ) : (
         <Card className="overflow-hidden">
-          <ul>
+          <ListGrid>
             {items.map((p) => {
               const Icon = KIND_ICON[p.kind] ?? Palmtree;
               return <ListRow key={p.id} href={`/turismo/${p.id}`} icon={<Icon className="size-6" />} iconClass="bg-ok-soft text-ok" title={p.name} subtitle={[PLACE_KIND[p.kind], p.municipality].filter(Boolean).join(' · ')} />;
             })}
-          </ul>
+          </ListGrid>
         </Card>
       )}
       <p className="mt-4 text-[15px]">¿Conoces un lugar que falta? <Link href="/proponer" className="font-semibold text-brand underline">Propónlo</Link> y el municipio lo revisa.</p>

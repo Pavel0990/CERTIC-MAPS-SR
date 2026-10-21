@@ -16,8 +16,8 @@ export function Wordmark() {
     <span className="flex items-center gap-2.5">
       <Logo className="size-9" />
       <span className="leading-tight">
-        <span className="block text-[15px] font-extrabold tracking-wide">SR CONECTA</span>
-        <span className="block text-[13px] text-muted">El territorio está vivo</span>
+        <span className="block font-display text-[18px] font-extrabold">SR Conecta</span>
+        <span className="block text-[14px] text-muted">El territorio está vivo</span>
       </span>
     </span>
   );

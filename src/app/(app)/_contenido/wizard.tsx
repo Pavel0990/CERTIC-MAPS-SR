@@ -59,8 +59,8 @@ export function DoneScreen({
       <div className="mt-2 text-[17px] text-muted">{message}</div>
       {photoError && <div className="mt-4 w-full"><Notice tone="warn">Algunas fotos no se pudieron subir: {photoError}</Notice></div>}
       <div className="mt-8 flex w-full flex-col gap-2">
-        <Link href={primary.href} className="press inline-flex h-13 min-h-[52px] items-center justify-center rounded-[14px] bg-ink font-semibold text-white">{primary.label}</Link>
-        {secondary && <Link href={secondary.href} className="press inline-flex h-12 items-center justify-center rounded-[14px] font-semibold text-ink hover:bg-surface">{secondary.label}</Link>}
+        <Link href={primary.href} className="press inline-flex h-13 min-h-[52px] items-center justify-center rounded-full bg-ink font-semibold text-white">{primary.label}</Link>
+        {secondary && <Link href={secondary.href} className="press inline-flex h-12 items-center justify-center rounded-full font-semibold text-ink hover:bg-surface">{secondary.label}</Link>}
       </div>
     </section>
   );

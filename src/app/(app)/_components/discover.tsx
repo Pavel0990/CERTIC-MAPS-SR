@@ -18,9 +18,9 @@ export function Discover({ items, alerts }: { items: DiscoverItem[]; alerts: num
       <div className="flex items-end justify-between gap-2">
         <div>
           <Eyebrow>Santiago Rodríguez</Eyebrow>
-          <h2 id="descubre" className="text-xl font-bold">Descubre la provincia</h2>
+          <h2 id="descubre" className="text-[22px] font-extrabold leading-tight">Descubre la provincia</h2>
         </div>
-        <Link href="/mapa" className="-mr-2 flex min-h-11 items-center px-2 text-[15px] font-semibold text-brand hover:underline">
+        <Link href="/mapa" className="-mr-2 flex min-h-11 shrink-0 items-center whitespace-nowrap px-2 text-[15px] font-semibold text-brand hover:underline">
           Ver mapa <ChevronRight className="size-4" aria-hidden />
         </Link>
       </div>
@@ -55,7 +55,7 @@ export function Discover({ items, alerts }: { items: DiscoverItem[]; alerts: num
                   <svg viewBox="0 0 24 24" className="absolute -bottom-3 -right-3 size-24 text-white/25" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <path d={L.icon} />
                   </svg>
-                  <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1.5 rounded-full bg-white px-2 py-0.5 text-[12px] font-bold text-ink">
+                  <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-0.5 text-[14px] font-bold text-ink">
                     <span className="size-2 rounded-full" style={{ background: L.color }} aria-hidden />
                     {L.label}
                   </span>

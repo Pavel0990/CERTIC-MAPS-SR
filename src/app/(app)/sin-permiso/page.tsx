@@ -12,7 +12,7 @@ export default function NoPermissionPage() {
         <EmptyState
           icon={<ShieldAlert className="size-7" />}
           title="Esta sección es para el personal del municipio"
-          action={<Link href="/" className="mt-2 inline-flex h-12 items-center rounded-[14px] bg-ink px-5 font-semibold text-white">Volver al mapa</Link>}
+          action={<Link href="/" className="mt-2 inline-flex h-12 items-center rounded-full bg-ink px-5 font-semibold text-white">Volver al mapa</Link>}
         >
           Si trabajas en el ayuntamiento y necesitas acceso, pide a la administración municipal que te asigne el rol.
         </EmptyState>

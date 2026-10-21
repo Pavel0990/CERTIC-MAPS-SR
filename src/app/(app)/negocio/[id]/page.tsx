@@ -116,7 +116,7 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
   return (
     <div className="flex flex-col items-center gap-1 rounded-[14px] bg-canvas p-3">
       <span className="text-muted" aria-hidden>{icon}</span>
-      <dt className="order-last text-[13px] leading-tight text-muted">{label}</dt>
+      <dt className="order-last text-[14px] leading-tight text-muted">{label}</dt>
       <dd className="text-2xl font-extrabold">{formatNumber(value)}</dd>
     </div>
   );

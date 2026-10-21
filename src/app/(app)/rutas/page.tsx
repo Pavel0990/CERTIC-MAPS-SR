@@ -7,7 +7,7 @@ import { Badge, Card, EmptyState } from '@/components/ui/primitives';
 import { getCatalogs } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
 import { DIFFICULTY, ROUTE_KIND } from '@/lib/vocabulary';
-import { FilterChips, ListRow, OsmCredit } from '../_contenido/list';
+import { FilterChips, ListGrid, ListRow, OsmCredit } from '../_contenido/list';
 
 export const metadata: Metadata = { title: 'Rutas', description: 'Rutas para caminar y pedalear en Santiago Rodríguez, con distancia, tiempo y dificultad.' };
 
@@ -31,7 +31,7 @@ export default async function RoutesPage({ searchParams }: { searchParams: Promi
         <Card><EmptyState icon={<Route className="size-7" />} title="No hay rutas en este municipio" action={<Link href="/rutas" className="font-semibold text-brand underline">Ver todas</Link>} /></Card>
       ) : (
         <Card className="overflow-hidden">
-          <ul>
+          <ListGrid>
             {items.map((r) => (
               <ListRow
                 key={r.id}
@@ -48,7 +48,7 @@ export default async function RoutesPage({ searchParams }: { searchParams: Promi
                 }
               />
             ))}
-          </ul>
+          </ListGrid>
         </Card>
       )}
       <p className="mt-4 text-[15px]">¿Haces una ruta que falta? <Link href="/proponer?que=ruta" className="font-semibold text-brand underline">Propónla</Link> dibujándola en el mapa o con un archivo GPX.</p>

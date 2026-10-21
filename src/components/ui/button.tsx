@@ -14,9 +14,9 @@ const variants: Record<Variant, string> = {
   danger: 'bg-surface text-danger-strong border border-[#f5c2c0] hover:bg-danger-soft',
 };
 const sizes: Record<Size, string> = {
-  sm: 'h-11 md:h-9 px-3 text-sm gap-1.5 rounded-[10px]',
-  md: 'h-11 px-4 text-[15px] gap-2 rounded-[12px]',
-  lg: 'h-13 px-5 text-base gap-2.5 rounded-[14px] min-h-[52px]',
+  sm: 'h-11 md:h-9 px-3 text-sm gap-1.5 rounded-full',
+  md: 'h-11 px-4 text-[15px] gap-2 rounded-full',
+  lg: 'h-13 px-5 text-base gap-2.5 rounded-full min-h-[52px]',
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

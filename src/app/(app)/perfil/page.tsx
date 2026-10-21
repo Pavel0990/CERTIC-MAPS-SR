@@ -78,7 +78,7 @@ function MenuLink({ href, icon, label, badge = 0 }: { href: string; icon: React.
     <Link href={href} className="flex items-center gap-3 border-b border-line px-5 py-4 font-semibold last:border-0 hover:bg-[#fafbfc]">
       <span className="text-muted" aria-hidden>{icon}</span>
       <span className="flex-1">{label}</span>
-      {badge > 0 && <span className="whitespace-nowrap rounded-full bg-danger px-2 py-0.5 text-[13px] font-bold text-white">{badge} sin leer</span>}
+      {badge > 0 && <span className="whitespace-nowrap rounded-full bg-danger px-2 py-0.5 text-[14px] font-bold text-white">{badge} sin leer</span>}
       <ChevronRight className="size-4 text-subtle" aria-hidden />
     </Link>
   );

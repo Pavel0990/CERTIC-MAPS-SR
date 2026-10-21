@@ -2,7 +2,8 @@
 
 /* Identidad visual de SR Conecta (derivada del prototipo de diseño, project/Main.dc.html). */
 @theme {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: var(--font-lexend), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: var(--font-nunito), var(--font-lexend), ui-rounded, system-ui, sans-serif;
 
   --color-ink: #111418;
   --color-muted: #5b616b;
@@ -77,14 +78,22 @@
   html {
     -webkit-tap-highlight-color: transparent;
     text-size-adjust: 100%;
+    /* En PC: la página no "salta" de lado al pasar de una pantalla corta a una con desplazamiento */
+    scrollbar-gutter: stable;
+    scrollbar-color: var(--color-line-strong) transparent;
+    scroll-behavior: smooth;
   }
+  /* Con ratón, todo lo que se puede tocar muestra la mano (Tailwind 4 deja la flecha en los botones) */
+  button:not(:disabled), [role='button'], summary, select, label:has(> input[type='checkbox'], > input[type='radio']) { cursor: pointer; }
+  button:disabled, [aria-disabled='true'] { cursor: not-allowed; }
   body {
     background: var(--color-canvas);
     color: var(--color-ink);
     font-size: 16px; /* baja alfabetización digital: texto base de 16 px o más (§6.2) */
     line-height: 1.5;
   }
-  h1, h2, h3 { text-wrap: balance; letter-spacing: -0.015em; }
+  /* Títulos redondeados y amables; el cuerpo queda en la letra de lectura fácil */
+  h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; letter-spacing: -0.01em; }
   :focus-visible {
     outline: 3px solid var(--color-brand);
     outline-offset: 2px;

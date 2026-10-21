@@ -37,7 +37,7 @@ export function SelectedCard({ feature, catalogs, userLocation, onClose }: { fea
       )}
       <div className="mt-4 flex gap-2">
         {href && (
-          <Link href={href} className="press inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-[14px] bg-ink px-4 font-semibold text-white hover:bg-black">
+          <Link href={href} className="press inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-ink px-4 font-semibold text-white hover:bg-black">
             Ver detalles <ArrowRight className="size-4" aria-hidden />
           </Link>
         )}
@@ -45,7 +45,7 @@ export function SelectedCard({ feature, catalogs, userLocation, onClose }: { fea
           href={directionsUrl(lat, lng)}
           target="_blank"
           rel="noopener noreferrer"
-          className="press inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-[14px] bg-brand-soft px-4 font-semibold text-brand-strong hover:bg-[#dce8ff]"
+          className="press inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-brand-soft px-4 font-semibold text-brand-strong hover:bg-[#dce8ff]"
         >
           <Navigation className="size-4" aria-hidden /> Cómo llegar
         </a>

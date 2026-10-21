@@ -105,7 +105,7 @@ export default async function RoutePage({ params }: { params: Promise<{ id: stri
 function Fact({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1 rounded-[18px] bg-surface p-3 shadow-[var(--shadow-card)] sm:p-4">
-      <dt className="flex items-center gap-1.5 text-[13px] font-semibold text-muted"><span aria-hidden>{icon}</span>{label}</dt>
+      <dt className="flex items-center gap-1.5 text-[14px] font-semibold text-muted"><span aria-hidden>{icon}</span>{label}</dt>
       <dd className="text-[17px] font-bold">{value}</dd>
     </div>
   );

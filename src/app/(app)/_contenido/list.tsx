@@ -19,7 +19,7 @@ export function FilterChips({ label, options, active, hrefFor }: {
           aria-current={active === o.value ? 'true' : undefined}
           className={cn(
             'press inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-[15px] font-semibold',
-            active === o.value ? 'bg-ink text-white' : 'bg-surface text-ink shadow-[var(--shadow-card)] hover:bg-canvas',
+            active === o.value ? 'bg-brand text-white' : 'bg-surface text-ink shadow-[var(--shadow-card)] hover:bg-canvas',
           )}
         >
           {o.icon}
@@ -41,8 +41,9 @@ export function ListRow({ href, icon, iconClass, title, subtitle, badge, action 
   action?: ReactNode;
 }) {
   return (
-    <li className="flex items-center gap-2 border-b border-line last:border-0">
-      <Link href={href} className="press-soft flex min-w-0 flex-1 items-center gap-3 px-4 py-3 hover:bg-canvas active:bg-canvas md:px-5">
+    // En pantallas grandes la lista va en dos columnas (ListGrid): sin bordes sueltos al final
+    <li className="flex items-center gap-2 border-b border-line last:border-0 lg:odd:border-r lg:[&:nth-last-child(2):nth-child(odd)]:border-b-0">
+      <Link href={href} className="press-soft group flex min-w-0 flex-1 items-center gap-3 px-4 py-3 hover:bg-canvas active:bg-canvas md:px-5">
         <span className={cn('grid size-12 shrink-0 place-items-center rounded-[14px]', iconClass ?? 'bg-brand-soft text-brand-strong')} aria-hidden>
           {icon}
         </span>
@@ -51,11 +52,16 @@ export function ListRow({ href, icon, iconClass, title, subtitle, badge, action 
           <span className="block text-[15px] text-muted">{subtitle}</span>
           {badge && <span className="mt-1 block">{badge}</span>}
         </span>
-        {!action && <ChevronRight className="size-5 shrink-0 text-subtle" aria-hidden />}
+        {!action && <ChevronRight className="size-5 shrink-0 text-subtle transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-ink" aria-hidden />}
       </Link>
       {action && <span className="shrink-0 pr-4 md:pr-5">{action}</span>}
     </li>
   );
+}
+
+/** Contenedor de filas: una columna en teléfono y tableta, dos en computadora (filas cortas, fáciles de recorrer). */
+export function ListGrid({ children }: { children: ReactNode }) {
+  return <ul className="lg:grid lg:grid-cols-2">{children}</ul>;
 }
 
 export function OsmCredit() {

@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { List, LocateFixed, Map as MapIcon, WifiOff } from 'lucide-react';
 import { ALL_LAYERS, MapCanvas, type LatLng, type LayerId, type MapFeature, type MapFeatureCollection } from '@/modules/map';
 import { IconButton } from '@/components/ui/button';
@@ -37,6 +37,16 @@ export function Explorer({ catalogs, children, initialLayers = ALL_LAYERS }: { c
   );
   const listItems = useMemo(() => byDistance(visible.features, userLocation), [visible, userLocation]);
   const mode = !online ? 'offline' : degraded ? 'degraded' : 'online';
+
+  // En PC, Escape cierra la ficha abierta (salvo si se está escribiendo en el buscador, que usa su propio Escape)
+  useEffect(() => {
+    if (!selected) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !(e.target instanceof HTMLInputElement)) setSelected(null);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selected]);
 
   function toggleLayer(id: LayerId) {
     setLayers((ls) => (ls.includes(id) ? ls.filter((l) => l !== id) : [...ls, id]));
@@ -101,7 +111,7 @@ export function Explorer({ catalogs, children, initialLayers = ALL_LAYERS }: { c
         </IconButton>
       </div>
       {live && (
-        <p className="absolute bottom-3 left-3 z-10 hidden items-center gap-1.5 rounded-full bg-surface/90 px-3 py-1 text-[13px] font-semibold text-ok shadow-[var(--shadow-card)] md:inline-flex">
+        <p className="absolute bottom-3 left-3 z-10 hidden items-center gap-1.5 rounded-full bg-surface/90 px-3 py-1 text-[14px] font-semibold text-ok shadow-[var(--shadow-card)] md:inline-flex">
           <span className="relative flex size-2"><span className="absolute inset-0 animate-pulse-ring rounded-full bg-ok" /><span className="size-2 rounded-full bg-ok" /></span>
           Tránsito en vivo
         </p>
