@@ -71,6 +71,8 @@ Para que la seguridad no dependa de volver a revisar a mano:
 | **Cabeceras** `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy` y `X-Permitted-Cross-Domain-Policies` | `next.config.ts` | `curl -I https://sr-conecta.vercel.app` |
 | **Dependencias:** `npm audit --omit=dev --audit-level=high` en cada PR, push a `main` y cada lunes; Dependabot (npm y GitHub Actions) con alertas y actualizaciones de seguridad activadas | `security.yml`, `.github/dependabot.yml` | *Security → Dependabot* en GitHub |
 
+Al activar Dependabot aparecieron 6 avisos, todos en herramientas de desarrollo que no llegan a producción. Se corrigieron con `vite` 8.3.4 y `handlebars` 4.7.10 (forzado con `overrides` en `package.json`, porque `eslint-plugin-boundaries` lo fija). Queda un aviso de `braces` (lo usan las herramientas de lint) sin versión corregida publicada: solo puede colgar el lint con patrones escritos por nosotros, así que no hay riesgo y se actualizará cuando salga la corrección.
+
 La auditoría semanal de la base usa el mismo secreto que la copia de seguridad (`SUPABASE_DB_URL`) y solo lee el catálogo. Si algún día se agrega a propósito algo que marca (por ejemplo, una función pública nueva para visitantes), se actualiza la lista permitida en `security_audit.sql` con su justificación.
 
 ## Pendientes conocidos

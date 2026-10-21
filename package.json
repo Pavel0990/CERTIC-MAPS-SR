@@ -58,5 +58,8 @@
     "typescript": "6.0.3",
     "typescript-eslint": "8.70.1",
     "vitest": "5.0.2"
+  },
+  "overrides": {
+    "handlebars": "4.7.10"
   }
 }
