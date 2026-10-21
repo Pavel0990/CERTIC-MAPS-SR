@@ -7,13 +7,12 @@ import { catalogIcon } from '@/components/shared/catalog-icon';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Textarea } from '@/components/ui/form';
 import { ErrorNote } from '@/components/ui/primitives';
+import { newIdempotencyKey } from '@/lib/schemas';
 import { cn } from '@/utils/cn';
 import { LocationPicker } from '../../_contenido/location-picker';
 import { PhotoPicker, usePhotos } from '../../_contenido/photo-picker';
-import { DoneScreen, MissingHint, StepTitle, WizardHeader } from '../../_contenido/wizard';
+import { DoneScreen, MissingHint, StepTitle, WizardHeader, WizardStep } from '../../_contenido/wizard';
 import { registerBusiness } from './actions';
-
-const newKey = () => crypto.randomUUID().replace(/-/g, '');
 
 export function BusinessWizard({ categories }: { categories: { slug: string; name: string; icon: string }[] }) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -25,7 +24,7 @@ export function BusinessWizard({ categories }: { categories: { slug: string; nam
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ id: string; photoError: string | null } | null>(null);
-  const [key] = useState(newKey); // misma clave en todos los reintentos de este registro
+  const [key] = useState(newIdempotencyKey); // misma clave en todos los reintentos de este registro
   const heading = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => heading.current?.focus(), [step, done]);
@@ -78,7 +77,7 @@ export function BusinessWizard({ categories }: { categories: { slug: string; nam
       <WizardHeader step={step} total={3} onBack={() => setStep((s) => (s - 1) as 1 | 2)} />
 
       {step === 1 && (
-        <section className="animate-step-in flex flex-col gap-5 px-4 pb-8 pt-5">
+        <WizardStep>
           <StepTitle headingRef={heading} title="¿Qué negocio tienes?" hint="Aparecerá gratis en el mapa de la provincia cuando el municipio lo apruebe." />
           {error && <ErrorNote>{error}</ErrorNote>}
           <fieldset>
@@ -109,20 +108,20 @@ export function BusinessWizard({ categories }: { categories: { slug: string; nam
           </Field>
           <Button size="lg" disabled={!category || !nameOk} onClick={() => { setError(null); setStep(2); }}>Seguir</Button>
           <MissingHint show={!category || !nameOk}>{!category ? 'Para seguir, toca el tipo de negocio.' : 'Para seguir, escribe el nombre del negocio.'}</MissingHint>
-        </section>
+        </WizardStep>
       )}
 
       {step === 2 && (
-        <section className="animate-step-in flex flex-col px-4 pb-8 pt-5">
+        <WizardStep spaced={false}>
           <StepTitle headingRef={heading} title="¿Dónde está?" hint="Mueve el mapa hasta que el pin rojo quede sobre la puerta del negocio." />
           {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
           <LocationPicker onChange={setPoint} initial={point} ariaLabel="Mapa para marcar dónde está el negocio" />
           <Button size="lg" className="mt-5" disabled={!point} onClick={() => { setError(null); setStep(3); }}>El pin está en el negocio</Button>
-        </section>
+        </WizardStep>
       )}
 
       {step === 3 && (
-        <section className="animate-step-in flex flex-col gap-5 px-4 pb-8 pt-5">
+        <WizardStep>
           <StepTitle headingRef={heading} title="¿Cómo te contactan?" hint="Todo es opcional, pero ayuda a que te encuentren." />
           {error && <ErrorNote>{error}</ErrorNote>}
           <Field label="WhatsApp" optional hint="Con este número la gente te escribe directo desde el mapa.">
@@ -147,7 +146,7 @@ export function BusinessWizard({ categories }: { categories: { slug: string; nam
           <PhotoPicker state={photos} hint="La fachada y tus productos ayudan a que te reconozcan." />
           <Button size="lg" onClick={submit} loading={busy}>Registrar mi negocio</Button>
           <p className="text-center text-sm text-muted">Es gratis. El municipio revisa cada negocio antes de publicarlo.</p>
-        </section>
+        </WizardStep>
       )}
     </div>
   );

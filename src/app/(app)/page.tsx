@@ -5,7 +5,7 @@ import { listPlaces } from '@/modules/tourism/server';
 import { countActiveAlerts } from '@/modules/traffic/server';
 import { getLabelMaps } from '@/lib/catalogs';
 import { createAnonClient } from '@/lib/supabase/anon';
-import { formatMinutes } from '@/utils/format';
+import { formatKm, formatMinutes } from '@/utils/format';
 
 // Primero lo que más atrae a quien visita la provincia (la Presa de Monción antes que una capilla)
 const KIND_ORDER = ['naturaleza', 'mirador', 'rio_balneario', 'agroturismo', 'historico', 'cultural'];
@@ -24,7 +24,7 @@ export default async function HomePage() {
     ...[...places].sort((a, b) => kindRank(a.kind) - kindRank(b.kind)).slice(0, 8).map((p) => ({ id: p.id, layer: 'tourism' as const, title: p.name, subtitle: `${labels.categories[p.kind] ?? 'Turismo'} · ${p.municipality}` })),
     ...routes.slice(0, 6).map((r) => ({
       id: r.id, layer: 'route' as const, title: r.name,
-      subtitle: [r.distance_km ? `${r.distance_km.toFixed(1).replace('.', ',')} km` : null, formatMinutes(r.duration_min), labels.categories[r.difficulty]].filter(Boolean).join(' · '),
+      subtitle: [r.distance_km ? formatKm(r.distance_km) : null, formatMinutes(r.duration_min), labels.categories[r.difficulty]].filter(Boolean).join(' · '),
     })),
   ];
   return (

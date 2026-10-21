@@ -28,6 +28,11 @@ export function WizardHeader({ step, total, onBack, cancelHref = '/perfil', canc
   );
 }
 
+/** Contenedor de un paso del asistente (entra con animación). `spaced`: separa sus bloques. */
+export function WizardStep({ spaced = true, children }: { spaced?: boolean; children: ReactNode }) {
+  return <section className={cn('animate-step-in flex flex-col px-4 pb-8 pt-5', spaced && 'gap-5')}>{children}</section>;
+}
+
 /** Título de un paso: recibe el foco al cambiar de paso (lectores de pantalla y teclado). */
 export function StepTitle({ headingRef, title, hint }: { headingRef: RefObject<HTMLHeadingElement | null>; title: string; hint?: string }) {
   return (

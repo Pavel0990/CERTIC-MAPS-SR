@@ -9,6 +9,7 @@ import { getCatalogs, getLabelMaps } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
 import { REQUEST_STATUS, TRAFFIC_STATUS } from '@/lib/vocabulary';
 import { cn } from '@/utils/cn';
+import { shortMunicipality } from '@/utils/format';
 import { AutoRefresh } from '../_components/auto-refresh';
 import { RequestCard, TrafficCard } from './cards';
 
@@ -60,7 +61,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         {scope.length > 1 && (
           <FilterGroup label="Municipio">
             <Chip href={qs({ municipio: undefined })} active={!muniFilter}>Todos</Chip>
-            {scope.map((m) => <Chip key={m.id} href={qs({ municipio: m.id })} active={muniFilter === m.id}>{m.name.replace('San Ignacio de ', '').replace('Villa ', '')}</Chip>)}
+            {scope.map((m) => <Chip key={m.id} href={qs({ municipio: m.id })} active={muniFilter === m.id}>{shortMunicipality(m.name)}</Chip>)}
           </FilterGroup>
         )}
         <FilterGroup label="Estado">

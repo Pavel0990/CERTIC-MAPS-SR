@@ -1,4 +1,5 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
+import { formatNumber } from '@/utils/format';
 import { APP_TIMEZONE } from '@/utils/locale';
 import type { WeeklyReportData, WeeklyKpis } from '../index';
 
@@ -25,8 +26,7 @@ const s = StyleSheet.create({
   footer: { position: 'absolute', bottom: 24, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between', fontSize: 8, color: C.muted },
 });
 
-const nf = new Intl.NumberFormat('es-DO');
-const n = (v: number | null | undefined) => (v == null ? '—' : nf.format(v));
+const n = (v: number | null | undefined) => (v == null ? '—' : formatNumber(v));
 /**
  * Periodo legible: "21 – 27 de septiembre de 2026" o "28 de septiembre – 4 de octubre de 2026".
  * Son fechas civiles (sin hora): se formatean en UTC para no correrse de día.
@@ -38,7 +38,7 @@ export function periodLabel(start: string, end: string) {
   const from = sameMonth ? fmt(start, { day: 'numeric' }) : fmt(start, { day: 'numeric', month: 'long', ...(sameYear ? {} : { year: 'numeric' }) });
   return `${from} – ${fmt(end, { day: 'numeric', month: 'long', year: 'numeric' })}`;
 }
-const hours = (h: number | null) => (h == null ? '—' : h < 48 ? `${nf.format(h)} h` : `${nf.format(Math.round((h / 24) * 10) / 10)} días`);
+const hours = (h: number | null) => (h == null ? '—' : h < 48 ? `${formatNumber(h)} h` : `${formatNumber(Math.round((h / 24) * 10) / 10)} días`);
 
 function Card({ value, label }: { value: string; label: string }) {
   return (

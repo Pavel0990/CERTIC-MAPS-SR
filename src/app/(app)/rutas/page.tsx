@@ -7,11 +7,11 @@ import { Badge, Card, EmptyState } from '@/components/ui/primitives';
 import { getCatalogs } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
 import { DIFFICULTY, ROUTE_KIND } from '@/lib/vocabulary';
+import { formatMinutes } from '@/utils/format';
 import { FilterChips, ListGrid, ListRow, OsmCredit } from '../_contenido/list';
 
 export const metadata: Metadata = { title: 'Rutas', description: 'Rutas para caminar y pedalear en Santiago Rodríguez, con distancia, tiempo y dificultad.' };
 
-const duration = (min: number) => (min < 60 ? `${min} min` : `${Math.floor(min / 60)} h${min % 60 ? ` ${min % 60} min` : ''}`);
 const km = (v: number | null) => (v === null ? '' : `${v.toLocaleString('es-DO', { maximumFractionDigits: 1 })} km`);
 
 export default async function RoutesPage({ searchParams }: { searchParams: Promise<{ municipio?: string }> }) {
@@ -43,7 +43,7 @@ export default async function RoutesPage({ searchParams }: { searchParams: Promi
                 badge={
                   <span className="flex flex-wrap items-center gap-2">
                     <Badge tone={DIFFICULTY[r.difficulty]?.tone ?? 'neutral'}>{DIFFICULTY[r.difficulty]?.label ?? r.difficulty}</Badge>
-                    <span className="inline-flex items-center gap-1 text-sm text-muted"><Clock className="size-3.5" aria-hidden /> {duration(r.duration_min)} a pie</span>
+                    <span className="inline-flex items-center gap-1 text-sm text-muted"><Clock className="size-3.5" aria-hidden /> {formatMinutes(r.duration_min)} a pie</span>
                   </span>
                 }
               />

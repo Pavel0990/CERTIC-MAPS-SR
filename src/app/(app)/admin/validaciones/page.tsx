@@ -7,7 +7,7 @@ import { requireStaff } from '@/lib/auth';
 import { getCatalogs } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
 import { PLACE_KIND, ROUTE_KIND, DIFFICULTY } from '@/lib/vocabulary';
-import { formatDate, formatMinutes, timeAgo } from '@/utils/format';
+import { formatDate, formatKm, formatMinutes, timeAgo } from '@/utils/format';
 import { ReviewActions } from './review-actions';
 
 export const metadata: Metadata = { title: 'Validaciones' };
@@ -55,7 +55,7 @@ export default async function ValidationsPage() {
             key={r.id}
             title={r.name}
             status={r.status}
-            meta={[ROUTE_KIND[r.kind] ?? r.kind, DIFFICULTY[r.difficulty]?.label, formatMinutes(r.duration_min), r.distance_km ? `${Number(r.distance_km).toFixed(1).replace('.', ',')} km` : null, muni.get(r.municipality_id)].filter(Boolean).join(' · ')}
+            meta={[ROUTE_KIND[r.kind] ?? r.kind, DIFFICULTY[r.difficulty]?.label, formatMinutes(r.duration_min), r.distance_km ? formatKm(Number(r.distance_km)) : null, muni.get(r.municipality_id)].filter(Boolean).join(' · ')}
             body={r.description}
           >
             <ReviewActions entity="route" id={r.id} status={r.status} />

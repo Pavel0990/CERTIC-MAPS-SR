@@ -12,10 +12,11 @@ import { useToast } from '@/components/ui/toast';
 import { GEO_MESSAGE, useGeolocation } from '@/hooks/use-geolocation';
 import { PROVINCE_VIEW } from '@/config/env';
 import { sendOrQueue, type SendResult } from '@/lib/outbox';
+import { newIdempotencyKey } from '@/lib/schemas';
 import { SEVERITY, reasonMessage } from '@/lib/vocabulary';
 import { cn } from '@/utils/cn';
 import { PhotoPicker, usePhotos } from '../_contenido/photo-picker';
-import { DoneScreen, MissingHint, StepTitle, WizardHeader } from '../_contenido/wizard';
+import { DoneScreen, MissingHint, StepTitle, WizardHeader, WizardStep } from '../_contenido/wizard';
 import { SimilarNotice } from './similar-notice';
 
 export interface ReportCatalogs {
@@ -29,7 +30,6 @@ type Choice =
   | { flow: 'request'; kind: 'incident' | 'inquiry'; code: string; name: string };
 
 const MAX_PHOTOS = 3;
-const newKey = () => crypto.randomUUID().replace(/-/g, '');
 
 export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalogs; initialType?: string }) {
   const toast = useToast();
@@ -47,7 +47,7 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<SendResult | null>(null);
   const [focus, setFocus] = useState<{ center: LatLng; zoom?: number; key: number } | null>(null);
-  const [key] = useState(newKey); // misma clave en todos los reintentos de este reporte
+  const [key] = useState(newIdempotencyKey); // misma clave en todos los reintentos de este reporte
   // Aviso de reporte parecido cercano (tras elegir tipo y lugar). `skipped`: el tipo y lugar ya consultados, para no
   // volver a preguntar lo mismo si regresa al mapa sin mover el pin.
   const [checking, setChecking] = useState(false);
@@ -247,7 +247,7 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
       )}
 
       {step === 3 && choice && (
-        <section className="animate-step-in flex flex-col gap-5 px-4 pb-8 pt-5">
+        <WizardStep>
           <StepTitle headingRef={heading} title="Cuéntanos más" hint={`${choice.name}${choice.flow === 'traffic' ? ' · alerta vial' : ''}`} />
           {error && <ErrorNote>{error}</ErrorNote>}
 
@@ -291,7 +291,7 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
           </Button>
           <MissingHint show={!detailsOk}>{title.trim().length < 3 ? 'Para enviar, escribe un título corto.' : 'Para enviar, cuenta un poco más (al menos 10 letras).'}</MissingHint>
           <p className="text-center text-sm text-muted">Tu nombre no aparece en el mapa público.</p>
-        </section>
+        </WizardStep>
       )}
     </div>
   );

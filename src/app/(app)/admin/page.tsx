@@ -8,13 +8,12 @@ import { requireStaff } from '@/lib/auth';
 import { getCatalogs, getLabelMaps } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
 import { cn } from '@/utils/cn';
-import { formatDate, formatNumber } from '@/utils/format';
+import { formatDate, formatNumber, shortMunicipality as short } from '@/utils/format';
 import { DashboardToolbar } from './_dashboard/toolbar';
 import { TrendChart } from './_dashboard/trend-chart';
 
 export const metadata: Metadata = { title: 'Panel municipal' };
 
-const short = (name: string) => name.replace('San Ignacio de ', '').replace('Villa ', '');
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ municipio?: string; periodo?: string }> }) {
   const viewer = await requireStaff('/admin');
