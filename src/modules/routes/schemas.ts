@@ -13,7 +13,6 @@ const lineGeometry = z.object({
   type: z.literal('LineString'),
   coordinates: z.array(position).min(2, 'Marca al menos 2 puntos del recorrido.').max(MAX_ROUTE_POINTS, 'El trazado tiene demasiados puntos.'),
 });
-export type LineGeometry = z.infer<typeof lineGeometry>;
 
 const duration = z.number().int('Escribe la duración en minutos.').min(5, 'La duración mínima es 5 minutos.').max(2880, 'La duración máxima es 2 días.');
 

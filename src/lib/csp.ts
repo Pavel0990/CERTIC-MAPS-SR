@@ -1,7 +1,7 @@
 // CSP estricta con nonce (ARCHITECTURE.md §10.7). La aplica src/proxy.ts en cada request.
 
 /** Origen de Cloudflare Turnstile (captcha de /entrar). */
-export const TURNSTILE_ORIGIN = 'https://challenges.cloudflare.com';
+const TURNSTILE_ORIGIN = 'https://challenges.cloudflare.com';
 
 interface CspOptions {
   nonce: string;
