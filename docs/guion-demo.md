@@ -6,7 +6,7 @@ Demo en vivo del 28 al 30/11/2026, con datos reales. Este guion reparte el tiemp
 **Equipo:**
 - **Teléfono A:** vecino, con la sesión iniciada y la app instalada en la pantalla de inicio.
 - **Teléfono B:** moderador.
-- **Computadora:** panel municipal, con la cuenta de administración provincial.
+- **Computadora:** panel municipal, con la cuenta de administración provincial, y la presentación (6 diapositivas) abierta en otra pestaña.
 - **Proyector**, y el **video de respaldo** en una memoria USB y descargado en la computadora.
 
 ---
@@ -25,19 +25,35 @@ Demo en vivo del 28 al 30/11/2026, con datos reales. Este guion reparte el tiemp
 
 ## Guion
 
+El tiempo sigue el peso de cada criterio de la rúbrica (100 puntos → 25 minutos, unos 15 segundos por punto). Cuando un bloque sirve a dos criterios, sus minutos se reparten entre ambos.
+
+| Criterio | Puntos | Minutos que le tocan | Minutos en este guion |
+|---|---|---|---|
+| Funcionalidad (MVP) | 25 | 6¼ | 6 |
+| UX/UI para baja alfabetización digital | 20 | 5 | 5 |
+| Innovación | 20 | 5 | 5½ |
+| Impacto territorial | 15 | 3¾ | 4 |
+| Sostenibilidad | 10 | 2½ | 2 |
+| Código y documentación | 10 | 2½ | 2½ |
+
+Las diapositivas (6) están en la presentación de claude.ai: ábrela en la computadora antes de empezar.
+
 | Min | Qué se muestra | Qué se dice | Criterio |
 |---|---|---|---|
-| 0–2 | Portada en el teléfono A, proyectado | El problema: la información de la provincia está dispersa y el vecino no sabe a quién avisar | Pertinencia |
+| 0–2 | **Diapositivas 1 y 2** (problema y solución), luego la portada en el teléfono A, proyectado | El problema: la información de la provincia está dispersa y el vecino no sabe a quién avisar. Seis cosas que resuelve, en los 3 municipios | Impacto territorial |
 | 2–6 | **Mapa** y luego **Negocios / Lugares / Rutas** en lista: filtrar por municipio, abrir una ficha, **Llamar** y **Cómo llegar** | "Datos reales de la provincia: 84 negocios, presas y parques, rutas trazadas sobre caminos reales. Y en lista, para quien no se maneja con mapas" | MVP (F1–F3), UX |
-| 6–10 | **Reportar** un bache en 3 toques, con foto | "Sin escribir mucho. La foto se limpia sola: no guarda dónde vives" | MVP (F4–F5), UX |
-| 10–13 | **Teléfono B (moderador):** llega el aviso. Bandeja → **Publicar en el mapa**. En el teléfono A aparece la alerta **en vivo**, sin recargar | "Tiempo real: el vecino de al lado ya lo ve" | Innovación |
-| 13–14 | Teléfono A: **Reportar** otra vez un bache en el mismo lugar. Antes de escribir nada sale **"Ya hay un reporte parecido aquí"** con **Ver el reporte** y **Crear el mío igual** (en un reporte al municipio, también **Apoyarlo**) | "La app avisa si alguien ya lo reportó a menos de 150 metros: en vez de diez reportes repetidos, el ayuntamiento ve uno con diez apoyos. Y nunca impide enviar el tuyo" | Innovación, UX |
-| 14–15 | Teléfono A: **Actividad**. El reporte cambió de estado y llega la notificación | "El vecino sabe qué pasó con lo que reportó" | MVP, UX |
-| 15–19 | **Computadora:** Panel → Resumen (indicadores), Bandeja (asignar responsable), Validaciones (aprobar un negocio) | "El ayuntamiento opera solo, sin el equipo técnico" | Sostenibilidad |
-| 19–21 | **Informes → Descargar PDF**. Auditoría | "Cada lunes se genera solo. Cada descarga queda registrada" | MVP (F6), innovación |
-| 21–22 | **Catálogos:** agregar un tipo de reporte en vivo y mostrarlo en el teléfono | "Si mañana necesitan reportar 'animales en la vía', lo agregan ellos" | Sostenibilidad |
-| 22–23 | Quitar la señal del teléfono A y abrir el mapa y **Reportar** | "Sin señal en la loma, el reporte se guarda y se envía solo al volver" | Innovación, pertinencia |
-| 23–25 | Código abierto en GitHub (MIT), documentación, pruebas, costo | "Más de cien pruebas de la base de datos, con ataques directos incluidos. Funciona en planes gratuitos. Se lo puede quedar FUNDESER" | Código y documentación |
+| 6–8 | **Reportar** un bache en 3 toques, con foto | "Sin escribir mucho. La foto se limpia sola: no guarda dónde vives" | MVP (F4–F5), UX |
+| 8–11 | **Teléfono B (moderador):** llega el aviso. Bandeja → **Publicar en el mapa**. En el teléfono A aparece la alerta **en vivo**, sin recargar | "Tiempo real: el vecino de al lado ya lo ve" | Innovación |
+| 11–12 | Teléfono A: **Reportar** otra vez un bache en el mismo lugar. Antes de escribir nada sale **"Ya hay un reporte parecido aquí"** con **Ver el reporte** y **Crear el mío igual** (en un reporte al municipio, también **Apoyarlo**) | "La app avisa si alguien ya lo reportó a menos de 150 metros: en vez de diez reportes repetidos, el ayuntamiento ve uno con diez apoyos. Y nunca impide enviar el tuyo" | Innovación, UX |
+| 12–13 | Teléfono A: **Actividad**. El reporte cambió de estado y llega la notificación | "El vecino sabe qué pasó con lo que reportó" | MVP, UX |
+| 13–14 | Quitar la señal del teléfono A y abrir el mapa y **Reportar** | "Sin señal en la loma, el reporte se guarda y se envía solo al volver" | Innovación |
+| 14–17 | **Computadora:** Panel → Resumen (indicadores **por municipio**), Bandeja (asignar responsable), Validaciones (aprobar un negocio) | "Cada ayuntamiento ve lo que pasa en sus comunidades y lo atiende desde aquí" | MVP, impacto territorial |
+| 17–19 | **Informes → Descargar PDF**. Auditoría | "Cada lunes se genera solo. Cada descarga queda registrada" | MVP (F6), innovación |
+| 19–20 | **Diapositiva 6:** resultados de la prueba con vecinos | "Lo probaron [__] vecinos sin ayuda: de [__]/35 a [__]/35 tareas" | UX |
+| 20–22 | **Catálogos:** agregar un tipo de reporte en vivo y mostrarlo en el teléfono. **Diapositiva 5** (costos y traspaso) | "Si mañana necesitan reportar 'animales en la vía', lo agregan ellos. Hoy cuesta US$0 al mes y las cuentas pasan a la organización" | Sostenibilidad |
+| 22–25 | **Diapositivas 3 y 4** (arquitectura y seguridad), código abierto en GitHub (MIT), documentación y pruebas. Cierre con la diapositiva 6 | "195 pruebas de la base de datos, con ataques directos incluidos. Se lo puede quedar FUNDESER". Cierre: "un vecino que avisa, un ayuntamiento que responde" | Código y documentación, impacto territorial |
+
+**Si vas tarde:** acorta primero Validaciones (14–17) y el recorrido por las listas (2–6). No recortes la alerta en vivo ni los resultados de los vecinos: son los criterios de más peso que no se ven en ningún otro momento.
 
 ## Plan B
 
