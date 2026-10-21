@@ -55,7 +55,7 @@ La revisión del 17/10 y la del 21/10 están detalladas en [SECURITY.md](../SECU
 | **Captcha** en `/entrar` (Cloudflare Turnstile) | Frenar el envío masivo de correos de acceso | Requiere la cuenta de Cloudflare (§5.2). Widget en `/entrar`, `challenges.cloudflare.com` en la CSP de `src/proxy.ts` y activado en *Supabase → Authentication → Attack Protection* |
 | **E2E sin limpieza manual** | Que las pruebas se puedan correr varias veces seguidas | `tests/e2e/helpers.ts` reinicia el límite de reportes por hora de las cuentas de prueba |
 | **E2E en la CI** | Hoy Playwright y axe se corren a mano antes de subir | Un workflow que los corra contra la vista previa de Vercel |
-| **Simulacro de restauración** | La copia diaria nunca se ha restaurado de prueba | Cargar la última copia en PGlite con todas las migraciones y comparar conteos; procedimiento en [DEPLOYMENT.md §8.1](../DEPLOYMENT.md#81-copias-de-seguridad) |
+| ✅ ~~**Simulacro de restauración**~~ | Hecho el 21/10/2026: la copia diaria cifrada del 20/10 y la última copia local se restauraron en PGlite con todas las migraciones, con los mismos conteos por tabla y sin claves foráneas huérfanas | Repetirlo con `npm run backup:check` antes de la demo; procedimiento en [DEPLOYMENT.md §8.1](../DEPLOYMENT.md#81-copias-de-seguridad) |
 | **Correcciones de la prueba con vecinos** | Lo que salga de la ronda 1 | Un *issue* `ux` por problema, corregido antes de la ronda 2 |
 
 ### 5.2 Cuentas externas (las hace una persona del equipo)

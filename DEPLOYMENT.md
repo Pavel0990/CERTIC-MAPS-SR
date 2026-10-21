@@ -216,6 +216,27 @@ openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in sr-conecta-AAAAMMDD-HHMM.du
 docker run --rm -v "$PWD:/w" postgres:17 pg_restore --no-owner --no-privileges --clean --if-exists -d "<SUPABASE_DB_URL>" /w/copia.dump
 ```
 
+**Simulacro de restauración** (`npm run backup:check`). Comprueba que una copia se puede volver a cargar, sin tocar Supabase: la carga en una base PGlite nueva en memoria (PostgreSQL + PostGIS en WebAssembly) con todas las migraciones, compara los conteos por tabla y revisa que ninguna clave foránea quede huérfana. Termina con error si algo no coincide. Sirve para las dos copias: el JSON de `npm run backup` y el `pg_dump` del workflow, cifrados o no. La copia descifrada nunca se escribe en disco y la salida solo trae nombres de tabla y conteos. Hacerlo antes de la demo y después de cambiar el workflow o las migraciones.
+
+```bash
+# 0. Una sola vez: la base de pruebas (PGlite)
+npm --prefix supabase/tests ci
+
+# 1a. Copia local: toma la más reciente de backups/ (si no hay, crearla antes con `npm run backup`)
+npm run backup:check
+
+# 1b. Copia diaria del workflow: descargar la última ejecución correcta a una carpeta fuera del repositorio
+gh run list --workflow backup.yml -L 1                     # anota el ID de la ejecución
+gh run download <ID> -D ../copias-descargadas
+BACKUP_PASSPHRASE='<frase del gestor de contraseñas>' npm run backup:check -- ../copias-descargadas
+#    (si BACKUP_PASSPHRASE no está en el entorno, el script la busca en .env.local)
+
+# 2. Borrar la descarga al terminar: tiene datos personales
+rm -rf ../copias-descargadas
+```
+
+Resultado esperado: una fila por tabla con `Copia` = `Restaurada` y `✓`, y al final `✓ Restauración correcta`. Del `pg_dump` se restauran `public`, `private`, `auth.users`, `storage.buckets` y `storage.objects`; el resto de tablas internas de `auth` y `storage` (sesiones, tokens, migraciones de Supabase) solo se listan con su conteo, porque en PGlite esos esquemas son stubs. Si falla: `No se pudo descifrar` es una frase equivocada; un conteo distinto o una clave huérfana quiere decir que esa copia no sirve para restaurar y hay que revisar el workflow antes de borrar la anterior. El último simulacro (21/10/2026) pasó con la copia diaria del 20/10 (36 tablas, 378 filas) y con la copia local del 21/10 (27 tablas, 323 filas).
+
 Restaurar **solo los datos** desde el JSON de `npm run backup`: cada tabla es una lista de filas. Se reinsertan con `insert into public.<tabla> select * from jsonb_populate_recordset(null::public.<tabla>, '<filas>')`, respetando el orden de las claves foráneas (primero provincias y municipios, después perfiles, negocios y el resto).
 
 ## 9. Traspaso a cuentas de la organización
