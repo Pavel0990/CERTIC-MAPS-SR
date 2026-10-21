@@ -9,6 +9,7 @@ import { getCatalogs, getLabelMaps } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
 import { REQUEST_STATUS, TRAFFIC_STATUS } from '@/lib/vocabulary';
 import { cn } from '@/utils/cn';
+import { shortMunicipality } from '@/utils/format';
 import { AutoRefresh } from '../_components/auto-refresh';
 import { RequestCard, TrafficCard } from './cards';
 
@@ -60,7 +61,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         {scope.length > 1 && (
           <FilterGroup label="Municipio">
             <Chip href={qs({ municipio: undefined })} active={!muniFilter}>Todos</Chip>
-            {scope.map((m) => <Chip key={m.id} href={qs({ municipio: m.id })} active={muniFilter === m.id}>{m.name.replace('San Ignacio de ', '').replace('Villa ', '')}</Chip>)}
+            {scope.map((m) => <Chip key={m.id} href={qs({ municipio: m.id })} active={muniFilter === m.id}>{shortMunicipality(m.name)}</Chip>)}
           </FilterGroup>
         )}
         <FilterGroup label="Estado">
@@ -97,7 +98,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         </div>
       )}
       <p className="mt-6 text-sm text-muted">
-        Ordenado por gravedad y antigüedad (tránsito) o por apoyos de los vecinos (reportes). <Link href="/admin" className="font-semibold text-brand hover:underline">Ver resumen</Link>
+        Ordenado por gravedad y antigüedad (tránsito) o por apoyos de los vecinos (reportes). <Link prefetch={false} href="/admin" className="font-semibold text-brand hover:underline">Ver resumen</Link>
       </p>
     </>
   );
@@ -114,7 +115,7 @@ function FilterGroup({ label, children }: { label: string; children: React.React
 
 function Chip({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
   return (
-    <Link href={href} aria-current={active ? 'true' : undefined} className={cn('press inline-flex min-h-11 shrink-0 items-center rounded-full px-3.5 text-sm font-semibold md:min-h-8', active ? 'bg-brand text-on-brand' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
+    <Link prefetch={false} href={href} aria-current={active ? 'true' : undefined} className={cn('press inline-flex min-h-11 shrink-0 items-center rounded-full px-3.5 text-sm font-semibold', active ? 'bg-brand text-on-brand' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
       {children}
     </Link>
   );

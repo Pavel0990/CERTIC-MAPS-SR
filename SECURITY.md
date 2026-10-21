@@ -83,7 +83,7 @@ Revisión línea por línea de todas las rutas de la API, las Server Actions, `s
 |---|---|---|
 | El tope de 20 subidas de evidencia por hora se podía saltar pidiendo muchas URLs firmadas (firmar no crea ningún objeto) | Medio | **Corregido**: cada ruta es un permiso de un solo uso de `request_upload` (20 por hora) que la política de Storage exige. Pruebas K1–K1d y SR2 |
 | El dueño de un negocio aprobado podía cambiar el nombre o la web sin nueva revisión (suplantación, enlaces de estafa) | Medio | **Corregido**: nombre o web → vuelve a revisión; toda edición del dueño avisa al personal. Prueba SR3 |
-| Sin captcha, se pueden agotar los correos de acceso del proyecto (30 por hora) y los límites por IP de Supabase, que ven la IP de Vercel | Medio | **Pendiente**: Cloudflare Turnstile (requiere crear la cuenta). Mientras tanto: límites de Supabase Auth y SMTP propio |
+| Sin captcha, se pueden agotar los correos de acceso del proyecto (30 por hora) y los límites por IP de Supabase, que ven la IP de Vercel | Medio | **Listo en el código, falta activarlo**: Cloudflare Turnstile en `/entrar` (ver *Pendientes conocidos*). Mientras tanto: límites de Supabase Auth y SMTP propio |
 | Un moderador de un municipio veía la evidencia privada de toda la provincia | Bajo-medio | **Corregido**: solo la del municipio del reporte (y la provincia). Prueba SR1 |
 | Las suscripciones push aceptaban cualquier `https://` (el worker les enviaba un POST) y se podían insertar sin límite | Bajo | **Corregido**: solo servicios de push reales y alta solo por la RPC. Pruebas SR4–SR5 |
 | El service worker guardaba páginas privadas de consultas en el teléfono | Bajo | **Corregido**: `/consultas/` ya no se guarda. `/reportar` sí (es el formulario para reportar sin conexión y no lleva datos personales) |
@@ -93,11 +93,21 @@ Revisión línea por línea de todas las rutas de la API, las Server Actions, `s
 
 Verificado como correcto: CSRF por origen en toda escritura, `getClaims()` (firma del JWT), validación zod en cada entrada, secretos de máquina comparados en tiempo constante, redirecciones solo internas, las 59 funciones `SECURITY DEFINER` con `search_path` fijo, RLS en todas las tablas, columnas personales ocultas por grants, roles sin escalada posible, sin `dangerouslySetInnerHTML`, fotos re-codificadas sin metadatos, PDF con descarga auditada y 0 vulnerabilidades en las dependencias de producción.
 
+### Funciones agregadas después de la revisión
+
+Las tres migraciones posteriores (todavía sin aplicar en staging, [DATABASE.md](DATABASE.md#estado-verificado)) siguen las mismas reglas y tienen sus pruebas de ataque en `npm run test:db`:
+
+| Pieza | Quién la ejecuta | Protección |
+|---|---|---|
+| `find_similar_reports` (aviso de reporte parecido) | Solo `authenticated` | 60 consultas por hora; solo devuelve lo que la persona ya ve por RLS y nunca autor, texto, fotos ni coordenadas (pruebas W5, W9, W12–W14) |
+| `e2e_reset_rate_limits` (E2E repetibles) | Solo `service_role` | Solo toca cuentas `@example.com`; `security_audit.sql` marca cualquier `e2e_*` ejecutable por clientes (V1–V3) |
+| `attachments.credit` (crédito de fotos, propuesta) | Lectura pública, como el resto del adjunto | Nadie la escribe desde la API, ni el personal (AC4) |
+
 ## Pendientes conocidos
 
 | Pendiente | Riesgo | Plan |
 |---|---|---|
-| **Sin captcha** en el inicio de sesión | Alguien podría pedir muchos correos de acceso. Hoy lo frenan los límites de Supabase Auth (correos por hora, intentos por IP) | Antes de abrir al público: Cloudflare Turnstile con la integración nativa de Supabase Auth (*Authentication → Attack Protection*) y el widget en `/entrar` (añadir `challenges.cloudflare.com` a la CSP) |
+| **Captcha listo, falta activarlo** en el inicio de sesión | Mientras no se active, alguien podría pedir muchos correos de acceso. Hoy lo frenan los límites de Supabase Auth (correos por hora, intentos por IP) | El código ya está: con `NEXT_PUBLIC_TURNSTILE_SITE_KEY` aparece el recuadro de Cloudflare Turnstile en `/entrar` (y solo ahí), su token va como `captchaToken` en `signInWithOtp` y la CSP permite `challenges.cloudflare.com` solo en `script-src` y `frame-src`. Sin la variable, todo queda como antes. Falta: crear el widget en Cloudflare, poner la clave pública en Vercel y la secreta en Supabase → *Authentication → Attack Protection*, en ese orden ([DEPLOYMENT.md §4](DEPLOYMENT.md#4-vercel)). «Ya tengo un código» (`verifyOtp`) no lleva captcha: Supabase no lo exige en `/verify` |
 | **Cuentas a nombre de una persona** (Supabase, SMTP de Gmail, Vercel) | Si esa persona pierde el acceso, se pierde el control | Traspaso a cuentas de la organización: [DEPLOYMENT.md §9](DEPLOYMENT.md#9-traspaso-a-cuentas-de-la-organización) |
 | **Base de staging compartida** entre la demo y las pruebas | Datos de prueba mezclados con reales | Supabase de producción separado ([DEPLOYMENT.md §3](DEPLOYMENT.md#3-supabase-de-producción)) |
-| **Restauración de la copia sin ensayar** | La copia diaria cifrada está activa, pero nunca se ha restaurado de prueba | Simulacro de restauración ([pendientes](docs/ESTADO-Y-PENDIENTES.md#51-código-poco-y-acotado)) y `npm run backup` antes de cambios grandes ([DEPLOYMENT.md §8.1](DEPLOYMENT.md#81-copias-de-seguridad)) |
+| ✅ ~~**Restauración de la copia sin ensayar**~~ | **Hecho (21/10/2026):** simulacro de restauración de la copia diaria cifrada y de la copia local, con conteos por tabla idénticos y sin claves foráneas huérfanas | Repetirlo con `npm run backup:check` antes de la demo, y `npm run backup` antes de cambios grandes ([DEPLOYMENT.md §8.1](DEPLOYMENT.md#81-copias-de-seguridad)) |

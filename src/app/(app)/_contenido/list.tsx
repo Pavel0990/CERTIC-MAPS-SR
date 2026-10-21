@@ -13,7 +13,7 @@ export function FilterChips({ label, options, active, hrefFor }: {
   return (
     <nav aria-label={label} className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0">
       {[{ value: '', label: 'Todos' }, ...options].map((o) => (
-        <Link
+        <Link prefetch={false}
           key={o.value || 'todos'}
           href={hrefFor(o.value)}
           aria-current={active === o.value ? 'true' : undefined}
@@ -43,7 +43,8 @@ export function ListRow({ href, icon, iconClass, title, subtitle, badge, action 
   return (
     // En pantallas grandes la lista va en dos columnas (ListGrid): sin bordes sueltos al final
     <li className="flex items-center gap-2 border-b border-line last:border-0 lg:odd:border-r lg:[&:nth-last-child(2):nth-child(odd)]:border-b-0">
-      <Link href={href} className="press-soft group flex min-w-0 flex-1 items-center gap-3 px-4 py-3 hover:bg-canvas active:bg-canvas md:px-5">
+      {/* Se precarga al tocar o pasar el mouse, no al aparecer: una lista larga no dispara una petición por fila */}
+      <Link href={href} prefetch={false} className="press-soft group flex min-w-0 flex-1 items-center gap-3 px-4 py-3 hover:bg-canvas active:bg-canvas md:px-5">
         <span className={cn('grid size-12 shrink-0 place-items-center rounded-[14px]', iconClass ?? 'bg-brand-soft text-brand-strong')} aria-hidden>
           {icon}
         </span>
@@ -62,6 +63,32 @@ export function ListRow({ href, icon, iconClass, title, subtitle, badge, action 
 /** Contenedor de filas: una columna en teléfono y tableta, dos en computadora (filas cortas, fáciles de recorrer). */
 export function ListGrid({ children }: { children: ReactNode }) {
   return <ul className="lg:grid lg:grid-cols-2">{children}</ul>;
+}
+
+/** Cuántas filas se muestran de entrada y cuántas más con cada «Ver más». */
+export const PAGE_SIZE = 24;
+
+/** Lee ?ver= de la URL: cuántas filas mostrar (en múltiplos de PAGE_SIZE). */
+export function shownCount(ver: string | undefined) {
+  const n = Number(ver);
+  return Number.isInteger(n) && n > PAGE_SIZE ? Math.min(n, 1000) : PAGE_SIZE;
+}
+
+/**
+ * La lista se carga por partes: primero lo que cabe en pantalla y, si la persona quiere, más.
+ * Es un enlace normal (funciona sin JavaScript y se puede compartir) y no mueve la pantalla al tocarlo.
+ */
+export function ShowMore({ shown, total, href, noun }: { shown: number; total: number; href: string; noun: string }) {
+  if (shown >= total) return null;
+  const next = Math.min(PAGE_SIZE, total - shown);
+  return (
+    <div className="mt-4 flex flex-col items-center gap-1.5">
+      <Link prefetch={false} href={href} scroll={false} className="press inline-flex min-h-[52px] items-center justify-center rounded-[14px] border border-line-strong bg-surface px-6 text-base font-semibold text-ink hover:bg-canvas">
+        Ver {next} {noun} más
+      </Link>
+      <p className="text-[14px] text-muted">Mostrando {shown} de {total}</p>
+    </div>
+  );
 }
 
 export function OsmCredit() {

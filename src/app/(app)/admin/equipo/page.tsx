@@ -36,7 +36,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
             {team.map((t) => (
               <li key={t.id} className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3 last:border-0">
                 <Avatar src={avatarUrl(t.user_id, t.avatar_version)} name={t.name} size={40} />
-                <span className="min-w-0 flex-1">
+                <span className="min-w-0 flex-[1_1_12rem]">
                   <span className="block font-semibold">{t.name}{t.user_id === viewer.id ? ' (tú)' : ''}</span>
                   <span className="text-sm text-muted">{t.municipality_id ? muni.get(t.municipality_id) : 'Toda la provincia'}</span>
                 </span>
@@ -68,7 +68,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
             )}
           </Card>
           <Notice tone="neutral">
-            La administración <strong>provincial</strong> no se asigna desde aquí: se crea con un script de operación revisado y auditado (ADR-020).
+            La administración <strong>provincial</strong> no se asigna desde aquí: la da el equipo técnico con un procedimiento revisado que queda registrado (ADR-020).
           </Notice>
         </div>
       </div>

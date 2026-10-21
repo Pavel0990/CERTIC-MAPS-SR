@@ -29,16 +29,16 @@ export function DashboardToolbar({ days, municipio, updatedAt, csv, csvName }: {
 
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between print:hidden">
-      <nav aria-label="Periodo" className="inline-flex self-start rounded-full bg-ink p-1 shadow-[var(--shadow-card)]">
+      <nav aria-label="Periodo" className="inline-flex shrink-0 self-start rounded-full bg-ink p-1 shadow-[var(--shadow-card)]">
         {PERIODS.map((d) => (
-          <Link key={d} href={hrefFor(d)} scroll={false} aria-current={d === days ? 'true' : undefined}
-            className={cn('press inline-flex min-h-11 items-center rounded-full px-4 text-[15px] font-semibold md:min-h-10', d === days ? 'bg-surface text-ink' : 'text-on-ink/75 hover:text-on-ink')}>
+          <Link prefetch={false} key={d} href={hrefFor(d)} scroll={false} aria-current={d === days ? 'true' : undefined}
+            className={cn('press inline-flex min-h-11 items-center whitespace-nowrap rounded-full px-4 text-[15px] font-semibold', d === days ? 'bg-surface text-ink' : 'text-on-ink/75 hover:text-on-ink')}>
             {d} días
           </Link>
         ))}
       </nav>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-1 text-sm text-muted" aria-live="polite">{pending ? 'Actualizando…' : `Actualizado a las ${time}`}</span>
+        <span className="mr-1 w-full text-sm text-muted sm:w-auto" aria-live="polite">{pending ? 'Actualizando…' : `Actualizado a las ${time}`}</span>
         <IconAction label="Actualizar" onClick={() => start(() => router.refresh())} spin={pending}><RefreshCw className="size-4" /></IconAction>
         <IconAction label="Descargar CSV" onClick={download}><Download className="size-4" /></IconAction>
         <IconAction label="Imprimir" onClick={() => window.print()}><Printer className="size-4" /></IconAction>
@@ -50,9 +50,10 @@ export function DashboardToolbar({ days, municipio, updatedAt, csv, csvName }: {
 function IconAction({ label, onClick, children, spin }: { label: string; onClick: () => void; children: React.ReactNode; spin?: boolean }) {
   return (
     <button type="button" onClick={onClick} title={label}
-      className="press inline-flex h-11 items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-sm font-semibold text-ink hover:bg-canvas md:h-10">
+      className="press inline-flex h-11 items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-sm font-semibold text-ink hover:bg-canvas">
       <span className={cn(spin && 'animate-spin')} aria-hidden>{children}</span>
-      <span className="max-sm:sr-only">{label}</span>
+      {/* Ícono y texto también en el teléfono (§6.2): un ícono solo no dice qué hace */}
+      {label}
     </button>
   );
 }

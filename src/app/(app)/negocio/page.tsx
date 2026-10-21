@@ -23,7 +23,7 @@ export default async function MyBusinessesPage() {
           <EmptyState
             icon={<Store className="size-7" />}
             title="Todavía no tienes un negocio registrado"
-            action={<Link href="/negocios/registrar" className="inline-flex min-h-[52px] items-center rounded-[14px] bg-brand px-5 font-semibold text-on-brand hover:bg-brand-strong">Registrar mi negocio</Link>}
+            action={<Link prefetch={false} href="/negocios/registrar" className="inline-flex min-h-[52px] items-center rounded-[14px] bg-brand px-5 font-semibold text-on-brand hover:bg-brand-strong">Registrar mi negocio</Link>}
           >
             Regístralo gratis para que aparezca en el mapa de la provincia.
           </EmptyState>
@@ -35,7 +35,7 @@ export default async function MyBusinessesPage() {
               const s = CONTENT_STATUS[b.status as ContentStatus];
               return (
                 <li key={b.id} className="border-b border-line last:border-0">
-                  <Link href={`/negocio/${b.id}`} className="flex items-center gap-3 px-5 py-4 hover:bg-canvas">
+                  <Link prefetch={false} href={`/negocio/${b.id}`} className="flex items-center gap-3 px-5 py-4 hover:bg-canvas">
                     <span className="flex size-10 items-center justify-center rounded-full bg-brand-soft text-brand" aria-hidden><Store className="size-5" /></span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-semibold">{b.name}</span>
@@ -50,7 +50,7 @@ export default async function MyBusinessesPage() {
         </Card>
       )}
       {businesses.length > 0 && (
-        <Link href="/negocios/registrar" className="mt-4 inline-flex h-12 items-center justify-center rounded-full px-4 font-semibold text-brand hover:bg-surface">
+        <Link prefetch={false} href="/negocios/registrar" className="mt-4 inline-flex h-12 items-center justify-center rounded-full px-4 font-semibold text-brand hover:bg-surface">
           Registrar otro negocio
         </Link>
       )}

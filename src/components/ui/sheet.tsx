@@ -45,7 +45,7 @@ export function Sheet({
         <div className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-line-strong md:hidden" aria-hidden />
         <header className="flex items-center gap-3 px-5 pb-2 pt-3">
           <h2 className="flex-1 text-xl font-bold">{title}</h2>
-          <button type="button" onClick={onClose} aria-label="Cerrar" className="flex size-10 items-center justify-center rounded-full bg-canvas hover:bg-line">
+          <button type="button" onClick={onClose} aria-label="Cerrar" className="flex size-11 items-center justify-center rounded-full bg-canvas hover:bg-line">
             <X className="size-5" />
           </button>
         </header>

@@ -27,7 +27,7 @@ El panel está en **Perfil → Panel municipal**, o directamente en `/admin`. Fu
 
 El panel se recorre con la **barra lateral** de la izquierda (en el teléfono, con las pestañas de arriba): *Gestión* (Resumen, Bandeja, Validaciones) y *Administración* (Informes, Equipo, Auditoría, Catálogos).
 
-**Moderación** ve **Tu trabajo hoy**: alertas por confirmar, reportes por revisar y contenido por validar. Cada tarjeta lleva a su lista.
+**Moderación** ve **Tu trabajo hoy**: alertas por confirmar, reportes por revisar y contenido por validar. Cada tarjeta lleva a su lista. Si todo está en cero, un aviso verde dice **Todo al día**.
 
 **Administración** ve el tablero de indicadores:
 
@@ -35,12 +35,12 @@ El panel se recorre con la **barra lateral** de la izquierda (en el teléfono, c
 2. **Territorio:** toda la provincia o un municipio (la administración provincial puede elegir).
 3. **Lo que hay que atender** (arriba, porque es lo urgente): reportes abiertos ahora, alertas por confirmar, contenido por validar y **la espera más antigua**. Tocar una tarjeta abre su lista.
 4. **Cómo va el periodo:** reportes recibidos, resueltos, tiempo para resolver y personas nuevas. Cada cifra trae una píldora ▲ / ▼ con el cambio frente al periodo anterior, **verde si mejora y roja si empeora** (más resueltos es bueno; más reportes recibidos, no).
-5. **Recibidos y resueltos:** gráfico por día (7 días) o por semana (30 y 90). Toca un punto, o usa las flechas del teclado, para ver su valor; *Ver como tabla* muestra los mismos números.
+5. **Recibidos y resueltos:** gráfico por día (7 días) o por semana (30 y 90). Toca un punto, o usa las flechas del teclado, y arriba del gráfico se lee en palabras (por ejemplo, *mié: 2 recibidos · 1 resuelto*); *Ver como tabla* muestra los mismos números.
 6. **Aspectos destacados:** frases automáticas con lo más importante del periodo (por ejemplo, "Monción concentra el 60 % de los reportes").
 7. **Por municipio**, **tránsito por tipo**, **lo que más piden los vecinos** y **lo más visto** (las 5 fichas con más visitas, clics en *Cómo llegar* y en WhatsApp).
 8. **Contenido del mapa:** negocios activos, turismo publicado y visitas.
 
-El botón **?** de cada tarjeta explica qué mide en palabras simples. Arriba a la derecha: **Actualizar** (con la hora de la última carga), **Descargar CSV** (se abre en Excel con tildes) e **Imprimir**.
+El botón **?** de cada tarjeta explica qué mide en palabras simples. Arriba (en la computadora, a la derecha): **Actualizar** (con la hora de la última carga), **Descargar CSV** (se abre en Excel con tildes) e **Imprimir**.
 
 Las cifras salen de la misma función que el PDF semanal, así que siempre coinciden con el informe.
 
@@ -134,7 +134,7 @@ Para quitar un rol, usa **Quitar** en la lista de personal actual. No puedes qui
 
 ## 7. Auditoría
 
-Registro de todo lo que hace el personal: quién, cuándo, qué y con qué resultado. Incluye los intentos que fueron **denegados**. Nadie lo puede editar ni borrar, tampoco la administración. Filtra por tipo (roles, reportes, tránsito, revisiones, negocios, informes, cuentas) para encontrar algo rápido.
+Registro de todo lo que hace el personal: cuándo, qué hizo, quién (con su rol en palabras: Moderación, Administración…) y con qué resultado. En el teléfono, la columna *Qué hizo* se ve sin deslizar la tabla. Incluye los intentos que fueron **denegados**. Nadie lo puede editar ni borrar, tampoco la administración. Filtra por tipo (roles, reportes, tránsito, revisiones, negocios, informes, cuentas) para encontrar algo rápido.
 
 ## 8. Catálogos (administración provincial)
 

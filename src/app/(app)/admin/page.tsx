@@ -8,13 +8,12 @@ import { requireStaff } from '@/lib/auth';
 import { getCatalogs, getLabelMaps } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
 import { cn } from '@/utils/cn';
-import { formatDate, formatNumber } from '@/utils/format';
+import { formatDate, formatNumber, shortMunicipality as short } from '@/utils/format';
 import { DashboardToolbar } from './_dashboard/toolbar';
 import { TrendChart } from './_dashboard/trend-chart';
 
 export const metadata: Metadata = { title: 'Panel municipal' };
 
-const short = (name: string) => name.replace('San Ignacio de ', '').replace('Villa ', '');
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ municipio?: string; periodo?: string }> }) {
   const viewer = await requireStaff('/admin');
@@ -33,7 +32,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
     return (
       <Card className="p-6">
         <Notice tone="danger">No pudimos cargar los indicadores.</Notice>
-        <Link href={`/admin?periodo=${range.days}`} className="press mt-4 inline-flex min-h-11 items-center rounded-[12px] bg-ink px-4 font-semibold text-on-ink">Reintentar</Link>
+        <Link prefetch={false} href={`/admin?periodo=${range.days}`} className="press mt-4 inline-flex min-h-11 items-center rounded-[12px] bg-ink px-4 font-semibold text-on-ink">Reintentar</Link>
       </Card>
     );
   }
@@ -116,7 +115,8 @@ function Overview({ d, labels }: { d: Dashboard; labels: { trafficTypes: Record<
             help="Reportes al municipio que se marcaron como resueltos en el periodo (aunque hubieran llegado antes)." />
           <Kpi icon={<Clock />} label="Tiempo para resolver" value={formatHours(k.requests.avg_resolution_hours)}
             delta={k.requests.avg_resolution_hours != null && p.requests.avg_resolution_hours != null ? delta(k.requests.avg_resolution_hours, p.requests.avg_resolution_hours, false) : undefined}
-            help="Promedio entre que llega un reporte y se marca como resuelto, de los resueltos en el periodo." />
+            help="Promedio entre que llega un reporte y se marca como resuelto, de los resueltos en el periodo."
+            detail={k.requests.avg_resolution_hours == null ? 'sin reportes resueltos en el periodo' : undefined} />
           <Kpi icon={<Users />} label="Personas nuevas" value={k.users.new} delta={delta(k.users.new, p.users.new, true)}
             help="Cuentas que se crearon en el periodo." detail={`${formatNumber(k.engagement.views)} visitas a fichas`} />
         </div>
@@ -150,7 +150,7 @@ function Overview({ d, labels }: { d: Dashboard; labels: { trafficTypes: Record<
             <ol className="flex flex-col">
               {k.requests.top_supported.map((r, i) => (
                 <li key={r.id}>
-                  <Link href={`/consultas/${r.id}`} className="press-soft flex min-h-12 items-center gap-3 rounded-[12px] px-2 hover:bg-canvas">
+                  <Link prefetch={false} href={`/consultas/${r.id}`} className="press-soft flex min-h-12 items-center gap-3 rounded-[12px] px-2 hover:bg-canvas">
                     <span className={cn('grid size-7 shrink-0 place-items-center rounded-full font-mono text-sm font-bold', i === 0 ? 'bg-warn-bright text-ink' : 'bg-canvas text-muted')}>{i + 1}</span>
                     <span className="min-w-0 flex-1 truncate font-semibold">{r.title}</span>
                     <span className="flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 font-mono text-sm font-bold text-brand-strong"><ThumbsUp className="size-3.5" aria-hidden />{r.support_count}</span>
@@ -175,8 +175,8 @@ function Overview({ d, labels }: { d: Dashboard; labels: { trafficTypes: Record<
                 <tbody>
                   {d.topViewed.map((v) => (
                     <tr key={v.id} className="border-b border-line last:border-0">
-                      <td className="px-5 py-2.5">
-                        <Link href={v.href} className="flex items-center gap-2.5 font-semibold hover:text-brand">
+                      <td className="px-5 py-0.5">
+                        <Link prefetch={false} href={v.href} className="flex min-h-11 items-center gap-2.5 font-semibold hover:text-brand">
                           <span className={cn('h-6 w-1 shrink-0 rounded-full', v.entity === 'business' ? 'bg-layer-business' : v.entity === 'tourism_place' ? 'bg-layer-tourism' : 'bg-layer-route')} aria-hidden />
                           <span className="truncate">{v.name}</span>
                         </Link>
@@ -226,7 +226,7 @@ function Kpi({ icon, label, value, detail, delta: dl, help, href, tone }: {
   return (
     <div className="relative">
       {href ? (
-        <Link href={href} className="press-soft group block h-full rounded-[18px] border border-line bg-surface p-5 shadow-[var(--shadow-card)] hover:border-line-strong hover:shadow-[var(--shadow-float)]">
+        <Link prefetch={false} href={href} className="press-soft group block h-full rounded-[18px] border border-line bg-surface p-5 shadow-[var(--shadow-card)] hover:border-line-strong hover:shadow-[var(--shadow-float)]">
           {body}
           <ArrowRight className="absolute bottom-5 right-5 size-4 text-subtle transition group-hover:translate-x-0.5 group-hover:text-ink" aria-hidden />
         </Link>
@@ -241,9 +241,12 @@ function Kpi({ icon, label, value, detail, delta: dl, help, href, tone }: {
 /** "?" que explica el indicador en lenguaje sencillo. Funciona con toque, ratón y teclado. */
 function Help({ text, label }: { text: string; label: string }) {
   return (
-    <details className="group/help absolute right-4 top-4 print:hidden">
-      <summary aria-label={`Qué mide «${label}»`} className="press grid size-8 cursor-pointer list-none place-items-center rounded-full border border-line text-sm font-bold text-muted hover:bg-canvas [&::-webkit-details-marker]:hidden">?</summary>
-      <p className="animate-fade-in absolute right-0 top-10 z-20 w-64 rounded-[14px] bg-ink p-3 text-sm leading-snug text-on-ink shadow-[var(--shadow-float)]">{text}</p>
+    <details className="group/help absolute right-2.5 top-2.5 print:hidden">
+      {/* Área táctil de 44 px; el círculo visible sigue siendo de 32 px */}
+      <summary aria-label={`Qué mide «${label}»`} className="press group/q grid size-11 cursor-pointer list-none place-items-center rounded-full [&::-webkit-details-marker]:hidden">
+        <span className="grid size-8 place-items-center rounded-full border border-line text-sm font-bold text-muted group-hover/q:bg-canvas" aria-hidden>?</span>
+      </summary>
+      <p className="animate-fade-in absolute right-1.5 top-12 z-20 w-64 rounded-[14px] bg-ink p-3 text-sm leading-snug text-on-ink shadow-[var(--shadow-float)]">{text}</p>
     </details>
   );
 }
@@ -268,7 +271,7 @@ function Panel({ title, sub, action, icon, children }: { title: string; sub?: st
           <h3 className="flex items-center gap-2 text-[17px] font-bold">{icon}{title}</h3>
           {sub && <p className="text-sm text-muted">{sub}</p>}
         </div>
-        {action && <Link href={action.href} className="press -my-2 -mr-2 inline-flex min-h-11 shrink-0 items-center px-2 text-sm font-semibold text-brand hover:underline print:hidden">{action.label}</Link>}
+        {action && <Link prefetch={false} href={action.href} className="press -my-2 -mr-2 inline-flex min-h-11 shrink-0 items-center px-2 text-sm font-semibold text-brand hover:underline print:hidden">{action.label}</Link>}
       </div>
       {children}
     </Card>
@@ -292,7 +295,7 @@ function Bars({ rows, color }: { rows: { key: string; label: string; value: numb
             {r.extra && <p className="mt-1 text-[13px] text-muted">{r.extra}</p>}
           </>
         );
-        return <li key={r.key}>{r.href ? <Link href={r.href} className="press-soft -mx-2 block rounded-[12px] p-2 hover:bg-canvas">{inner}</Link> : inner}</li>;
+        return <li key={r.key}>{r.href ? <Link prefetch={false} href={r.href} className="press-soft -mx-2 block rounded-[12px] p-2 hover:bg-canvas">{inner}</Link> : inner}</li>;
       })}
     </ul>
   );
@@ -304,8 +307,8 @@ function Empty({ children }: { children: React.ReactNode }) {
 
 function Pill({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
   return (
-    <Link href={href} scroll={false} aria-current={active ? 'page' : undefined}
-      className={cn('press inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-[15px] font-semibold md:min-h-10', active ? 'bg-ink text-on-ink' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
+    <Link prefetch={false} href={href} scroll={false} aria-current={active ? 'page' : undefined}
+      className={cn('press inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-[15px] font-semibold', active ? 'bg-ink text-on-ink' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
       {children}
     </Link>
   );
@@ -321,6 +324,10 @@ function ModeratorHome({ counts, scopeNames }: { counts: { trafficPending: numbe
         <h1 className="text-[28px] font-extrabold leading-tight md:text-[34px]">Tu trabajo hoy</h1>
         <p className="mt-1 text-[16px] text-muted">{scopeNames}</p>
       </header>
+      {/* Con todo en cero, decirlo con palabras: tres ceros solos no dicen si falta cargar algo o si ya terminó */}
+      {counts.trafficPending + counts.requestsPending + counts.requestsInReview + counts.validations === 0 && (
+        <Notice tone="ok"><span className="inline-flex items-center gap-2 font-semibold"><CheckCircle2 className="size-5 shrink-0" aria-hidden />Todo al día: no hay nada pendiente por ahora.</span></Notice>
+      )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Kpi icon={<TrafficCone />} label="Alertas por confirmar" value={counts.trafficPending} href="/admin/bandeja" help="Alertas de tránsito que esperan que las publiques o descartes." tone={counts.trafficPending ? 'danger' : undefined} />
         <Kpi icon={<Inbox />} label="Reportes por revisar" value={counts.requestsPending + counts.requestsInReview} href="/admin/bandeja?ver=consultas" help="Reportes al municipio nuevos o en revisión." tone={counts.requestsPending ? 'warn' : undefined} />

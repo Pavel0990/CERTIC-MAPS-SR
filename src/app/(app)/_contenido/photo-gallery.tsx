@@ -2,7 +2,7 @@ import { ImageOff } from 'lucide-react';
 
 /**
  * Fotos de una ficha. La primera va grande. Las fotos que el worker aún no procesó
- * se muestran con un aviso: aparecen solas cuando quedan listas (REPARTO-DE-TRABAJO, B1).
+ * se muestran con un aviso: aparecen solas cuando quedan listas.
  */
 export function PhotoGallery({ photos, name }: { photos: { id: string; url: string; status: string }[]; name: string }) {
   if (!photos.length) return null;

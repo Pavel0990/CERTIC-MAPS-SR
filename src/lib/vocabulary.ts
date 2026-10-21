@@ -127,3 +127,13 @@ const REASON_MESSAGE: Record<string, string> = {
 
 export const reasonMessage = (reason?: string | null) =>
   (reason && REASON_MESSAGE[reason]) ?? 'No se pudo completar. Inténtalo otra vez en un momento.';
+
+/** Captcha de /entrar (Cloudflare Turnstile, SECURITY.md): mensajes cortos y sin jerga. */
+export const HUMAN_CHECK = {
+  /** Nombre del recuadro de Cloudflare para lectores de pantalla. */
+  label: 'Comprobación de que eres una persona',
+  failed: 'No pudimos comprobar que eres una persona. Toca para intentar otra vez',
+  waiting: 'Espera un momento: estamos comprobando que eres una persona. Después toca el botón otra vez.',
+  /** Supabase rechazó el token (vencido o ya usado): el recuadro se renueva solo. */
+  rejected: 'No pudimos comprobar que eres una persona. Espera un momento y toca el botón otra vez.',
+} as const;

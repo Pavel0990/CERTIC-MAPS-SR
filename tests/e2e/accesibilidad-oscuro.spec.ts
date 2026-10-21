@@ -8,7 +8,9 @@ test.use({ colorScheme: 'dark' });
 test('modo oscuro sin errores de accesibilidad (públicas, con sesión y panel)', async ({ page }) => {
   const all: string[] = [];
   const scan = async (path: string) => {
-    await page.goto(path); await page.waitForLoadState('networkidle');
+    await page.goto(path);
+    // Con el captcha activado, Turnstile mantiene la red ocupada en /entrar: "networkidle" no llega nunca
+    await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => page.waitForTimeout(1500));
     const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).exclude('.maplibregl-map').exclude('nextjs-portal').analyze();
     for (const v of r.violations) all.push(`${path} ${v.impact} ${v.id}: ${v.nodes.slice(0, 4).map((n) => n.target.join(' ') + ' ' + (n.any[0]?.message ?? '').slice(0, 90)).join(' | ')}`);
   };

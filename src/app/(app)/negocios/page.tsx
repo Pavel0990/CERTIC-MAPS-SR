@@ -7,11 +7,11 @@ import { PageShell } from '@/components/shared/page';
 import { Badge, Card, EmptyState } from '@/components/ui/primitives';
 import { getCatalogs } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
-import { FilterChips, ListGrid, ListRow, OsmCredit } from '../_contenido/list';
+import { FilterChips, ListGrid, ListRow, OsmCredit, PAGE_SIZE, ShowMore, shownCount } from '../_contenido/list';
 
 export const metadata: Metadata = { title: 'Negocios', description: 'Comercios y servicios de Santiago Rodríguez: colmados, comida, salud, alojamiento y más.' };
 
-type Params = { municipio?: string; tipo?: string; q?: string };
+type Params = { municipio?: string; tipo?: string; q?: string; ver?: string };
 
 // Listado de negocios para quien prefiere una lista a un mapa (criterio de baja alfabetización digital).
 export default async function BusinessesPage({ searchParams }: { searchParams: Promise<Params> }) {
@@ -21,6 +21,7 @@ export default async function BusinessesPage({ searchParams }: { searchParams: P
   const cat = catalogs.businessCategories.find((c) => c.slug === sp.tipo);
   const q = sp.q?.trim().slice(0, 60) ?? '';
   const items = await listBusinesses(await createClient(), { municipalityId: muni?.id, categorySlug: cat?.slug, q });
+  const shown = shownCount(sp.ver);
 
   const href = (next: Params) => {
     const p = new URLSearchParams();
@@ -54,14 +55,14 @@ export default async function BusinessesPage({ searchParams }: { searchParams: P
       </p>
       {items.length === 0 ? (
         <Card>
-          <EmptyState icon={<Store className="size-7" />} title="No encontramos negocios" action={<Link href="/negocios" className="font-semibold text-brand underline">Ver todos</Link>}>
+          <EmptyState icon={<Store className="size-7" />} title="No encontramos negocios" action={<Link prefetch={false} href="/negocios" className="font-semibold text-brand underline">Ver todos</Link>}>
             Prueba con otro nombre o quita los filtros.
           </EmptyState>
         </Card>
       ) : (
         <Card className="overflow-hidden">
           <ListGrid>
-            {items.map((b) => {
+            {items.slice(0, shown).map((b) => {
               const Icon = catalogIcon(b.category?.icon, Store);
               return (
                 <ListRow
@@ -82,9 +83,10 @@ export default async function BusinessesPage({ searchParams }: { searchParams: P
           </ListGrid>
         </Card>
       )}
+      <ShowMore shown={shown} total={items.length} noun="negocios" href={href({ ver: String(shown + PAGE_SIZE) })} />
       <Card className="mt-4 flex flex-wrap items-center gap-3 p-4">
-        <span className="min-w-0 flex-1 text-[15px]"><strong>¿Tienes un negocio?</strong> Regístralo gratis para que aparezca con tu horario, fotos y WhatsApp.</span>
-        <Link href="/negocios/registrar" className="inline-flex h-11 items-center rounded-full bg-brand px-4 text-[15px] font-semibold text-on-brand hover:bg-brand-strong">Registrar mi negocio</Link>
+        <span className="min-w-0 flex-[1_1_15rem] text-[16px]"><strong>¿Tienes un negocio?</strong> Regístralo gratis para que aparezca con tu horario, fotos y WhatsApp.</span>
+        <Link prefetch={false} href="/negocios/registrar" className="inline-flex h-11 items-center rounded-full bg-brand px-4 text-[15px] font-semibold text-on-brand hover:bg-brand-strong">Registrar mi negocio</Link>
       </Card>
       <OsmCredit />
     </PageShell>

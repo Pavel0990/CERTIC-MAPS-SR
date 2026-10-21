@@ -1,4 +1,4 @@
-// Dashboard de indicadores del panel (§9.7, REPARTO B5-B7). Lógica pura, sin base ni React:
+// Dashboard de indicadores del panel (ARCHITECTURE.md §9.7). Lógica pura, sin base ni React:
 // periodos, series para el gráfico, comparación con el periodo anterior, tiempos legibles,
 // aspectos destacados y CSV. Segura para el cliente y probada con vitest.
 import { APP_TIMEZONE } from '@/utils/locale';

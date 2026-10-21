@@ -29,6 +29,6 @@ Una decisión no se edita en silencio: si cambia, su estado dice "revisada" o "r
 | [022](ADR-022-maplibre-openfreemap.md) | MapLibre + OpenFreeMap como mapa base | Aceptada |
 | [023](ADR-023-server-actions.md) | Server Actions para la interfaz; Route Handlers solo donde hace falta HTTP | Aceptada |
 | [024](ADR-024-datos-osm.md) | OpenStreetMap como fuente provisional de datos reales | Aceptada |
-| [025](ADR-025-e2e-contra-staging.md) | E2E con Playwright contra staging, fuera del CI | Aceptada |
+| [025](ADR-025-e2e-contra-staging.md) | E2E con Playwright contra staging, a mano y en un workflow opcional | Aceptada · revisada el 21/10/2026 |
 
 Resumen y contexto general: [ARCHITECTURE.md §18](../../ARCHITECTURE.md#18-decisiones-de-arquitectura-adr).

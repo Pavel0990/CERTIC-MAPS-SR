@@ -18,10 +18,16 @@ export function timeAgo(iso: string | Date, now: Date = new Date()) {
   return formatDate(iso);
 }
 
+/** Kilómetros con un decimal: "2,4 km" */
+export const formatKm = (km: number) => `${km.toFixed(1).replace('.', ',')} km`;
+
 /** Distancia legible: "350 m", "2,4 km" */
 export function formatDistance(km: number) {
-  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1).replace('.', ',')} km`;
+  return km < 1 ? `${Math.round(km * 1000)} m` : formatKm(km);
 }
+
+/** Nombre corto del municipio para filtros y gráficos: "Monción", "Los Almácigos", "Sabaneta". */
+export const shortMunicipality = (name: string) => name.replace('San Ignacio de ', '').replace('Villa ', '');
 
 /** Duración legible: "45 min", "2 h 10 min" */
 export function formatMinutes(min: number) {
@@ -31,7 +37,8 @@ export function formatMinutes(min: number) {
   return m ? `${h} h ${m} min` : `${h} h`;
 }
 
-export const formatNumber = (n: number) => new Intl.NumberFormat('es-DO').format(n);
+const numberFmt = new Intl.NumberFormat('es-DO');
+export const formatNumber = (n: number) => numberFmt.format(n);
 
 /** Distancia en km entre dos puntos (haversine). */
 export function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {

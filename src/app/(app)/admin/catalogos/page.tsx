@@ -34,7 +34,7 @@ export default async function CatalogsPage({ searchParams }: { searchParams: Pro
       </header>
       <nav aria-label="Catálogo" className="mb-4 flex flex-wrap gap-1.5">
         {TABS.map((t) => (
-          <Link key={t.id} href={`/admin/catalogos?que=${t.id}`} aria-current={t.id === tab.id ? 'true' : undefined} className={cn('press inline-flex min-h-11 items-center rounded-full px-3.5 text-[15px] font-semibold', t.id === tab.id ? 'bg-brand text-on-brand' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
+          <Link prefetch={false} key={t.id} href={`/admin/catalogos?que=${t.id}`} aria-current={t.id === tab.id ? 'true' : undefined} className={cn('press inline-flex min-h-11 items-center gap-1 rounded-full px-3.5 text-[15px] font-semibold', t.id === tab.id ? 'bg-brand text-on-brand' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
             {t.label} <span className="font-normal">({lists[t.key].length})</span>
           </Link>
         ))}

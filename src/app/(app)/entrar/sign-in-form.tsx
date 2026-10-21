@@ -5,9 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/form';
 import { ErrorNote } from '@/components/ui/primitives';
 import { requestAccess, verifyCode, type AuthState } from './actions';
+import { HumanCheck, type CaptchaConfig } from './human-check';
 
-export function SignInForm({ next, linkError }: { next: string; linkError: boolean }) {
-  const [sent, send, sending] = useActionState<AuthState, FormData>(requestAccess, { step: 'email' });
+/** `tries` cuenta los envíos: el captcha se vuelve a montar con cada uno porque su token sirve una sola vez. */
+type SentState = AuthState & { tries: number };
+
+export function SignInForm({ next, linkError, captcha }: { next: string; linkError: boolean; captcha?: CaptchaConfig }) {
+  const [sent, send, sending] = useActionState<SentState, FormData>(
+    async (prev, form) => ({ ...(await requestAccess(prev, form)), tries: prev.tries + 1 }),
+    { step: 'email', tries: 0 },
+  );
   const [checked, check, checking] = useActionState<AuthState, FormData>(verifyCode, { step: 'code' });
   const [haveCode, setHaveCode] = useState(false);
   const [typedEmail, setTypedEmail] = useState('');
@@ -47,9 +54,11 @@ export function SignInForm({ next, linkError }: { next: string; linkError: boole
             Entrar
           </Button>
         </form>
-        <form action={send}>
+        <form action={send} className="flex flex-col gap-3">
           <input type="hidden" name="email" value={email} />
           <input type="hidden" name="next" value={next} />
+          {captcha && <HumanCheck key={sent.tries} {...captcha} />}
+          {sent.error && <ErrorNote>{sent.error}</ErrorNote>}
           <Button type="submit" variant="ghost" block loading={sending}>
             No me llegó: enviar otro correo
           </Button>
@@ -72,10 +81,11 @@ export function SignInForm({ next, linkError }: { next: string; linkError: boole
       <Field label="Tu correo electrónico" error={sent.error}>
         {(a) => <Input {...a} name="email" type="email" inputMode="email" autoComplete="email" required placeholder="nombre@gmail.com" defaultValue={email} />}
       </Field>
+      {captcha && <HumanCheck key={sent.tries} {...captcha} />}
       <Button type="submit" size="lg" block loading={sending}>
         Enviarme el correo para entrar
       </Button>
-      <Button variant="ghost" block onClick={() => setHaveCode(true)}>
+      <Button variant="secondary" block onClick={() => setHaveCode(true)}>
         Ya tengo un código
       </Button>
     </form>

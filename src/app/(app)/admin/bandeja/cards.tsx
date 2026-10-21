@@ -57,7 +57,7 @@ function EscalateButton({ id, categories }: { id: string; categories: { code: st
   const [open, setOpen] = useState(false);
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="press inline-flex h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-muted hover:bg-canvas hover:text-ink md:h-9">
+      <button type="button" onClick={() => setOpen(true)} className="press inline-flex h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-muted hover:bg-canvas hover:text-ink">
         <ArrowUpRight className="size-4" aria-hidden /> Pasar a obra municipal
       </button>
     );
@@ -65,7 +65,7 @@ function EscalateButton({ id, categories }: { id: string; categories: { code: st
   return (
     <div className="flex w-full flex-wrap items-center gap-2 rounded-[12px] bg-canvas p-2">
       <label className="sr-only" htmlFor={`esc-${id}`}>Categoría de la obra</label>
-      <Select id={`esc-${id}`} className="h-10 flex-1 text-[15px]" value={category} onChange={(e) => setCategory(e.target.value)}>
+      <Select id={`esc-${id}`} className="h-11 flex-1 text-[15px]" value={category} onChange={(e) => setCategory(e.target.value)}>
         {categories.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
       </Select>
       <button
@@ -77,11 +77,11 @@ function EscalateButton({ id, categories }: { id: string; categories: { code: st
           setOpen(false);
           router.refresh();
         })}
-        className="press h-10 rounded-full bg-ink px-4 text-sm font-semibold text-on-ink hover:bg-ink-strong"
+        className="press h-11 rounded-full bg-ink px-4 text-sm font-semibold text-on-ink hover:bg-ink-strong"
       >
         Crear reporte municipal
       </button>
-      <button type="button" onClick={() => setOpen(false)} className="h-10 rounded-[10px] px-3 text-sm font-semibold text-muted">Cancelar</button>
+      <button type="button" onClick={() => setOpen(false)} className="h-11 rounded-[10px] px-3 text-sm font-semibold text-muted">Cancelar</button>
     </div>
   );
 }
@@ -158,7 +158,7 @@ function AssignControl({ requestId, staff, current, viewerId }: { requestId: str
       <label className="sr-only" htmlFor={`asg-${requestId}`}>Responsable</label>
       <Select
         id={`asg-${requestId}`}
-        className="h-11 w-auto py-0 pr-9 text-sm md:h-9"
+        className="h-11 w-auto py-0 pr-9 text-sm"
         value={current ?? ''}
         disabled={pending}
         onChange={(e) => {

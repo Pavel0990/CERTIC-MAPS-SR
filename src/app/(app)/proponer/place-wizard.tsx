@@ -9,7 +9,7 @@ import { ErrorNote } from '@/components/ui/primitives';
 import { PLACE_KIND } from '@/lib/vocabulary';
 import { LocationPicker } from '../_contenido/location-picker';
 import { PhotoPicker, usePhotos } from '../_contenido/photo-picker';
-import { ChoiceGrid, DoneScreen, StepTitle, WizardHeader } from '../_contenido/wizard';
+import { ChoiceGrid, DoneScreen, MissingHint, StepTitle, WizardHeader, WizardStep } from '../_contenido/wizard';
 import { submitPlace } from './actions';
 
 type Kind = (typeof PLACE_KINDS)[number];
@@ -68,30 +68,31 @@ export function PlaceWizard({ staff }: { staff: boolean }) {
       <WizardHeader step={step} total={3} onBack={() => setStep((s) => (s - 1) as 1 | 2)} />
 
       {step === 1 && (
-        <section className="animate-step-in flex flex-col gap-5 px-4 pb-8 pt-5">
+        <WizardStep>
           <StepTitle headingRef={heading} title="Proponer un lugar" hint="Un sitio bonito o importante de la provincia que todos deberían conocer." />
           <p className="-mt-2 text-[15px]">
-            ¿Es un recorrido o sendero? <Link href="/proponer?que=ruta" className="font-semibold text-brand underline">Proponer una ruta</Link>
+            ¿Es un recorrido o sendero? <Link prefetch={false} href="/proponer?que=ruta" className="font-semibold text-brand underline">Proponer una ruta</Link>
           </p>
           <ChoiceGrid legend="¿Qué tipo de lugar es?" options={PLACE_KINDS.map((k) => ({ value: k, label: PLACE_KIND[k] ?? k }))} value={kind} onChange={setKind} />
           <Field label="Nombre del lugar" hint="Como lo llama la gente. Por ejemplo: «Mirador de La Leonor».">
             {(a) => <Input {...a} value={name} maxLength={120} onChange={(e) => setName(e.target.value)} />}
           </Field>
           <Button size="lg" disabled={!kind || name.trim().length < 2} onClick={() => setStep(2)}>Seguir</Button>
-        </section>
+          <MissingHint show={!kind || name.trim().length < 2}>{!kind ? 'Para seguir, toca el tipo de lugar.' : 'Para seguir, escribe el nombre del lugar.'}</MissingHint>
+        </WizardStep>
       )}
 
       {step === 2 && (
-        <section className="animate-step-in flex flex-col px-4 pb-8 pt-5">
+        <WizardStep spaced={false}>
           <StepTitle headingRef={heading} title="¿Dónde está?" hint="Mueve el mapa hasta que el pin rojo quede sobre el lugar." />
           {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
           <LocationPicker onChange={setPoint} initial={point} ariaLabel="Mapa para marcar dónde está el lugar" />
           <Button size="lg" className="mt-5" disabled={!point} onClick={() => { setError(null); setStep(3); }}>El pin está en el lugar</Button>
-        </section>
+        </WizardStep>
       )}
 
       {step === 3 && (
-        <section className="animate-step-in flex flex-col gap-5 px-4 pb-8 pt-5">
+        <WizardStep>
           <StepTitle headingRef={heading} title="Cuéntanos del lugar" hint={`${PLACE_KIND[kind] ?? ''} · ${name.trim()}`} />
           {error && <ErrorNote>{error}</ErrorNote>}
           <Field label="¿Qué hay y por qué vale la pena?" optional hint="Por ejemplo: «se ve todo el valle, hay sombra y un ventorrillo los domingos».">
@@ -100,7 +101,7 @@ export function PlaceWizard({ staff }: { staff: boolean }) {
           <PhotoPicker state={photos} hint="Una buena foto ayuda al municipio a aprobarlo." />
           <Button size="lg" onClick={submit} loading={busy}>{staff ? 'Publicar lugar' : 'Enviar propuesta'}</Button>
           <p className="text-center text-sm text-muted">{staff ? 'Si es de tu municipio, se publica directamente.' : 'Tu nombre no aparece en el mapa público.'}</p>
-        </section>
+        </WizardStep>
       )}
     </div>
   );

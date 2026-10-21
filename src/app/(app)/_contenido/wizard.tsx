@@ -14,7 +14,7 @@ export function WizardHeader({ step, total, onBack, cancelHref = '/perfil', canc
           <ChevronLeft className="size-5" />
         </button>
       ) : (
-        <Link href={cancelHref} aria-label={cancelLabel} className="press flex size-11 items-center justify-center rounded-full bg-surface shadow-[var(--shadow-card)]">
+        <Link prefetch={false} href={cancelHref} aria-label={cancelLabel} className="press flex size-11 items-center justify-center rounded-full bg-surface shadow-[var(--shadow-card)]">
           <X className="size-5" />
         </Link>
       )}
@@ -26,6 +26,11 @@ export function WizardHeader({ step, total, onBack, cancelHref = '/perfil', canc
       <span className="text-sm font-semibold text-muted">{step} de {total}</span>
     </div>
   );
+}
+
+/** Contenedor de un paso del asistente (entra con animación). `spaced`: separa sus bloques. */
+export function WizardStep({ spaced = true, children }: { spaced?: boolean; children: ReactNode }) {
+  return <section className={cn('animate-step-in flex flex-col px-4 pb-8 pt-5', spaced && 'gap-5')}>{children}</section>;
 }
 
 /** Título de un paso: recibe el foco al cambiar de paso (lectores de pantalla y teclado). */
@@ -59,11 +64,20 @@ export function DoneScreen({
       <div className="mt-2 text-[17px] text-muted">{message}</div>
       {photoError && <div className="mt-4 w-full"><Notice tone="warn">Algunas fotos no se pudieron subir: {photoError}</Notice></div>}
       <div className="mt-8 flex w-full flex-col gap-2">
-        <Link href={primary.href} className="press inline-flex h-13 min-h-[52px] items-center justify-center rounded-full bg-ink font-semibold text-on-ink">{primary.label}</Link>
-        {secondary && <Link href={secondary.href} className="press inline-flex h-12 items-center justify-center rounded-full font-semibold text-ink hover:bg-surface">{secondary.label}</Link>}
+        <Link prefetch={false} href={primary.href} className="press inline-flex h-13 min-h-[52px] items-center justify-center rounded-full bg-ink font-semibold text-on-ink">{primary.label}</Link>
+        {secondary && <Link prefetch={false} href={secondary.href} className="press inline-flex h-12 items-center justify-center rounded-full font-semibold text-ink hover:bg-surface">{secondary.label}</Link>}
       </div>
     </section>
   );
+}
+
+/**
+ * Debajo de un botón desactivado: qué falta para poder seguir (§6.3, estado DISABLED con motivo).
+ * Un botón pálido solo no explica nada y la persona se queda sin saber qué hacer.
+ */
+export function MissingHint({ show, children }: { show: boolean; children: ReactNode }) {
+  if (!show) return null;
+  return <p className="-mt-2 text-center text-[15px] text-muted">{children}</p>;
 }
 
 /** Botones grandes para elegir una opción (tipo de lugar, dificultad…). */

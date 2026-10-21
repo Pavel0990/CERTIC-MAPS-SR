@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { contentSecurityPolicy } from '@/lib/csp';
 
 // Proxy (Next 16). Hace tres cosas, ninguna de autorización (ARCHITECTURE.md §10.1):
 //   1. Genera un nonce por request y aplica la CSP estricta (§10.7): scripts solo con nonce.
@@ -7,29 +8,15 @@ import { createServerClient } from '@supabase/ssr';
 //   3. Redirige a /entrar las rutas que requieren sesión. Cada página, acción y RPC vuelve a verificar.
 const PROTECTED = ['/actividad', '/perfil', '/notificaciones', '/reportar', '/negocio', '/admin', '/proponer', '/negocios/registrar'];
 
-function contentSecurityPolicy(nonce: string) {
-  const supabase = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).host;
-  const isDev = process.env.NODE_ENV === 'development';
-  return [
-    "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
-    // React serializa atributos style en el HTML; un nonce no los cubre. No ejecutan código.
-    "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: https://${supabase} https://tiles.openfreemap.org`,
-    "font-src 'self' data:",
-    `connect-src 'self' https://${supabase} wss://${supabase} https://tiles.openfreemap.org`,
-    "worker-src 'self' blob:",
-    "object-src 'none'",
-    "frame-ancestors 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    ...(isDev ? [] : ['upgrade-insecure-requests']),
-  ].join('; ');
-}
-
 export async function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
-  const csp = contentSecurityPolicy(nonce);
+  const csp = contentSecurityPolicy({
+    nonce,
+    supabaseHost: new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).host,
+    isDev: process.env.NODE_ENV === 'development',
+    // Captcha de /entrar: solo si existe la clave pública de Turnstile (SECURITY.md).
+    captcha: Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim()),
+  });
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('Content-Security-Policy', csp);

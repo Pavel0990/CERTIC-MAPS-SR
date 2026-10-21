@@ -22,6 +22,8 @@ export default defineConfig([
     'next-env.d.ts',
     'node_modules/**',
     'public/vendor/**',
+    // Copias de trabajo de los agentes (git worktree): cada una se revisa en su propia rama
+    '.claude/**',
     // Fuera de la aplicación: prototipo de diseño (runtime generado), SQL y sus pruebas, documentación
     'project/**',
     'supabase/**',

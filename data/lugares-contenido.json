@@ -1,0 +1,279 @@
+{
+  "_info": {
+    "que_es": "Contenido de los lugares turísticos y rutas de la provincia Santiago Rodríguez: descripciones con fuente, fotos con licencia libre y la lista de lo que falta confirmar. Lo carga scripts/load-places-content.mjs (ver data/README.md).",
+    "reglas": [
+      "Solo datos con fuente pública enlazada. Lo que no se pudo confirmar va en por_confirmar, no en places.",
+      "Coordenadas: de OpenStreetMap o de Wikidata. En las áreas protegidas que pasan el límite de la provincia, el punto es un punto interior de la parte que cae dentro (polígono de OSM ∩ municipio, calculado con PostGIS).",
+      "Fotos: solo Wikimedia Commons con CC0, CC BY, CC BY-SA o dominio público. El crédito se agrega al final de la descripción.",
+      "El script nunca borra ni sobrescribe lo que el municipio escribió: solo llena campos vacíos o con el texto que puso la carga de OSM."
+    ],
+    "revisado": "2026-10-21",
+    "province_code": "SR"
+  },
+  "sources": {
+    "osm": { "title": "OpenStreetMap (© colaboradores de OpenStreetMap, ODbL 1.0)", "url": "https://www.openstreetmap.org/copyright" },
+    "eswiki-moncion": { "title": "Wikipedia (es): Monción", "url": "https://es.wikipedia.org/w/index.php?title=Monci%C3%B3n&oldid=173400239" },
+    "enwiki-moncion-dam": { "title": "Wikipedia (en): Monción Dam", "url": "https://en.wikipedia.org/w/index.php?title=Monci%C3%B3n_Dam&oldid=1362095305" },
+    "eswiki-provincia": { "title": "Wikipedia (es): Provincia de Santiago Rodríguez", "url": "https://es.wikipedia.org/w/index.php?title=Provincia_de_Santiago_Rodr%C3%ADguez&oldid=175367163" },
+    "eswiki-sabaneta": { "title": "Wikipedia (es): San Ignacio de Sabaneta", "url": "https://es.wikipedia.org/w/index.php?title=San_Ignacio_de_Sabaneta&oldid=169750447" },
+    "eswiki-almacigos": { "title": "Wikipedia (es): Villa Los Almácigos", "url": "https://es.wikipedia.org/w/index.php?title=Villa_Los_Alm%C3%A1cigos&oldid=169739041" },
+    "eswiki-nalga-de-maco": { "title": "Wikipedia (es): Parque nacional Nalga de Maco", "url": "https://es.wikipedia.org/w/index.php?title=Parque_nacional_Nalga_de_Maco&oldid=174993700" },
+    "eswiki-armando-bermudez": { "title": "Wikipedia (es): Parque nacional José Armando Bermúdez", "url": "https://es.wikipedia.org/w/index.php?title=Parque_nacional_Jos%C3%A9_Armando_Berm%C3%BAdez&oldid=175930927" },
+    "eswiki-la-peonia": { "title": "Wikipedia (es): La Peonía", "url": "https://es.wikipedia.org/w/index.php?title=La_Peon%C3%ADa&oldid=171595327" },
+    "eswiki-cerro-frio": { "title": "Wikipedia (es): Cerro Frío", "url": "https://es.wikipedia.org/w/index.php?title=Cerro_Fr%C3%ADo&oldid=174843884" },
+    "eswiki-rio-mao": { "title": "Wikipedia (es): Río Mao (República Dominicana)", "url": "https://es.wikipedia.org/w/index.php?title=R%C3%ADo_Mao_(Rep%C3%BAblica_Dominicana)&oldid=174957766" },
+    "wikidata-la-peonia": { "title": "Wikidata Q5964757 (La Peonía)", "url": "https://www.wikidata.org/wiki/Q5964757" },
+    "diariolibre-piky-lora": { "title": "Diario Libre, 26/04/2011: Abren centro de protección y vigilancia en el parque nacional Piky Lora", "url": "https://www.diariolibre.com/actualidad/abren-centro-de-proteccin-y-vigilancia-en-el-parque-nacional-piky-lora-GCDL288248" },
+    "diariolibre-dorrejo-2021": { "title": "Diario Libre, 04/12/2021 (opinión, Erick Dorrejo): Rescatando el potencial de Santiago Rodríguez", "url": "https://www.diariolibre.com/opinion/otras-firmas/rescatando-el-potencial-de-santiago-rodriguez-JI30298098" }
+  },
+  "images": {
+    "presa-moncion": {
+      "file": "File:Presa de Monción.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Presa_de_Monci%C3%B3n.jpg",
+      "author": "Albertduraan",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "date": "2020-02-22"
+    },
+    "presa-moncion-2020": {
+      "file": "File:Presa moncion 2020.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Presa_moncion_2020.jpg",
+      "author": "Albertduraan",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "date": "2020-02-22"
+    },
+    "iglesia-moncion": {
+      "file": "File:Iglesia moncion san antonio.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Iglesia_moncion_san_antonio.jpg",
+      "author": "Albertduraan",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "date": "2019-08-20"
+    },
+    "parque-moncion": {
+      "file": "File:Parque moncion.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Parque_moncion.jpg",
+      "author": "Albertduraan",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "date": "2018-09-22"
+    },
+    "armando-bermudez-atardecer": {
+      "file": "File:Atardecer dentro del Parque Nacional Jose Armando Bermudez.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Atardecer_dentro_del_Parque_Nacional_Jose_Armando_Bermudez.jpg",
+      "author": "Mauricio Espejo Chura",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "date": "2026-07-28",
+      "nota": "La foto es del parque, pero Commons no dice en qué provincia se tomó."
+    },
+    "loma-la-peonia": {
+      "file": "File:Loma La Peonia, 115 (45) edited-1.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Loma_La_Peonia,_115_(45)_edited-1.jpg",
+      "author": "usuario Peonia",
+      "license": "dominio público",
+      "license_url": null,
+      "date": "2007-01-18"
+    }
+  },
+  "places": [
+    {
+      "slug": "presa-de-moncion-osmw49190186",
+      "name": "Presa de Monción",
+      "municipality": "Monción",
+      "kind": "naturaleza",
+      "lng": -71.1190648, "lat": 19.4056983,
+      "coord_source": "https://www.openstreetmap.org/way/49190186",
+      "description": "Es la presa más alta de la República Dominicana y del Caribe: mide 119 metros. Está sobre el río Mao y se inauguró el 22 de septiembre de 2001. Da agua a Monción, a los pueblos cercanos y al riego, y produce electricidad. En 2003 ganó el Premio Internacional Puente de Alcántara.",
+      "images": ["presa-moncion"],
+      "sources": ["enwiki-moncion-dam", "eswiki-moncion", "osm"]
+    },
+    {
+      "slug": "contraembalse-moncion-osmw366125649",
+      "name": "Contraembalse Monción",
+      "municipality": "Monción",
+      "kind": "naturaleza",
+      "lng": -71.0804595, "lat": 19.4665411,
+      "coord_source": "https://www.openstreetmap.org/way/366125649",
+      "description": "Es una presa más pequeña sobre el río Mao, río abajo de la Presa de Monción.",
+      "images": [],
+      "aviso": "Solo una frase: no se encontró una fuente pública con más datos.",
+      "sources": ["eswiki-moncion", "osm"]
+    },
+    {
+      "slug": "iglesia-catolica-de-moncion-osmw493307800",
+      "name": "Iglesia Católica de Monción",
+      "municipality": "Monción",
+      "kind": "cultural",
+      "lng": -71.1498975, "lat": 19.4108083,
+      "coord_source": "https://www.openstreetmap.org/way/493307800",
+      "description": "Es la Parroquia San Antonio de Padua, frente al parque central de Monción. Del 9 al 18 de junio celebra las fiestas patronales en honor a San Antonio, una tradición que empezó en 1887. El 13 de junio, día del santo, hay misa, música y venta de comida típica en el parque.",
+      "images": ["iglesia-moncion"],
+      "sources": ["eswiki-moncion", "osm"]
+    },
+    {
+      "slug": "parque-central-de-moncion-osmw493307705",
+      "name": "Parque Central de Monción",
+      "municipality": "Monción",
+      "kind": "cultural",
+      "lng": -71.1501753, "lat": 19.4108604,
+      "coord_source": "https://www.openstreetmap.org/way/493307705",
+      "description": "Es el parque principal de Monción, frente a la Parroquia San Antonio de Padua. Aquí se hacen las fiestas patronales de junio, con música, juegos tradicionales y venta de productos típicos. Monción es conocida como la capital del casabe.",
+      "images": ["parque-moncion"],
+      "sources": ["eswiki-moncion", "osm"]
+    },
+    {
+      "slug": "monasterio-carmelita-n-s-de-america-y-san-jose-osmn11985342898",
+      "name": "Monasterio Carmelita N.S. de América y San José",
+      "municipality": "Monción",
+      "kind": "cultural",
+      "lng": -71.1470077, "lat": 19.4480331,
+      "coord_source": "https://www.openstreetmap.org/node/11985342898",
+      "new": true,
+      "description": "Monasterio católico de la orden carmelita, en Los Pinos, Cacique, en Monción. Es uno de los lugares religiosos importantes del municipio.",
+      "images": [],
+      "sources": ["eswiki-moncion", "osm"]
+    },
+    {
+      "slug": "parque-nacional-piky-lora-osmw740592842",
+      "name": "Parque Nacional Piky Lora",
+      "municipality": "Monción",
+      "kind": "naturaleza",
+      "lng": -71.1163098, "lat": 19.4530114,
+      "coord_source": "https://www.openstreetmap.org/way/740592842 (punto interior de la parte del parque que está en Monción)",
+      "new": true,
+      "description": "Parque nacional al pie de la Cordillera Central, con lomas bajas y vegetación seca: cactus, orquídeas y bromelias. Lleva el nombre de Piky Lora, que luchó contra la dictadura de Trujillo. El Ministerio de Medio Ambiente tiene allí un centro de protección y vigilancia.",
+      "images": [],
+      "sources": ["diariolibre-piky-lora", "eswiki-moncion", "osm"]
+    },
+    {
+      "slug": "reserva-forestal-alto-mao-osmw728271897",
+      "name": "Reserva Forestal Alto Mao",
+      "municipality": "Monción",
+      "kind": "naturaleza",
+      "lng": -71.2415846, "lat": 19.3221547,
+      "coord_source": "https://www.openstreetmap.org/way/728271897",
+      "description": "Reserva forestal de la Cordillera Central, en el sur de la provincia. Ocupa parte de San Ignacio de Sabaneta, Monción y Villa Los Almácigos. Lleva el nombre del río Mao, que nace en la vertiente norte de esta cordillera y llena la Presa de Monción.",
+      "images": [],
+      "sources": ["osm", "eswiki-rio-mao"]
+    },
+    {
+      "slug": "parque-central-osmw415676032",
+      "name": "Parque Central",
+      "municipality": "San Ignacio de Sabaneta",
+      "kind": "cultural",
+      "lng": -71.341797, "lat": 19.4756636,
+      "coord_source": "https://www.openstreetmap.org/way/415676032",
+      "description": "Es el parque principal de San Ignacio de Sabaneta, la capital de la provincia. Al lado está la Iglesia de Las Mercedes. La ciudad la fundaron en 1844 Santiago Rodríguez y los hermanos Alejandro y José Bueno, y fue el centro de la lucha en la Guerra de la Restauración.",
+      "images": [],
+      "sources": ["eswiki-sabaneta", "osm"]
+    },
+    {
+      "slug": "iglesia-de-las-mercedes-osmn2037619928",
+      "name": "Iglesia De Las Mercedes",
+      "municipality": "San Ignacio de Sabaneta",
+      "kind": "cultural",
+      "lng": -71.341219, "lat": 19.4756564,
+      "coord_source": "https://www.openstreetmap.org/node/2037619928",
+      "description": "Iglesia del centro de San Ignacio de Sabaneta, al lado del Parque Central.",
+      "images": [],
+      "sources": ["osm"],
+      "aviso": "Solo una frase: no se encontró una fuente pública con su historia."
+    },
+    {
+      "slug": "parque-nacional-jose-armando-bermudez-osmr10078631",
+      "name": "Parque Nacional José Armando Bermúdez",
+      "municipality": "San Ignacio de Sabaneta",
+      "kind": "naturaleza",
+      "lng": -71.2479332, "lat": 19.2310807,
+      "coord_source": "https://www.openstreetmap.org/relation/10078631 (punto interior de la parte del parque que está en San Ignacio de Sabaneta: 95 km²; otros 30 km² están en Villa Los Almácigos)",
+      "new": true,
+      "description": "Parque nacional de la Cordillera Central, protegido desde 1956. Tiene bosques de pino, ríos importantes del país y clima fresco, entre 12 y 20 °C. Su parte norte está en el sur de San Ignacio de Sabaneta y de Villa Los Almácigos. Dentro del parque está el Monte Gallo, de 1840 metros.",
+      "accessibility": "Desde la provincia se llega por La Leonor y La Manacla. Es zona de montaña: hay que ir preparado para el frío y la lluvia.",
+      "images": ["armando-bermudez-atardecer"],
+      "sources": ["eswiki-armando-bermudez", "eswiki-provincia", "osm"]
+    },
+    {
+      "slug": "reserva-forestal-rio-cana-osmw728275584",
+      "name": "Reserva Forestal Río Cana",
+      "municipality": "San Ignacio de Sabaneta",
+      "kind": "naturaleza",
+      "lng": -71.2096994, "lat": 19.5270795,
+      "coord_source": "https://www.openstreetmap.org/way/728275584 (punto interior de la parte de la reserva que está en San Ignacio de Sabaneta: 48 km²)",
+      "new": true,
+      "description": "Reserva forestal en el norte de la provincia, en la zona del río Cana. El río Cana y el río Gurabo forman cañones y barrancos que dan forma al paisaje de esta parte de Santiago Rodríguez.",
+      "images": [],
+      "sources": ["eswiki-provincia", "osm"]
+    },
+    {
+      "slug": "parque-nacional-nalga-de-maco-osmw728271899",
+      "name": "Parque Nacional Nalga de Maco",
+      "municipality": "Villa Los Almácigos",
+      "kind": "naturaleza",
+      "lng": -71.4747693, "lat": 19.2397286,
+      "coord_source": "https://www.openstreetmap.org/way/728271899",
+      "description": "Parque nacional creado en 1995, al sur de Villa Los Almácigos. Protege la montaña Nalga de Maco, de unos 2000 metros, que tiene en su cima el único bosque enano de la isla. En esta zona nacen ríos como el Artibonito. Hace frío: entre 11 y 16 °C.",
+      "accessibility": "Se entra por La Peonía, una comunidad cafetalera al sur de Villa Los Almácigos. Subir a la cima es de lo más difícil del país.",
+      "images": [],
+      "sources": ["eswiki-nalga-de-maco", "eswiki-la-peonia", "osm"]
+    },
+    {
+      "slug": "la-peonia-wdq5964757",
+      "name": "La Peonía",
+      "municipality": "Villa Los Almácigos",
+      "kind": "naturaleza",
+      "lng": -71.4709583, "lat": 19.2960472,
+      "coord_source": "https://www.wikidata.org/wiki/Q5964757",
+      "new": true,
+      "description": "Comunidad cafetalera de montaña al sur de Villa Los Almácigos, a unos 850 metros de altura. Tiene clima fresco, entre 16 y 20 °C, ríos con pozas como el río El Pez y el bosque nublado de Cerro Frío, con helechos gigantes. Desde aquí sale el camino al Parque Nacional Nalga de Maco.",
+      "images": ["loma-la-peonia"],
+      "sources": ["eswiki-la-peonia", "eswiki-cerro-frio", "wikidata-la-peonia"]
+    }
+  ],
+  "routes": [
+    {
+      "slug": "moncion-presa-osm",
+      "name": "De Monción a la Presa",
+      "osm_description": "Caminata desde el Parque Central de Monción hasta la Presa de Monción, sobre el río Mao. El trazado sigue calles y caminos que existen en OpenStreetMap; conviene validarlo con el municipio antes de recomendarlo.",
+      "add": "Puntos de referencia: sale del Parque Central de Monción, frente a la Parroquia San Antonio de Padua, y termina en la Presa de Monción, la más alta del país (119 metros).",
+      "images": ["presa-moncion-2020"],
+      "sources": ["enwiki-moncion-dam", "eswiki-moncion", "osm"]
+    }
+  ],
+  "routes_sin_fuente": [
+    { "slug": "sabaneta-mata-del-jobo-osm", "name": "Sabaneta al Parador de Mata del Jobo", "nota": "No hay fuentes públicas sobre el parador ni fotos libres. Falta validarla en el terreno y tomar fotos propias." },
+    { "slug": "sabaneta-caimito-osm", "name": "Sabaneta al Parador de Caimito", "nota": "No hay fuentes públicas sobre el parador ni fotos libres. Falta validarla en el terreno y tomar fotos propias." }
+  ],
+  "sin_fuente": [
+    { "slug": "monumento-a-cristo-osmn13568229711", "name": "Monumento a Cristo", "municipality": "Monción" },
+    { "slug": "monumento-moncion-osmn13568229710", "name": "Monumento Monción", "municipality": "Monción" },
+    { "slug": "parque-barrio-nuevo-osmw1177064537", "name": "Parque Barrio Nuevo", "municipality": "Monción" },
+    { "slug": "parque-las-flores-osmw1177064566", "name": "Parque Las Flores", "municipality": "Monción" },
+    { "slug": "rotonda-de-cepillo-osmn4665755594", "name": "Rotonda de Cepillo", "municipality": "Monción" },
+    { "slug": "capilla-san-pedro-osmn3715356481", "name": "Capilla San Pedro", "municipality": "San Ignacio de Sabaneta" },
+    { "slug": "parador-fotografico-mata-del-jobo-osmn14100122920", "name": "Parador Fotográfico Mata del Jobo", "municipality": "San Ignacio de Sabaneta" },
+    { "slug": "parador-fotografico-caimito-osmn14100139568", "name": "Parador Fotográfico Caimito", "municipality": "San Ignacio de Sabaneta" }
+  ],
+  "por_confirmar": [
+    { "name": "Charcos de los Indios", "municipality": "Monción", "motivo": "Sin coordenadas en OSM ni Wikidata. Commons dice «3 km al norte de Monción».", "sources": ["https://commons.wikimedia.org/wiki/File:Los_Charcos_de_los_Indios.tiff"], "foto_libre": "File:Los Charcos de los Indios.tiff (Ken Mayer, CC BY-SA 2.0)" },
+    { "name": "Ruta del Casabe", "municipality": "Monción", "motivo": "Es un recorrido por fábricas de casabe, no un punto: falta saber qué lugares la forman y sus coordenadas.", "sources": ["eswiki-moncion"], "foto_libre": "File:Experiencia Taína de la Ruta del Casabe.jpg (Félix Manuel Rodríguez, CC BY-SA 4.0) y otras del mismo autor" },
+    { "name": "Salto de Jicomé", "municipality": "Monción", "motivo": "Sin coordenadas en OSM ni Wikidata.", "sources": ["eswiki-moncion", "diariolibre-dorrejo-2021"] },
+    { "name": "Cueva de Clavijo", "municipality": "Monción", "motivo": "Sin coordenadas en OSM ni Wikidata.", "sources": ["eswiki-moncion"] },
+    { "name": "La Noria", "municipality": "Monción", "motivo": "Sin coordenadas ni descripción.", "sources": ["eswiki-moncion"] },
+    { "name": "Río Toma", "municipality": "Monción", "motivo": "Falta el punto de baño o de visita.", "sources": ["eswiki-moncion"] },
+    { "name": "Mirador de la Presa de Monción", "municipality": "Monción", "motivo": "Sin coordenadas en OSM ni Wikidata.", "sources": ["eswiki-moncion"] },
+    { "name": "Parque mirador Manolo Tavárez Justo", "municipality": "Monción", "motivo": "Sin coordenadas en OSM ni Wikidata.", "sources": ["eswiki-moncion"] },
+    { "name": "Hidroeléctrica de Monción", "municipality": "Monción", "motivo": "La central está río abajo de la presa, pero no aparece en OSM.", "sources": ["eswiki-moncion", "enwiki-moncion-dam"] },
+    { "name": "Santuario del Divino Niño (Barrio Nuevo)", "municipality": "Monción", "motivo": "Sin coordenadas en OSM.", "sources": ["eswiki-moncion"] },
+    { "name": "Capilla Santa Ana (Cacique)", "municipality": "Monción", "motivo": "Sin coordenadas en OSM.", "sources": ["eswiki-moncion"] },
+    { "name": "Balnearios El Charco de los Chivos, Las Masetas y El Aposento", "municipality": "⚠️ sin confirmar", "motivo": "Un artículo de opinión los nombra, pero no dice en qué municipio están ni dónde.", "sources": ["diariolibre-dorrejo-2021"] },
+    { "name": "Saltos Bomba y Yajagual", "municipality": "⚠️ sin confirmar", "motivo": "Mismo artículo de opinión; sin ubicación.", "sources": ["diariolibre-dorrejo-2021"] },
+    { "name": "Monumento a los héroes de la sublevación de Sabaneta", "municipality": "San Ignacio de Sabaneta", "motivo": "Un documento del Senado (memoriahistorica.senadord.gob.do) lo sitúa en la entrada de la ciudad, pero no está en OSM. ⚠️ Falta el enlace exacto al documento.", "sources": [] },
+    { "name": "Río Mao, río Inaje y río Guayubín (balnearios)", "municipality": "los 3", "motivo": "Los ríos existen en OSM y Wikidata, pero falta el punto exacto de los balnearios donde la gente se baña.", "sources": ["eswiki-provincia", "eswiki-almacigos", "osm"] },
+    { "name": "Cerro Frío", "municipality": "Villa Los Almácigos", "motivo": "Wikidata le da la misma coordenada que a La Peonía, pero el artículo dice que está al este del pueblo: la coordenada no es fiable. Se menciona dentro de la ficha de La Peonía.", "sources": ["eswiki-cerro-frio"] },
+    { "name": "Río El Pez, cascada de Andino, Charco El Pomo y Salto de Las Aguas Blancas", "municipality": "Villa Los Almácigos", "motivo": "Sin coordenadas en OSM ni Wikidata.", "sources": ["eswiki-la-peonia"] },
+    { "name": "Monte Gallo (1840 m)", "municipality": "⚠️ sin confirmar", "motivo": "Dentro del Parque Armando Bermúdez; sin coordenada fiable.", "sources": ["eswiki-provincia"] },
+    { "name": "Reserva Científica Villa Elisa", "municipality": "no aplica", "motivo": "No está en la provincia: no aparece en OSM dentro de Santiago Rodríguez ni en las fuentes de la provincia.", "sources": [] }
+  ]
+}

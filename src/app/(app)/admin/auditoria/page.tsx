@@ -22,6 +22,11 @@ const GROUPS = [
   { id: 'catalog', label: 'Catálogos' },
 ];
 
+/** El rol se guarda en inglés (moderator, municipal_admin…); en pantalla va en palabras. */
+const ROLE_LABEL: Record<string, string> = {
+  citizen: 'Vecino', entrepreneur: 'Negocio', moderator: 'Moderación', municipal_admin: 'Administración', system: 'Sistema', service_role: 'Sistema',
+};
+
 /** Traduce la acción técnica (p. ej. "request.status_change") a una frase. */
 function describe(action: string) {
   // Acciones reales registradas por private.audit() en las migraciones
@@ -48,11 +53,11 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
       <header className="mb-5">
         <Eyebrow>Gestión municipal</Eyebrow>
         <h1 className="text-[28px] font-extrabold md:text-[34px]">Auditoría</h1>
-        <p className="mt-1 text-[16px] text-muted">Registro inmutable de las acciones del personal. Últimas 100.</p>
+        <p className="mt-1 text-[16px] text-muted">Lo que hizo el personal en el panel. Nadie puede borrarlo ni cambiarlo. Se ven las últimas 100 acciones.</p>
       </header>
       <nav aria-label="Tipo de acción" className="-mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0">
         {GROUPS.map((g) => (
-          <Link key={g.id} href={g.id ? `/admin/auditoria?tipo=${g.id}` : '/admin/auditoria'} aria-current={group === g.id ? 'true' : undefined} className={cn('press inline-flex min-h-11 shrink-0 items-center rounded-full px-3.5 md:min-h-8 text-sm font-semibold', group === g.id ? 'bg-brand text-on-brand' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
+          <Link prefetch={false} key={g.id} href={g.id ? `/admin/auditoria?tipo=${g.id}` : '/admin/auditoria'} aria-current={group === g.id ? 'true' : undefined} className={cn('press inline-flex min-h-11 shrink-0 items-center rounded-full px-3.5 text-sm font-semibold', group === g.id ? 'bg-brand text-on-brand' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
             {g.label}
           </Link>
         ))}
@@ -62,8 +67,9 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           <thead className="border-b border-line text-sm text-muted">
             <tr>
               <th scope="col" className="px-5 py-3 font-semibold">Cuándo</th>
-              <th scope="col" className="px-5 py-3 font-semibold">Quién</th>
+              {/* "Qué hizo" va segundo: en el teléfono es lo que se ve sin deslizar la tabla */}
               <th scope="col" className="px-5 py-3 font-semibold">Qué hizo</th>
+              <th scope="col" className="px-5 py-3 font-semibold">Quién</th>
               <th scope="col" className="px-5 py-3 font-semibold">Resultado</th>
             </tr>
           </thead>
@@ -74,8 +80,8 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
             {rows.map((r) => (
               <tr key={`${r.created_at}-${r.id}`} className="border-b border-line last:border-0">
                 <td className="whitespace-nowrap px-5 py-3 text-muted">{formatDateTime(r.created_at)}</td>
-                <td className="px-5 py-3"><span className="font-semibold">{r.actor_name}</span><span className="block text-sm text-muted">{r.actor_role}</span></td>
                 <td className="px-5 py-3">{describe(r.action)}</td>
+                <td className="px-5 py-3"><span className="font-semibold">{r.actor_name}</span><span className="block text-sm text-muted">{ROLE_LABEL[r.actor_role ?? ''] ?? r.actor_role}</span></td>
                 <td className="px-5 py-3"><Badge tone={r.result === 'success' ? 'ok' : r.result === 'denied' ? 'warn' : 'danger'}>{r.result === 'success' ? 'Hecho' : r.result === 'denied' ? 'Denegado' : 'Error'}</Badge></td>
               </tr>
             ))}

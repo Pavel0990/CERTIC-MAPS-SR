@@ -39,10 +39,10 @@ select problem, object from (
   where schema = 'public' and has_function_privilege('anon', oid, 'execute')
     and name not in (select name from anon_allowed)
   union all
-  -- 6. Las funciones del worker solo las ejecuta service_role
+  -- 6. Las funciones del worker y las de preparar las E2E solo las ejecuta service_role
   select 'función del worker ejecutable por clientes', (schema || '.' || name)::text
   from fn
-  where schema = 'public' and (name like 'worker\_%' or name = 'weekly_report_finish')
+  where schema = 'public' and (name like 'worker\_%' or name like 'e2e\_%' or name = 'weekly_report_finish')
     and (has_function_privilege('anon', oid, 'execute') or has_function_privilege('authenticated', oid, 'execute'))
   union all
   -- 7. Ningún cliente crea objetos en los esquemas de la app

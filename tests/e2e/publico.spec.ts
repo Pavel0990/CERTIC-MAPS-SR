@@ -5,7 +5,13 @@ test('un visitante encuentra un negocio en la lista, filtra y abre su ficha', as
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await page.getByRole('navigation', { name: 'Ver en lista' }).getByRole('link', { name: 'Negocios' }).click();
   await expect(page.getByRole('heading', { name: 'Negocios', level: 1 })).toBeVisible();
-  await expect(page.getByText(/\d+ negocios/)).toBeVisible();
+  await expect(page.getByText(/^\d+ negocios/)).toBeVisible();
+  // La lista se carga por partes: 24 de entrada y más al pedirlo, sin mover la pantalla
+  const rows = page.locator('main li a[href^="/negocios/"]');
+  await expect(rows).toHaveCount(24);
+  await page.getByRole('link', { name: /^Ver \d+ negocios más$/ }).click();
+  await expect(page).toHaveURL(/ver=48/);
+  await expect(rows).not.toHaveCount(24);
 
   await page.getByRole('navigation', { name: 'Municipio' }).getByRole('link', { name: 'Monción' }).click();
   await expect(page).toHaveURL(/municipio=mon/);

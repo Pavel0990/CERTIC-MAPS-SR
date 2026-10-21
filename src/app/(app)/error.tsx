@@ -13,7 +13,7 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
       <p className="text-[16px] text-muted">Puede ser la conexión o un problema momentáneo. Lo que ya enviaste está a salvo.</p>
       <div className="flex w-full flex-col gap-2">
         <Button size="lg" icon={<RefreshCw className="size-5" />} onClick={reset}>Intentar otra vez</Button>
-        <Link href="/" className="press inline-flex min-h-12 items-center justify-center rounded-[14px] font-semibold text-ink hover:bg-surface">Volver al inicio</Link>
+        <Link prefetch={false} href="/" className="press inline-flex min-h-12 items-center justify-center rounded-[14px] font-semibold text-ink hover:bg-surface">Volver al inicio</Link>
       </div>
       {error.digest && <p className="font-mono text-xs text-subtle">Código: {error.digest}</p>}
     </main>

@@ -25,7 +25,7 @@ export function DirectionsButton({ entity, id, point, label = 'Cómo llegar' }: 
 }
 
 export function SecondaryLink({ href, children, icon = <Pencil className="size-4" aria-hidden /> }: { href: string; children: ReactNode; icon?: ReactNode }) {
-  return <Link href={href} className={secondaryLink}>{icon}{children}</Link>;
+  return <Link prefetch={false} href={href} className={secondaryLink}>{icon}{children}</Link>;
 }
 
 /** Ficha todavía sin descripción ni fotos: lo dice en vez de dejar un hueco, y al personal le ofrece completarla. */

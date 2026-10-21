@@ -6,8 +6,8 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { ICON_PATHS, LAYERS } from '../layers';
 import type { BBox, LatLng, MapFeature, MapFeatureCollection, StaticLayers } from '../types';
 
-// Proveedor MapLibre GL + OpenFreeMap (datos © OpenStreetMap). Es el plan B de ADR-004 y el proveedor
-// activo mientras no se configure la clave de Google Maps. El resto de la app no conoce esta librería.
+// Proveedor MapLibre GL + OpenFreeMap (datos © OpenStreetMap): el mapa base definitivo del MVP (ADR-022,
+// que sustituye a ADR-004). El resto de la app no conoce esta librería.
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 // El worker se sirve desde public/vendor (scripts/copy-vendor.mjs), con la versión instalada.
 setWorkerUrl(`/vendor/maplibre/${maplibrePkg.version}/maplibre-gl-worker.mjs`);

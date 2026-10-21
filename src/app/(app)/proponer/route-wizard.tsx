@@ -12,7 +12,7 @@ import { DIFFICULTY, ROUTE_KIND } from '@/lib/vocabulary';
 import { distanceKm, formatDistance } from '@/utils/format';
 import { LocationPicker } from '../_contenido/location-picker';
 import { PhotoPicker, usePhotos } from '../_contenido/photo-picker';
-import { ChoiceGrid, DoneScreen, StepTitle, WizardHeader } from '../_contenido/wizard';
+import { ChoiceGrid, DoneScreen, MissingHint, StepTitle, WizardHeader, WizardStep } from '../_contenido/wizard';
 import { submitRoute } from './actions';
 
 type Kind = (typeof ROUTE_KINDS)[number];
@@ -132,10 +132,10 @@ export function RouteWizard({ staff }: { staff: boolean }) {
       <WizardHeader step={step} total={3} onBack={() => setStep((s) => (s - 1) as 1 | 2)} />
 
       {step === 1 && (
-        <section className="animate-step-in flex flex-col gap-5 px-4 pb-8 pt-5">
+        <WizardStep>
           <StepTitle headingRef={heading} title="Proponer una ruta" hint="Un sendero o recorrido para caminar, ir en bicicleta o conocer la provincia." />
           <p className="-mt-2 text-[15px]">
-            ¿Es un solo sitio? <Link href="/proponer" className="font-semibold text-brand underline">Proponer un lugar</Link>
+            ¿Es un solo sitio? <Link prefetch={false} href="/proponer" className="font-semibold text-brand underline">Proponer un lugar</Link>
           </p>
           <Field label="Nombre de la ruta" hint="Por ejemplo: «Sendero del río Inaje».">
             {(a) => <Input {...a} value={name} maxLength={120} onChange={(e) => setName(e.target.value)} />}
@@ -146,11 +146,12 @@ export function RouteWizard({ staff }: { staff: boolean }) {
             {(a) => <Input {...a} type="number" inputMode="numeric" min={5} max={2880} value={duration} onChange={(e) => setDuration(e.target.value)} />}
           </Field>
           <Button size="lg" disabled={!step1Ok} onClick={() => setStep(2)}>Seguir</Button>
-        </section>
+          <MissingHint show={!step1Ok}>Para seguir, completa el nombre, el tipo, la dificultad y los minutos (de 5 en adelante).</MissingHint>
+        </WizardStep>
       )}
 
       {step === 2 && (
-        <section className="animate-step-in flex flex-col px-4 pb-8 pt-5">
+        <WizardStep spaced={false}>
           <StepTitle headingRef={heading} title="Marca el recorrido" hint="Pon el pin en el inicio y toca «Agregar este punto». Luego muévelo por el camino y repite hasta el final." />
           {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
           <LocationPicker onChange={setCenter} staticLayers={trace} flyTo={flyTo} ariaLabel="Mapa para trazar el recorrido de la ruta">
@@ -178,11 +179,11 @@ export function RouteWizard({ staff }: { staff: boolean }) {
           <Button size="lg" className="mt-5" disabled={points.length < 2} onClick={() => { setError(null); setStep(3); }}>
             {points.length < 2 ? 'Marca al menos 2 puntos' : 'El recorrido está listo'}
           </Button>
-        </section>
+        </WizardStep>
       )}
 
       {step === 3 && (
-        <section className="animate-step-in flex flex-col gap-5 px-4 pb-8 pt-5">
+        <WizardStep>
           <StepTitle headingRef={heading} title="Cuéntanos de la ruta" hint={`${name.trim()} · ${formatDistance(km)}`} />
           {error && <ErrorNote>{error}</ErrorNote>}
           <Field label="¿Qué se ve y qué hay que saber?" optional hint="Dónde empieza, qué llevar, si hay ríos que cruzar o tramos difíciles.">
@@ -191,7 +192,7 @@ export function RouteWizard({ staff }: { staff: boolean }) {
           <PhotoPicker state={photos} hint="Fotos del camino ayudan a otras personas a animarse." />
           <Button size="lg" onClick={submit} loading={busy}>{staff ? 'Publicar ruta' : 'Enviar propuesta'}</Button>
           <p className="text-center text-sm text-muted">{staff ? 'Si empieza en tu municipio, se publica directamente.' : 'La distancia exacta la calcula el sistema con el trazado.'}</p>
-        </section>
+        </WizardStep>
       )}
     </div>
   );

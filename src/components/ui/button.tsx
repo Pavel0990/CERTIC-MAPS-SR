@@ -14,7 +14,7 @@ const variants: Record<Variant, string> = {
   danger: 'bg-surface text-danger-strong border border-danger-line hover:bg-danger-soft',
 };
 const sizes: Record<Size, string> = {
-  sm: 'h-11 md:h-9 px-3 text-sm gap-1.5 rounded-full',
+  sm: 'h-11 px-3 text-sm gap-1.5 rounded-full',
   md: 'h-11 px-4 text-[15px] gap-2 rounded-full',
   lg: 'h-13 px-5 text-base gap-2.5 rounded-full min-h-[52px]',
 };

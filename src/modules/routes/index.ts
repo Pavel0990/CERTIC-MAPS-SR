@@ -2,6 +2,6 @@
 // Rutas de ecoturismo: trazado, propuestas, edición y distancia (F3). No confundir con rutas HTTP.
 export {
   DIFFICULTIES, ROUTE_KINDS, routeProposalInput, routeUpdateInput,
-  type LineGeometry, type RouteProposalInput, type RouteUpdateInput,
+  type RouteProposalInput, type RouteUpdateInput,
 } from './schemas';
 export { parseGpx, thinPoints } from './gpx';

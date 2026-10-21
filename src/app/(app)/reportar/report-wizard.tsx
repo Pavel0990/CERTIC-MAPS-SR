@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { Check, CircleAlert, LocateFixed, MessageCircleQuestion, Siren, type LucideIcon } from 'lucide-react';
+import { checkSimilarReports, similarNotice, supportSimilarReport, type SimilarReport } from '@/modules/citizen-reports';
 import { MapCanvas, type LatLng } from '@/modules/map';
 import { uploadPhotos } from '@/modules/media';
 import { catalogIcon } from '@/components/shared/catalog-icon';
@@ -11,10 +12,12 @@ import { useToast } from '@/components/ui/toast';
 import { GEO_MESSAGE, useGeolocation } from '@/hooks/use-geolocation';
 import { PROVINCE_VIEW } from '@/config/env';
 import { sendOrQueue, type SendResult } from '@/lib/outbox';
+import { newIdempotencyKey } from '@/lib/schemas';
 import { SEVERITY, reasonMessage } from '@/lib/vocabulary';
 import { cn } from '@/utils/cn';
 import { PhotoPicker, usePhotos } from '../_contenido/photo-picker';
-import { DoneScreen, StepTitle, WizardHeader } from '../_contenido/wizard';
+import { DoneScreen, MissingHint, StepTitle, WizardHeader, WizardStep } from '../_contenido/wizard';
+import { SimilarNotice } from './similar-notice';
 
 export interface ReportCatalogs {
   trafficTypes: { code: string; name: string; icon: string; default_severity: number }[];
@@ -27,7 +30,6 @@ type Choice =
   | { flow: 'request'; kind: 'incident' | 'inquiry'; code: string; name: string };
 
 const MAX_PHOTOS = 3;
-const newKey = () => crypto.randomUUID().replace(/-/g, '');
 
 export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalogs; initialType?: string }) {
   const toast = useToast();
@@ -45,8 +47,15 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<SendResult | null>(null);
   const [focus, setFocus] = useState<{ center: LatLng; zoom?: number; key: number } | null>(null);
-  const [key] = useState(newKey); // misma clave en todos los reintentos de este reporte
+  const [key] = useState(newIdempotencyKey); // misma clave en todos los reintentos de este reporte
+  // Aviso de reporte parecido cercano (tras elegir tipo y lugar). `skipped`: el tipo y lugar ya consultados, para no
+  // volver a preguntar lo mismo si regresa al mapa sin mover el pin.
+  const [checking, setChecking] = useState(false);
+  const [similar, setSimilar] = useState<{ items: SimilarReport[]; point: LatLng; supported: boolean } | null>(null);
+  const [supporting, setSupporting] = useState(false);
+  const [skipped, setSkipped] = useState<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
+  const similarHeading = useRef<HTMLHeadingElement>(null);
 
   // Tipo preseleccionado desde un enlace (p. ej. /reportar?tipo=bache)
   useEffect(() => {
@@ -58,7 +67,8 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
   }, []);
 
   // Llevar el foco al título de cada paso (lectores de pantalla y teclado)
-  useEffect(() => heading.current?.focus(), [step, result]);
+  const showingSimilar = !!similar;
+  useEffect(() => (showingSimilar ? similarHeading : heading).current?.focus(), [step, result, showingSimilar]);
 
   const traffic = catalogs.trafficTypes;
   const incidents = catalogs.requestCategories.filter((c) => c.kind === 'incident');
@@ -83,6 +93,37 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
   }
 
   const locationOk = noPlaceEff ? !!municipalityId : !!point;
+
+  // "El pin está en el lugar": antes de pedir detalles, ¿hay ya un reporte abierto del mismo tipo a menos de 150 m?
+  // La consulta espera como mucho 1,5 s y ante cualquier fallo sigue sin aviso: nunca frena ni bloquea el envío.
+  async function confirmPlace() {
+    setError(null);
+    const isIncident = choice?.flow === 'request' && choice.kind === 'incident';
+    if (!choice || noPlaceEff || !point || (choice.flow !== 'traffic' && !isIncident)) return setStep(3);
+    const check = `${choice.flow}:${choice.code}:${point.lat.toFixed(4)},${point.lng.toFixed(4)}`;
+    if (check === skipped) return setStep(3);
+    const at = point;
+    setChecking(true);
+    const items = await checkSimilarReports({ kind: choice.flow === 'traffic' ? 'traffic' : 'incident', type: choice.code, lat: at.lat, lng: at.lng });
+    setChecking(false);
+    setSkipped(check);
+    if (items.length > 0) setSimilar({ items, point: at, supported: false });
+    else setStep(3);
+  }
+
+  async function supportExisting(requestId: string) {
+    setSupporting(true);
+    const r = await supportSimilarReport(requestId);
+    setSupporting(false);
+    if (!r.ok) return toast.show(reasonMessage(r.reason ?? 'unavailable'), 'error');
+    toast.show('Gracias por apoyar este reporte.');
+    setSimilar((s) => (s ? { ...s, supported: true } : s));
+  }
+
+  function createAnyway() {
+    setSimilar(null);
+    setStep(3);
+  }
   const detailsOk = choice?.flow === 'traffic' || (title.trim().length >= 3 && description.trim().length >= 10);
 
   async function submit() {
@@ -120,7 +161,20 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
   return (
     <div className="mx-auto flex max-w-2xl flex-col">
       {/* Progreso: 3 pasos, una decisión por pantalla (§6.2) */}
-      <WizardHeader step={step} total={3} onBack={() => setStep((s) => (s - 1) as 1 | 2)} cancelHref="/" cancelLabel="Cancelar y volver al inicio" />
+      <WizardHeader
+        step={step}
+        total={3}
+        onBack={() => (similar ? setSimilar(null) : setStep((s) => (s - 1) as 1 | 2))}
+        cancelHref="/"
+        cancelLabel="Cancelar y volver al inicio"
+      />
+
+      {step === 2 && similar && choice && (() => {
+        const model = similarNotice(similar.items, choice.name, similar.point);
+        return model ? (
+          <SimilarNotice model={model} headingRef={similarHeading} supporting={supporting} supported={similar.supported} onSupport={supportExisting} onContinue={createAnyway} />
+        ) : null;
+      })()}
 
       {step === 1 && (
         <section className="animate-step-in px-4 pb-8 pt-5">
@@ -143,8 +197,9 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
         </section>
       )}
 
+      {/* Mientras se ve el aviso, el mapa queda montado (oculto) para no perder dónde quedó el pin */}
       {step === 2 && choice && (
-        <section className="animate-step-in flex flex-col px-4 pb-8 pt-5">
+        <section className={cn('animate-step-in flex-col px-4 pb-8 pt-5', similar ? 'hidden' : 'flex')}>
           <StepTitle headingRef={heading} title="¿Dónde es?" hint="Mueve el mapa hasta que el pin rojo quede sobre el lugar." />
           {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
           {isInquiry && (
@@ -185,14 +240,14 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
               )}
             </>
           )}
-          <Button size="lg" className="mt-5" disabled={!locationOk} onClick={() => { setError(null); setStep(3); }}>
+          <Button size="lg" className="mt-5" disabled={!locationOk} loading={checking} onClick={confirmPlace}>
             {noPlaceEff ? 'Seguir' : 'El pin está en el lugar'}
           </Button>
         </section>
       )}
 
       {step === 3 && choice && (
-        <section className="animate-step-in flex flex-col gap-5 px-4 pb-8 pt-5">
+        <WizardStep>
           <StepTitle headingRef={heading} title="Cuéntanos más" hint={`${choice.name}${choice.flow === 'traffic' ? ' · alerta vial' : ''}`} />
           {error && <ErrorNote>{error}</ErrorNote>}
 
@@ -234,8 +289,9 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
           <Button size="lg" onClick={submit} loading={busy} disabled={!detailsOk}>
             Enviar reporte
           </Button>
+          <MissingHint show={!detailsOk}>{title.trim().length < 3 ? 'Para enviar, escribe un título corto.' : 'Para enviar, cuenta un poco más (al menos 10 letras).'}</MissingHint>
           <p className="text-center text-sm text-muted">Tu nombre no aparece en el mapa público.</p>
-        </section>
+        </WizardStep>
       )}
     </div>
   );

@@ -49,7 +49,7 @@ export function RevokeButton({ userId, role, municipalityId, name }: { userId: s
     <ActionButton
       label="Quitar"
       done={`Se quitó el rol a ${name}.`}
-      variant="ghost"
+      variant="danger"
       run={() => removeRole(userId, role, municipalityId)}
     />
   );

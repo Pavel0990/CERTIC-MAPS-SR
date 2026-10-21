@@ -2,9 +2,9 @@
 
 Plataforma geográfica para la provincia **Santiago Rodríguez** (República Dominicana), para el reto TechEmprende SR Conecta 2026. Pone en un solo mapa el turismo, los negocios, las rutas ecoturísticas, las alertas de tránsito en vivo y los reportes de los vecinos al municipio, con un panel municipal y un informe semanal en PDF.
 
-> **En línea:** https://sr-conecta.vercel.app, con **datos reales** de la provincia: 84 negocios, 16 lugares y 3 rutas de OpenStreetMap.
+> **En línea:** https://sr-conecta.vercel.app, con **datos reales** de la provincia: 84 negocios, 21 lugares y 3 rutas de OpenStreetMap, con descripciones de fuentes públicas y fotos libres de Wikimedia Commons ([data/README.md](data/README.md)).
 >
-> **Estado (05/10/2026):** las seis funcionalidades del reto funcionan en línea:
+> **Estado (21/10/2026):** las seis funcionalidades del reto funcionan en línea:
 >
 > - el mapa en vivo, el acceso por código, los reportes y su seguimiento;
 > - negocios, turismo y rutas, en mapa y en **lista**, y las propuestas;
@@ -87,11 +87,19 @@ Quita el reenvío al terminar: cualquiera con la URL ve la app.
 ```bash
 npm run check     # lint (con la regla de fronteras), tipos, pruebas unitarias y de fronteras
 npm run test:db   # pruebas de la base de datos (PostgreSQL + PostGIS en memoria, sin Docker)
-npm run test:e2e  # 14 recorridos (incluido axe en claro y oscuro) en un navegador real contra staging (con npm run dev corriendo)
+npm run test:e2e  # 23 pruebas en 9 archivos (axe en claro y oscuro, navegación rápida, reporte parecido…) en un navegador real contra staging, con la app corriendo; las 6 del captcha solo corren con su clave de prueba
 npm run backup    # copia de los datos de staging en backups/ (antes de cambios grandes)
+npm run backup:check  # simulacro: restaura la última copia en PGlite y compara los conteos (DEPLOYMENT.md §8.1)
+npm run db:audit  # auditoría de seguridad de la base en línea, solo lectura (SECURITY.md)
 ```
 
-El CI de GitHub ejecuta las dos primeras en cada pull request. Las de punta a punta (`test:e2e`) usan las cuentas de prueba y se corren a mano; los recorridos que dependen del teléfono están en el [guion de la demo](docs/guion-demo.md#prueba-completa-a-mano-teléfono-real).
+El CI de GitHub ejecuta las dos primeras en cada pull request. Las de punta a punta (`test:e2e`) usan las cuentas de prueba de staging:
+
+- **Se pueden correr varias veces seguidas.** Antes de cada corrida, `tests/e2e/global-setup.ts` reinicia los límites por hora y la reputación de las cuentas de prueba (solo de esas). Necesita la migración `20261021130000_e2e_rate_limit_reset` en staging; sin ella, avisa y sigue, y después de unas 5 corridas en la misma hora el reporte de prueba queda guardado "para cuando vuelva la señal" (límite de 5 alertas por hora).
+- **Con otro puerto:** `E2E_BASE_URL=http://localhost:3101 npm run test:e2e`.
+- **En la CI:** [`.github/workflows/e2e.yml`](.github/workflows/e2e.yml) construye la app en el runner y corre Playwright con Chromium contra staging en cada PR y en `main`. Está apagado hasta que exista la variable `E2E_ENABLED=true` y los secretos del entorno `e2e-staging` ([ADR-025](docs/decisions/ADR-025-e2e-contra-staging.md)). Si falla, deja el reporte y las trazas como artefacto.
+
+Los recorridos que dependen del teléfono están en el [guion de la demo](docs/guion-demo.md#prueba-completa-a-mano-teléfono-real).
 
 ---
 
@@ -111,7 +119,7 @@ Nunca pegues claves en un chat ni las subas a git: van en `.env.local` (y en Ver
 | 6 | Notificaciones push | Avisos en el teléfono | Claves VAPID: `npx web-push generate-vapid-keys` | ✅ En Vercel |
 | 7 | **Supabase de producción** | Separar la demo de los datos reales | Segundo proyecto en la misma organización | Después de la demo |
 
-Ya listos: **GitHub** (con CI y copia de seguridad diaria cifrada, a activar), **Vercel** (publica solo desde `main`) y **Supabase `staging`**, con todas las migraciones aplicadas y datos reales de OpenStreetMap. Paso a paso: [DEPLOYMENT.md](DEPLOYMENT.md).
+Ya listos: **GitHub** (con CI y copia de seguridad diaria cifrada, a activar), **Vercel** (publica solo desde `main`) y **Supabase `staging`**, con 27 de las 30 migraciones aplicadas (las 3 que faltan, en orden, en [docs/ESTADO-Y-PENDIENTES.md §5.1.2](docs/ESTADO-Y-PENDIENTES.md#512-migraciones-por-aplicar-en-staging)) y datos reales de OpenStreetMap. Paso a paso: [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ### 2. Construir lo que falta
 
@@ -177,11 +185,11 @@ Lo que falta hasta la entrega, con fechas, está en [docs/ESTADO-Y-PENDIENTES.md
 | `supabase/migrations/` | Migraciones SQL: la fuente de verdad del modelo |
 | `supabase/tests/` | Pruebas de la base de datos (cuántas y qué cubren: [DATABASE.md](DATABASE.md#estado-verificado)) |
 | `supabase/ops/` | Scripts de operación: límites de municipios, datos reales de OSM, prueba de humo, administrador provincial |
-| `scripts/` | Utilidades: cuentas de prueba, copia de seguridad, copia del worker del mapa |
+| `scripts/` | Utilidades: cuentas de prueba, copia de seguridad y su simulacro de restauración, auditoría de la base, carga del contenido de lugares, copia del worker del mapa |
 | `data/` | Datos geográficos reales (OpenStreetMap, ODbL) y sus importadores ([data/README.md](data/README.md)) |
 | `tests/e2e/` | Pruebas de punta a punta con Playwright |
 | `docs/decisions/` | Decisiones de arquitectura (ADR), una por archivo, con índice |
-| `docs/` | Índice por público ([docs/README.md](docs/README.md)), manual administrativo, guía de prueba con vecinos, guion de la demo, reparto del trabajo |
+| `docs/` | Índice por público ([docs/README.md](docs/README.md)), manual administrativo, guía de prueba con vecinos, guion de la demo, estado y pendientes |
 | `project/` | Prototipo de diseño original (referencia visual) |
 | [ARCHITECTURE.md](ARCHITECTURE.md) · [DATABASE.md](DATABASE.md) · [DEPLOYMENT.md](DEPLOYMENT.md) · [SECURITY.md](SECURITY.md) | Arquitectura, base de datos, despliegue y seguridad |
 

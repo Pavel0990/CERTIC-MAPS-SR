@@ -11,9 +11,9 @@
 
 | Qué | Cifra | Cómo se comprueba |
 |---|---|---|
-| Migraciones | **27**, todas aplicadas en el Supabase de staging | `ls supabase/migrations` · `npx supabase migration list` |
-| Funciones en `public` | **49** (§6) | `grep -ohE "function public\.[a-z_]+" supabase/migrations/*.sql \| sort -u \| wc -l` |
-| Pruebas de la base | **173**, en 23 secciones (A–U, AV y SR), todas pasan en cada push (CI) | `npm run test:db` |
+| Migraciones | **30**; 27 aplicadas en el Supabase de staging. Faltan, en este orden: `20261021130000_e2e_rate_limit_reset`, `20261022120000_attachment_credit` (propuesta, §5.24) y `20261022130000_similar_reports` | `ls supabase/migrations` · `npx supabase migration list` |
+| Funciones en `public` | **51** (§6) | `grep -ohE "function public\.[a-z_]+" supabase/migrations/*.sql \| sort -u \| wc -l` |
+| Pruebas de la base | **195**, en 26 secciones (A–W, AV, SR y AC), todas pasan en cada push (CI) | `npm run test:db` |
 | Motor de las pruebas | PostgreSQL 18.3 + PostGIS 3.6.2 en PGlite. Staging: PostgreSQL 17 + PostGIS 3.3 | — |
 
 Las pruebas cubren seguridad (con ataques directos), integridad, concurrencia, PostGIS, fotos, alertas, KPIs, descarga auditada del PDF, entrega del worker, push, catálogos y mantenimiento. Lo que no se puede verificar fuera de Supabase está en §14 y en [ARCHITECTURE.md §20](ARCHITECTURE.md#20-verificaciones-en-el-servicio-real).
@@ -26,7 +26,7 @@ Las pruebas cubren seguridad (con ataques directos), integridad, concurrencia, P
 |---|---|
 | Motor | PostgreSQL (Supabase; probado en 18.3, compatible con 15+) + PostGIS, `pg_trgm`, `unaccent`, `pgcrypto`, `pg_cron`, `pg_net`, Vault |
 | Esquemas | `public` (expuesto por la Data API): 27 tablas y las funciones de [Estado verificado](#estado-verificado) · `private` (no expuesto): tablas y ayudantes internos · `extensions` |
-| Seguridad | RLS en las 27 tablas de `public` (31 políticas + 3 de Storage) · grants por columna · `EXECUTE` explícito por función · 55 funciones `SECURITY DEFINER`, todas con `search_path` fijo |
+| Seguridad | RLS en las 27 tablas de `public` (31 políticas + 3 de Storage) · grants por columna · `EXECUTE` explícito por función · 56 funciones `SECURITY DEFINER`, todas con `search_path` fijo |
 | Integridad | FK compuestas territoriales, `CHECK` en cada columna con dominio acotado, `UNIQUE NULLS NOT DISTINCT` donde `NULL` tiene significado, arco exclusivo en adjuntos |
 | Rendimiento | 109 índices: GiST geométricos y geográficos, GIN de texto y trigramas, parciales para bandejas y colas, soporte de todas las FK hacia `profiles` |
 | Asincronía | Cola `private.jobs` (outbox) + worker con `FOR UPDATE SKIP LOCKED` + `pg_cron` |
@@ -126,7 +126,7 @@ Tablas con RLS + grants por columna + CHECK/FK       ← CAPA 4: integridad (úl
 |---|---|
 | `anon` | Visitante sin sesión: lectura pública + `map_features`, `map_aggregates`, `search_all`, `track_engagement` |
 | `authenticated` | Usuario con sesión: RPC de negocio, lectura por RLS. Su rol de negocio real sale de `user_roles` |
-| `service_role` | Solo el worker y el cron (servidor). Ejecuta los `worker_*`, `weekly_report_*` y `kpi_summary` |
+| `service_role` | Solo el worker y el cron (servidor). Ejecuta los `worker_*`, `weekly_report_*`, `kpi_summary` y `e2e_reset_rate_limits` (solo para preparar las E2E) |
 
 ## 5. Modelo de datos
 
@@ -381,6 +381,40 @@ Resultado de la [revisión del 21/10/2026](SECURITY.md#revisión-del-21102026). 
 
 Pruebas SR1–SR5, K1–K1d y AV10.
 
+### 5.22 E2E repetibles — `20261021130000_e2e_rate_limit_reset.sql`
+
+| Pieza | Qué hace |
+|---|---|
+| `e2e_reset_rate_limits(correos[])` | Borra los contadores de `private.rate_limit_hits` de las cuentas indicadas **solo si su correo es `@example.com`** (dominio reservado: las cuentas de `scripts/staging-test-users.mjs`). Solo `service_role`; la llama `tests/e2e/global-setup.ts` antes de cada corrida de Playwright para que las E2E se puedan repetir sin llegar al límite de 5 alertas por hora. `security_audit.sql` marca cualquier `e2e_*` ejecutable por clientes |
+
+Pruebas V1–V3.
+
+### 5.23 Aviso de reporte parecido cercano — `20261022130000_similar_reports.sql`
+
+Antes de enviar una alerta de tránsito o un reporte al municipio, `/reportar` pregunta "Ya hay un reporte parecido aquí. ¿Quieres apoyarlo en lugar de crear otro?". Menos duplicados en la bandeja y más apoyos en el reporte que ya existe.
+
+| Pieza | Qué hace |
+|---|---|
+| `find_similar_reports(p_kind, p_type, p_lat, p_lng)` | `p_kind`: `traffic` (tipo de alerta) o `incident` (categoría de incidencia; las consultas no se comparan). Hasta **3** reportes abiertos del mismo tipo a **menos de 150 m** (`ST_DWithin` sobre `geography`: metros reales), del más cercano al más lejano, solo en el municipio donde caería el reporte nuevo (`private.locate`: cada ayuntamiento tiene su bandeja). Fuera de la provincia, lista vacía. Solo `authenticated`, **60 por hora** (`similar_report_check`) |
+| Qué devuelve | Por resultado: `id`, `kind`, `type`, `distance_m` (redondeada) y, en los reportes al municipio, `support_count`. Más tres datos sobre quien llama: `mine`, `can_support` (las mismas reglas de `toggle_request_vote`) y `supported` (ya lo apoyó; el voto es un interruptor y "Apoyarlo" lo quitaría). **Nunca** autor, título, descripción, fotos ni coordenadas |
+| Qué se compara | **Tránsito:** `active` o `verified` y vigentes (`expires_at > now()`), o las `pending` propias. La vigencia ya es la vida útil de cada tipo (3 h un accidente, 7 días un bache, como máximo 30 días). **Municipio:** públicas `approved` o `in_progress`, o las propias abiertas (`pending` a `in_progress`), creadas en los **últimos 90 días**: un bache o una luz apagada pueden tardar semanas en arreglarse, y uno abierto hace más de 3 meses casi siempre está olvidado; un reporte nuevo vuelve a llamar la atención |
+| Privacidad | Solo aparece lo que la persona ya puede ver por RLS como ciudadana: la existencia de un reporte privado o pendiente de otra persona no se revela |
+| Rendimiento | Prefiltro `geom && ST_Expand(punto, 0.002)` (~220 m) con el GiST de geometría que ya tienen las dos tablas, y después `ST_DWithin` en metros. No hace falta un índice nuevo |
+
+**En la app:** `POST /api/v1/reports/similar` (Route Handler y no Server Action, porque el asistente la corta a los 1,5 s y una acción no se puede cancelar) → `modules/citizen-reports` (`findSimilarReports`). **Nunca bloquea:** si la función todavía no existe en la base, si falla, si se agotó el límite o si tarda más de 1,5 s, el asistente sigue sin aviso y sin mensaje de error. "Apoyarlo" usa `toggle_request_vote` por la ruta de votos de siempre.
+
+Pruebas W1–W14 (cerca, lejos, otro tipo, cerrados y viejos, privados de otra persona, propios, otro municipio, máximo 3 por distancia, sin datos personales, apoyo ya dado, entradas inválidas, anon sin permiso, `EXECUTE` explícito y límite de uso).
+
+### 5.24 Crédito de las fotos con licencia libre — `20261022120000_attachment_credit.sql` (propuesta, sin aplicar)
+
+Las fotos de Wikimedia Commons que carga [`scripts/load-places-content.mjs`](scripts/load-places-content.mjs) son CC BY o CC BY-SA: hay que mostrar autor y licencia. Hoy el crédito va al final de la descripción de la ficha. La migración propone guardarlo junto a la foto:
+
+| Pieza | Diseño |
+|---|---|
+| `attachments.credit` | `text`, 1–300 caracteres; `NULL` = foto propia. Lectura pública como las demás columnas del adjunto; nadie la escribe desde la API (solo la carga con la clave de servicio) |
+
+Compatible con el código actual. Al aplicarla falta: mostrar el crédito en la galería (`listPhotos` y `PhotoGallery`), que el script lo llene y quitar la línea de la descripción. Pruebas AC1–AC5.
+
 ## 6. Catálogo de RPC
 
 Todas las funciones de `public` (cifra en [Estado verificado](#estado-verificado)) son `SECURITY DEFINER`, salvo las marcadas como **invoker**.
@@ -395,6 +429,7 @@ Todas las funciones de `public` (cifra en [Estado verificado](#estado-verificado
 | `assign_request` | personal | 300/h | — |
 | `set_request_public` | personal | — | — |
 | `toggle_request_vote` | ciudadano (no autor) | 30/h | PK + captura de doble clic |
+| `find_similar_reports` | ciudadano | 60/h | solo lectura (más el contador); ≤ 3 resultados a < 150 m |
 | `submit_business` | ciudadano | 3/día | `idempotency_key` |
 | `update_business` | miembro / personal | 30/h | lista blanca de campos (incl. `google_place_id`) + `version` |
 | `set_business_hours` | miembro / personal | 30/h (compartido con `update_business`) | reemplazo completo |
@@ -422,6 +457,7 @@ Todas las funciones de `public` (cifra en [Estado verificado](#estado-verificado
 | `catalog_admin_list`, `save_catalog_item` | admin provincial | 300/h (`staff_action`) | lista blanca; código estable; nunca sin una opción activa |
 | `register_push_device`, `unregister_push_device` | ciudadano | 20/h (alta) | `ON CONFLICT (endpoint)`; el dispositivo pasa a la cuenta actual |
 | `worker_notify_moderators`, `worker_push_payload`, `worker_push_result`, `worker_attachment_info`, `worker_report_run` | service | — | idempotentes: ignoran estados ya avanzados |
+| `e2e_reset_rate_limits` | service (solo cuentas `@example.com`) | — | idempotente |
 
 Qué endpoint o Server Action consume cada RPC: ARCHITECTURE.md §12.
 
@@ -538,6 +574,9 @@ El panel la llama en vivo. El informe semanal guarda su resultado en `weekly_kpi
 | `20261017120000_security_hardening` | Auditoría del 17/10 (§5.19) |
 | `20261020120000_profile_avatars` | Foto de perfil (§5.20) |
 | `20261021120000_security_review_fixes` | Revisión de seguridad del 21/10 (§5.21) |
+| `20261021130000_e2e_rate_limit_reset` | E2E repetibles: reinicio de límites de las cuentas de prueba (§5.22) |
+| `20261022120000_attachment_credit` | Crédito de las fotos con licencia libre (§5.24). **Propuesta: no aplicada** |
+| `20261022130000_similar_reports` | Aviso de reporte parecido cercano (§5.23) |
 
 **Reglas:**
 - Solo hacia adelante.

@@ -1543,6 +1543,10 @@ export type Database = {
         Args: { p_category?: string; p_id: string }
         Returns: Json
       }
+      find_similar_reports: {
+        Args: { p_kind: string; p_lat: number; p_lng: number; p_type: string }
+        Returns: Json
+      }
       kpi_summary: {
         Args: { p_from: string; p_municipality_id?: string; p_to: string }
         Returns: Json

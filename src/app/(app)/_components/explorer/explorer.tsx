@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { List, LocateFixed, Map as MapIcon, WifiOff } from 'lucide-react';
-import { ALL_LAYERS, MapCanvas, type LatLng, type LayerId, type MapFeature, type MapFeatureCollection } from '@/modules/map';
+import { ALL_LAYERS, MapCanvas, type LatLng, type MapCanvasProps, type LayerId, type MapFeature, type MapFeatureCollection } from '@/modules/map';
 import { IconButton } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { GEO_MESSAGE, useGeolocation } from '@/hooks/use-geolocation';
@@ -18,7 +18,15 @@ import { useMapData } from './use-map-data';
 export type { ExplorerCatalogs } from './shared';
 
 /** Mapa principal: búsqueda, capas, vista de lista, ficha del punto elegido y modos de conexión (§6.4). */
-export function Explorer({ catalogs, children, initialLayers = ALL_LAYERS }: { catalogs: ExplorerCatalogs; children?: React.ReactNode; initialLayers?: LayerId[] }) {
+export function Explorer({
+  catalogs, children, initialLayers = ALL_LAYERS, initialView = PROVINCE_VIEW,
+}: {
+  catalogs: ExplorerCatalogs;
+  children?: React.ReactNode;
+  initialLayers?: LayerId[];
+  /** Encuadre al abrir; por defecto, la provincia completa */
+  initialView?: MapCanvasProps['initialView'];
+}) {
   const toast = useToast();
   const online = useOnlineStatus();
   const { state: geo, locate } = useGeolocation();
@@ -78,7 +86,7 @@ export function Explorer({ catalogs, children, initialLayers = ALL_LAYERS }: { c
         className="absolute inset-0"
         features={visible}
         staticLayers={staticLayers}
-        initialView={PROVINCE_VIEW}
+        initialView={initialView}
         focus={focus}
         userLocation={userLocation}
         selectedId={selected?.properties.id}

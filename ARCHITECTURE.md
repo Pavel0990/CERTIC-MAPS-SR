@@ -1,6 +1,6 @@
 # SR Conecta — Arquitectura
 
-> **Versión 3.1 · 21 de octubre de 2026 · arquitectura tal como está construida.**
+> **Versión 3.3 · 21 de octubre de 2026 · arquitectura tal como está construida.**
 > Plataforma geográfica para la provincia Santiago Rodríguez (República Dominicana), para el reto TechEmprende SR Conecta 2026.
 > Describe el sistema que funciona hoy en https://sr-conecta.vercel.app. Las decisiones y sus alternativas están en [`docs/decisions/`](docs/decisions); lo que cambió respecto del diseño inicial, en §18.1. Las cifras verificadas (migraciones, funciones, pruebas) viven solo en [DATABASE.md](DATABASE.md#estado-verificado), para que no se desincronicen.
 
@@ -201,7 +201,7 @@ Lo que está instalado y en uso. Las versiones exactas están en `package.json`.
 | Navegación | Enlace "Cómo llegar" (`google.com/maps/dir/?api=1&destination=…`) | Abre la app de navegación del teléfono; sin API ni clave |
 | Base de datos | Supabase PostgreSQL 17 + PostGIS + `pg_trgm` + `unaccent` + `pgcrypto` | Las pruebas corren en PGlite (PostgreSQL 18 + PostGIS 3.6) |
 | Lógica crítica | RPC PL/pgSQL + RLS + grants por columna | ADR-018 |
-| Auth | Supabase Auth: código de un solo uso o enlace por correo | Sin contraseñas. Captcha pendiente ([SECURITY.md](SECURITY.md)) |
+| Auth | Supabase Auth: código de un solo uso o enlace por correo | Sin contraseñas. Captcha Turnstile listo, falta activarlo ([SECURITY.md](SECURITY.md)) |
 | Correo | SMTP propio en Supabase Auth (hoy Gmail; Resend con dominio al publicar) | El SMTP por defecto de Supabase solo envía 2 por hora |
 | Archivos | Supabase Storage: `report-evidence` (privado), `public-media` (público), `reports-pdf` (privado) | §10.5 |
 | Fotos | `sharp` en el worker: WebP, sin EXIF, máximo 4 096 px | §10.5 |
@@ -429,13 +429,13 @@ Resumen. El detalle (columnas, índices, políticas, matriz de grants) está en 
 
 | | |
 |---|---|
-| Migraciones | 27 (`20260924120000` a `20261021120000`) |
+| Migraciones | 30 (`20260924120000` a `20261022130000`); 27 aplicadas en staging, 3 por aplicar ([ESTADO-Y-PENDIENTES §7](docs/ESTADO-Y-PENDIENTES.md)) |
 | Tablas | 27 en `public` (todas con RLS) y 7 en `private` |
-| Funciones | 49 en `public` (detalle y conteo verificado en [DATABASE.md](DATABASE.md)) |
+| Funciones | 51 en `public` (detalle y conteo verificado en [DATABASE.md](DATABASE.md)) |
 | Seguridad | 31 políticas RLS + 3 de Storage; grants por columna; `EXECUTE` explícito por función |
 | Índices | 109 al 07/10, incluidos GiST, GIN y parciales |
 | Triggers | 16 |
-| Pruebas | 173 de base de datos, todas pasan (§14.1) |
+| Pruebas | 195 de base de datos, todas pasan (§14.1) |
 
 ### 8.2 Esquemas y roles de base de datos
 
@@ -730,7 +730,7 @@ Vercel Cron DIARIO 10:00 UTC (06:00 America/Santo_Domingo)
 
 - **Registro e inicio de sesión:**
   - método: código de un solo uso o enlace por correo, sin contraseñas. El correo sale por el SMTP propio con plantillas en español;
-  - captcha: **pendiente** antes de abrir al público (Turnstile nativo de Supabase Auth, [SECURITY.md](SECURITY.md));
+  - captcha: **listo, falta activarlo** (Cloudflare Turnstile con la integración nativa de Supabase Auth, [SECURITY.md](SECURITY.md)). Con `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `/entrar` muestra el recuadro (`entrar/human-check.tsx`, tema claro u oscuro según la app, compacto en pantallas de 320 px) y `requestAccess` pasa el token como `captchaToken` a `signInWithOtp`; Supabase lo valida con la clave secreta. `verifyOtp` («Ya tengo un código») no lo lleva: Supabase no exige captcha en `/verify`. Sin la variable no se carga nada de Cloudflare;
   - al registrarse, el trigger `on_auth_user_created` crea el perfil y el rol `citizen`. Si falla, el registro falla.
 - **Sesión:**
   - `@supabase/ssr` con cookies `Secure` y `SameSite=Lax`;
@@ -849,6 +849,7 @@ Ventana fija por usuario y acción. Las reglas están en `private.rate_limit_rul
 
 - **CSP estricta con nonce:**
   - permite solo el propio origen, Supabase (API, Storage y Realtime) y las teselas de OpenFreeMap;
+  - con el captcha activado (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`), también `https://challenges.cloudflare.com` en `script-src` (detrás del nonce y `'strict-dynamic'`) y en `frame-src`, en todas las pantallas porque al navegar dentro de la app la CSP es la del primer documento; el script solo se carga en `/entrar`. La política se arma en `src/lib/csp.ts`;
   - sin `unsafe-inline` en scripts;
   - `frame-ancestors 'none'`.
 - **Resto de cabeceras:**
@@ -1058,6 +1059,7 @@ Los consumen el mapa, la cola offline, el worker y los cron. Son todos los Route
 | `GET /api/v1/search?q=` | anon | RPC `search_all` |
 | `POST /api/v1/engagement` | anon | RPC `track_engagement` |
 | `POST /api/v1/reports` | ciudadano | RPC `create_traffic_report` (idempotente; lo usa la cola offline) |
+| `POST /api/v1/reports/similar` | ciudadano | RPC `find_similar_reports` (aviso de reporte parecido; responde lista vacía ante cualquier fallo, DATABASE.md §5.23) |
 | `POST /api/v1/requests` | ciudadano | RPC `create_citizen_request` (idempotente) |
 | `POST /api/v1/requests/:id/vote` | ciudadano | RPC `toggle_request_vote` |
 | `POST /api/v1/uploads/sign` | ciudadano | URL de subida firmada en `incoming/{uid}/` |
@@ -1074,7 +1076,8 @@ Lo que solo se hace desde la interfaz es una **Server Action**, no un endpoint p
 | Pantalla | Acciones | RPC o tabla |
 |---|---|---|
 | Entrar (`entrar/actions.ts`) | `requestAccess`, `verifyCode`, `signOut` | Supabase Auth |
-| Perfil (`perfil/actions.ts`) | `saveProfile`, `savePreferences`, `enablePush`, `disablePush` | 4 columnas de `profiles`; `notification_preferences`; `register_push_device` / `unregister_push_device` |
+| Perfil (`perfil/actions.ts`) | `saveAvatar`, `saveProfile`, `savePreferences`, `enablePush`, `disablePush` | `set_avatar`; 4 columnas de `profiles`; `notification_preferences`; `register_push_device` / `unregister_push_device` |
+| Notificaciones (`notificaciones/page.tsx`) | `markAll` | `read_at` de las propias `notifications` (RLS) |
 | Registrar negocio (`negocios/registrar`) | `registerBusiness` | `submit_business` |
 | Panel del comercio (`negocio/[id]`) | `saveBusiness`, `saveHours`, `addPromotion` | `update_business`, `set_business_hours`, `create_promotion` |
 | Proponer (`proponer`) | `submitPlace`, `submitRoute` | `propose_place`, `propose_route` (el GPX se convierte en el cliente) |
@@ -1112,10 +1115,11 @@ Las lecturas (actividad, notificaciones, fichas, bandejas, KPIs, catálogos) las
 ```text
 rama de trabajo → push / Pull Request
   CI (.github/workflows/ci.yml): lint (con fronteras) + tipos + unitarias + fronteras + base de datos (PGlite)
+  E2E (.github/workflows/e2e.yml, si E2E_ENABLED=true): next build + next start en el runner → Playwright (Chromium) contra staging
   Vercel: vista previa de la rama
 
 push a main
-  CI
+  CI y E2E
   Vercel: publica en producción (integración Git)
   Las migraciones se aplican ANTES con `npx supabase db push` (regla del equipo, docs/ESTADO-Y-PENDIENTES.md §7)
 
@@ -1124,7 +1128,7 @@ cuando exista el Supabase de producción (ADR-019):
   y se desactiva la publicación automática de main en vercel.json
 ```
 
-Las pruebas E2E (`npm run test:e2e`) se corren a mano contra staging, porque necesitan las cuentas de prueba ([ADR-025](docs/decisions/ADR-025-e2e-contra-staging.md)).
+Las pruebas E2E (`npm run test:e2e`) usan las cuentas de prueba de staging. Se corren a mano antes de subir y, con `E2E_ENABLED=true` y los secretos del entorno `e2e-staging`, también en `e2e.yml`, una corrida a la vez porque las cuentas son compartidas ([ADR-025](docs/decisions/ADR-025-e2e-contra-staging.md)). Si una falla, el reporte HTML y las trazas quedan como artefacto 14 días.
 
 ### 13.4 Migraciones
 
@@ -1185,6 +1189,7 @@ Se validan al arrancar con Zod (`config/env.ts`); si falta una, la aplicación n
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Cliente y servidor | Sí | Anon o publishable key; RLS la protege |
 | `SUPABASE_SERVICE_ROLE_KEY` | Solo worker y cron | **No** | Solo en `lib/supabase/admin.ts` (`server-only`) |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Cliente | Sí | Suscripción Web Push |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | `/entrar` y `proxy.ts` (opcional) | Sí | Clave pública de Cloudflare Turnstile. Vacía = sin captcha. La secreta va en Supabase → *Attack Protection*, no en Vercel |
 | `VAPID_PRIVATE_KEY` | Worker | **No** | Firma de los push |
 | `VAPID_SUBJECT` | Worker | No | `mailto:` de la organización |
 | `CRON_SECRET` | Vercel Cron → `/api/v1/cron/weekly-report` | **No** | Vercel lo envía en `Authorization: Bearer` |
@@ -1233,9 +1238,9 @@ cd supabase/tests && npm install && npm test
 
 | Nivel | Herramienta | Qué cubre | Dónde corre |
 |---|---|---|---|
-| Unitarias | Vitest (`npm test`) | Mapeo de `reason` a HTTP, redirecciones seguras, rejilla de bbox, horario y "abierto ahora", lector de GPX, esquemas de negocio, procesamiento de fotos (EXIF, formato, tamaño), semanas ISO y periodos del informe, enlaces de notificaciones, secreto del worker | CI |
+| Unitarias | Vitest (`npm test`) | Mapeo de `reason` a HTTP, redirecciones seguras, rejilla de bbox, horario y "abierto ahora", lector de GPX, esquemas de negocio, procesamiento de fotos (EXIF, formato, tamaño), semanas ISO y periodos del informe, enlaces de notificaciones, secreto del worker, CSP y captcha, aviso de reporte parecido, indicadores del panel, foto de perfil (127 pruebas) | CI |
 | Fronteras | `node:test` (`npm run test:boundaries`) | Que el lint detecte importaciones prohibidas, incluido el alias `@/` | CI |
-| E2E | Playwright (`npm run test:e2e`) | Listados y filtros públicos, búsqueda sin tildes, fichas, y el recorrido central: vecino reporta → moderador publica → aparece en el mapa público. Limpia lo que crea | A mano, contra staging ([ADR-025](docs/decisions/ADR-025-e2e-contra-staging.md)) |
+| E2E | Playwright (`npm run test:e2e`) | 23 pruebas en 9 archivos: listados y filtros públicos, búsqueda sin tildes, fichas, foto de perfil, panel de indicadores, axe (WCAG 2.1 AA) en claro y oscuro, reacción inmediata de la navegación, aviso de reporte parecido (y que el asistente siga si la consulta falla), captcha (6, solo con su clave de prueba) y el recorrido central: vecino reporta → moderador publica → aparece en el mapa público. Limpia lo que crea y, antes de cada corrida, reinicia los límites por hora y la reputación de las cuentas de prueba (`global-setup.ts`), así se puede repetir | A mano y en `e2e.yml` (si `E2E_ENABLED=true`), contra staging ([ADR-025](docs/decisions/ADR-025-e2e-contra-staging.md)) |
 | Manual | Teléfonos reales | GPS, cámara, push, modo sin conexión, iPhone instalado | [Guion de la demo](docs/guion-demo.md#prueba-completa-a-mano-teléfono-real) |
 | Personas | Vecinos | Baja alfabetización digital (20 puntos) | [Guía](docs/prueba-con-vecinos.md) |
 
@@ -1265,7 +1270,14 @@ cd supabase/tests && npm install && npm test
 - Server Components para todo lo no interactivo;
 - `next/image` y fotos en WebP;
 - payload mínimo por viewport y geometrías simplificadas;
-- regiones de Vercel y Supabase cercanas entre sí.
+- regiones de Vercel y Supabase cercanas entre sí (iad1 y us-east-1).
+
+**Navegación (medida el 21/10 con `tests/e2e/navegacion-rapida.spec.ts`):** la pantalla reacciona en 20–40 ms desde el toque. Antes del ajuste se quedaba quieta entre 216 y 396 ms, y hasta 1,2 s en el panel. La prueba falla si alguna pestaña tarda más de 400 ms en reaccionar.
+- **`loading.tsx` en cada sección** (un solo componente, `RouteLoading`, que dibuja la forma de lo que viene: mapa, ficha, formulario o lista). Las páginas son dinámicas por la CSP con nonce y, sin un `loading.tsx`, Next no las precarga ni muestra nada hasta que responde el servidor.
+- **Precarga solo donde se toca seguido:** la barra principal y el menú del panel se precargan al aparecer; el resto de los enlaces (filas de listas, filtros, tarjetas) usa `prefetch={false}` y se precarga al tocarlo o al pasar el mouse. Así se bajó de 14–19 a 9–10 las peticiones al servidor por pantalla abierta.
+- **Caché del navegador de 30 s** (`staleTimes.dynamic`): volver a una pantalla recién vista es instantáneo. Lo que la persona guarda la refresca igual, porque las Server Actions llaman a `revalidatePath`.
+- **Catálogos en caché entre requests** (`unstable_cache`, etiqueta `catalogs`, 1 h): son 4 consultas que casi todas las pantallas repetían. Editar un catálogo en el panel lo invalida al instante (`updateTag`), y un fallo de lectura nunca se guarda en la caché.
+- **Listas por partes:** negocios y lugares muestran 24 filas y un botón «Ver más» (`?ver=48`); es un enlace normal, que funciona sin JavaScript y no mueve la pantalla.
 
 Antes de producción se revisa `EXPLAIN (ANALYZE, BUFFERS)` de `map_features`, `search_all` y `kpi_summary` con volumen realista.
 
@@ -1287,10 +1299,12 @@ sr-conecta/
 │  ├─ templates/  config.toml   correo en español y configuración de Auth
 │  └─ seed.sql                  semilla de pruebas locales
 ├─ data/                        datos de OpenStreetMap e importadores (data/README.md)
-├─ scripts/                     cuentas de prueba, copia de seguridad, copia del worker del mapa
+├─ scripts/                     cuentas de prueba, copia de seguridad y simulacro de restauración, auditoría de la base,
+│                               carga del contenido de lugares, copia del worker del mapa
 ├─ tests/boundaries/  tests/e2e/
 ├─ public/                      sw.js, íconos, vendor/ (worker de MapLibre)
-├─ .github/workflows/           ci.yml · backup.yml (diario, cifrado) · uptime.yml (cada hora) · deploy.yml (apagado)
+├─ .github/workflows/           ci.yml · security.yml (npm audit y auditoría de la base) · backup.yml (diario, cifrado)
+│                               uptime.yml (cada hora) · e2e.yml (apagado hasta E2E_ENABLED) · deploy.yml (apagado)
 ├─ vercel.json                  cron diario del informe
 └─ src/
    ├─ app/
@@ -1462,7 +1476,7 @@ Cada ADR tiene su archivo en [`docs/decisions/`](docs/decisions), con contexto, 
 | [022](docs/decisions/ADR-022-maplibre-openfreemap.md) | MapLibre + OpenFreeMap como mapa base definitivo del MVP, detrás del mismo adaptador | Google Maps (ADR-004) | Sin costo ni claves, cacheable sin conexión, coherente con los datos de OSM |
 | [023](docs/decisions/ADR-023-server-actions.md) | Server Actions para lo que solo se hace desde la interfaz; Route Handlers solo para el mapa, la cola offline, el worker y los cron | Una API REST completa `/me/*` | Menos superficie pública; las RPC siguen siendo la barrera |
 | [024](docs/decisions/ADR-024-datos-osm.md) | OpenStreetMap como fuente provisional de límites, negocios, lugares y rutas, con importadores idempotentes | Datos inventados de demostración; esperar los datos oficiales | Datos reales para la demo; los oficiales se cargan encima |
-| [025](docs/decisions/ADR-025-e2e-contra-staging.md) | E2E con Playwright contra staging, a mano; el CI corre lo que no necesita cuentas | Supabase local con Docker en CI | Pruebas reales del recorrido central sin secretos en CI |
+| [025](docs/decisions/ADR-025-e2e-contra-staging.md) | E2E con Playwright contra staging, a mano y en `e2e.yml` (apagado por defecto); repetibles | Supabase local con Docker en CI | Pruebas reales del recorrido central; el `service_role` de staging en un entorno de GitHub |
 
 ### 18.1 Decisiones que cambiaron
 
@@ -1541,7 +1555,7 @@ Lo que las pruebas locales no podían confirmar se comprobó en el proyecto `sta
 | 4–5 | Metadatos y carpetas de Storage, límites de los buckets | ✅ Subida, registro y procesamiento de fotos de punta a punta |
 | 6 | La Data API expone solo `public`, con los grants por defecto cerrados | ✅ Migración 240 (hallazgo con `supabase db advisors`) |
 | 7 | Validación de sesión en `@supabase/ssr` | ✅ `getClaims()` |
-| 8 | Captcha nativo de Supabase Auth | ⏳ Pendiente ([SECURITY.md](SECURITY.md)) |
+| 8 | Captcha nativo de Supabase Auth | ⏳ Código listo, falta activarlo con la cuenta de Cloudflare ([SECURITY.md](SECURITY.md)) |
 | 9 | Límites del SMTP por defecto | ✅ 2 por hora: se usa SMTP propio |
 | 10 | Conexión de los runners de GitHub por el pooler | ⏳ Al activar `backup.yml` |
 | 11 | Supabase Branching | ⏳ Fase 2 (requiere Pro) |
@@ -1570,3 +1584,5 @@ Lo que las pruebas locales no podían confirmar se comprobó en el proyecto `sta
 | **2.2** | 25/09/2026 | La regla de fronteras de ADR-008 deja de ser solo documento: `package.json`, `tsconfig.json`, ESLint con `eslint-plugin-boundaries` (8 pruebas de regresión, incluido el alias `@/`), los módulos con su `index.ts` y CI en GitHub Actions |
 | **3.0** | 07/10/2026 | **Documento de lo construido.** Stack real (§4), una sola carpeta de rutas (§6.1), MapLibre + OpenFreeMap (§7, ADR-022), API real: Route Handlers + Server Actions (§12, ADR-023), CI/CD y operación reales (§13), pruebas E2E (§14), estructura real (§15), ejecución (§16.3), riesgos sin Google (§17), ADR-023 a 025, verificaciones resueltas (§20). Las cifras pasan a vivir solo en DATABASE.md |
 | **3.1** | 21/10/2026 | Fechas oficiales corregidas (desarrollo hasta el 27/11, demo del 28 al 30/11), cifras al día (27 migraciones, 49 funciones, 173 pruebas), panel de indicadores explorable, modo oscuro, foto de perfil, revisión de seguridad del 21/10 ([SECURITY.md](SECURITY.md)) y seguimiento único en [docs/ESTADO-Y-PENDIENTES.md](docs/ESTADO-Y-PENDIENTES.md) |
+| **3.2** | 21/10/2026 | E2E repetibles (reinicio de límites de las cuentas de prueba, migración `20261021130000`) y workflow `e2e.yml` contra staging, apagado por defecto (§13.3, §14.2, ADR-025 revisada) |
+| **3.3** | 21/10/2026 | Integra los PR #7 a #14 (aviso de reporte parecido, captcha, navegación rápida, crédito de fotos propuesto, simulacro de restauración) y la limpieza de código: cifras al día (30 migraciones, 51 funciones, 195 pruebas de base, 23 E2E), §8.1, §12.3 (foto de perfil y notificaciones), §14.2 y §15 (workflows y scripts) |
