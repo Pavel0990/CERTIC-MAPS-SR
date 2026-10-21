@@ -435,7 +435,7 @@ Resumen. El detalle (columnas, índices, políticas, matriz de grants) está en 
 | Seguridad | 31 políticas RLS + 3 de Storage; grants por columna; `EXECUTE` explícito por función |
 | Índices | 109 al 07/10, incluidos GiST, GIN y parciales |
 | Triggers | 16 |
-| Pruebas | 173 de base de datos, todas pasan (§14.1) |
+| Pruebas | 178 de base de datos, todas pasan (§14.1) |
 
 ### 8.2 Esquemas y roles de base de datos
 

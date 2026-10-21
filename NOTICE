@@ -5,4 +5,8 @@ Datos geográficos incluidos en data/osm/ y en supabase/ops/load_osm_*.sql:
 © colaboradores de OpenStreetMap, disponibles bajo la Open Database License (ODbL) 1.0.
 https://www.openstreetmap.org/copyright
 
+Fotos de lugares turísticos cargadas con scripts/load-places-content.mjs: Wikimedia Commons, cada una con su
+autor y licencia (CC BY-SA 4.0 o dominio público) en data/lugares-contenido.json y en la ficha del lugar.
+Textos de los lugares: redactados a partir de las fuentes enlazadas en ese mismo archivo.
+
 Mapa base: teselas de OpenFreeMap (https://openfreemap.org), datos © colaboradores de OpenStreetMap.

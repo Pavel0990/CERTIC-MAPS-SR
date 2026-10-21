@@ -24,6 +24,7 @@
     "backup": "node --no-deprecation scripts/backup-snapshot.mjs",
     "db:audit": "node --no-deprecation scripts/db-audit.mjs",
     "data:osm": "node data/fetch-osm-routes.mjs && node data/import-osm-content.mjs",
+    "data:lugares": "node --no-deprecation scripts/load-places-content.mjs",
     "check": "npm run lint && npm run typecheck && npm test && npm run test:boundaries"
   },
   "dependencies": {
