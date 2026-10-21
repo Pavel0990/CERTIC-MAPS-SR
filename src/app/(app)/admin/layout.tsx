@@ -9,9 +9,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const c = await getPanelCounts(await createClient());
   const counts = { inbox: c.trafficPending + c.requestsPending, validations: c.validations };
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 pb-10 pt-5 md:px-8 md:pt-8">
+    <div className="mx-auto w-full max-w-7xl px-4 pb-10 pt-5 md:px-8 md:pt-8 lg:flex lg:gap-6">
       <AdminNav isAdmin={viewer.isAdmin} isProvincialAdmin={viewer.isProvincialAdmin} counts={counts} />
-      {children}
+      <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
 }
