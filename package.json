@@ -20,7 +20,7 @@
     "test:boundaries": "node --test tests/boundaries/boundaries.test.mjs",
     "test:db": "npm --prefix supabase/tests test",
     "test:e2e": "playwright test",
-    "db:types": "supabase gen types typescript --linked --schema public > src/types/database.ts",
+    "db:types": "npx supabase gen types typescript --linked --schema public > src/types/database.ts",
     "backup": "node --no-deprecation scripts/backup-snapshot.mjs",
     "backup:check": "node --no-deprecation scripts/restore-check.mjs",
     "db:audit": "node --no-deprecation scripts/db-audit.mjs",

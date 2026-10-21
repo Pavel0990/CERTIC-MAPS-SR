@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -21,6 +21,7 @@ export type Database = {
           bytes: number
           citizen_request_id: string | null
           created_at: string
+          credit: string | null
           eco_route_id: string | null
           height: number | null
           id: string
@@ -38,6 +39,7 @@ export type Database = {
           bytes: number
           citizen_request_id?: string | null
           created_at?: string
+          credit?: string | null
           eco_route_id?: string | null
           height?: number | null
           id?: string
@@ -55,6 +57,7 @@ export type Database = {
           bytes?: number
           citizen_request_id?: string | null
           created_at?: string
+          credit?: string | null
           eco_route_id?: string | null
           height?: number | null
           id?: string
@@ -1539,6 +1542,7 @@ export type Database = {
         }
         Returns: Json
       }
+      e2e_reset_rate_limits: { Args: { p_emails: string[] }; Returns: number }
       escalate_traffic_report: {
         Args: { p_category?: string; p_id: string }
         Returns: Json
@@ -1615,6 +1619,7 @@ export type Database = {
           request_id: string
         }[]
       }
+      request_upload: { Args: { p_ext: string }; Returns: Json }
       request_weekly_report: { Args: { p_period_start: string }; Returns: Json }
       review_content: {
         Args: {
@@ -1644,16 +1649,9 @@ export type Database = {
           rank: number
         }[]
       }
+      set_avatar: { Args: { p_present: boolean }; Returns: Json }
       set_business_hours: {
         Args: { p_business_id: string; p_hours: Json }
-        Returns: Json
-      }
-      request_upload: {
-        Args: { p_ext: string }
-        Returns: Json
-      }
-      set_avatar: {
-        Args: { p_present: boolean }
         Returns: Json
       }
       set_request_public: {
