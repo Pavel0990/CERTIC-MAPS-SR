@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { ACCOUNTS, signIn } from './helpers';
 
-// Dashboard del panel (REPARTO B5-B7): periodo en la URL, comparación, gráfico accesible y cada indicador abre su lista.
+// Dashboard del panel (ARCHITECTURE.md §9.7): periodo en la URL, comparación, gráfico accesible y cada indicador abre su lista.
 test('la administración cambia el periodo, recorre el gráfico y abre una lista desde un indicador', async ({ page }) => {
   await signIn(page, ACCOUNTS.admin);
   await page.goto('/admin');

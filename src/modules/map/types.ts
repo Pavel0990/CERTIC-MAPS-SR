@@ -1,4 +1,4 @@
-// Contrato neutral del mapa: la app habla GeoJSON, nunca `google.maps.*` ni `maplibregl.*` (ADR-004).
+// Contrato neutral del mapa: la app habla GeoJSON, nunca `maplibregl.*` ni los tipos de otro proveedor (ADR-004, ADR-022).
 
 export type LayerId = 'business' | 'tourism' | 'route' | 'traffic' | 'request';
 
