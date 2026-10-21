@@ -429,7 +429,7 @@ Resumen. El detalle (columnas, índices, políticas, matriz de grants) está en 
 
 | | |
 |---|---|
-| Migraciones | 30 (`20260924120000` a `20261022130000`); 27 aplicadas en staging, 3 por aplicar ([ESTADO-Y-PENDIENTES §7](docs/ESTADO-Y-PENDIENTES.md)) |
+| Migraciones | 30 (`20260924120000` a `20261022130000`); todas aplicadas en staging |
 | Tablas | 27 en `public` (todas con RLS) y 7 en `private` |
 | Funciones | 51 en `public` (detalle y conteo verificado en [DATABASE.md](DATABASE.md)) |
 | Seguridad | 31 políticas RLS + 3 de Storage; grants por columna; `EXECUTE` explícito por función |

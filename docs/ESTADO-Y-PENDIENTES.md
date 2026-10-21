@@ -53,12 +53,11 @@ La revisión del 17/10 y la del 21/10 están detalladas en [SECURITY.md](../SECU
 | Tarea | Por qué | Hecho cuando |
 |---|---|---|
 | **Captcha** en `/entrar` (Cloudflare Turnstile) | Frenar el envío masivo de correos de acceso | ⏳ Código listo: recuadro en `/entrar`, token a Supabase y CSP abierta a `challenges.cloudflare.com` solo si existe `NEXT_PUBLIC_TURNSTILE_SITE_KEY`. **Falta** la cuenta de Cloudflare (§5.2): crear el widget, la clave pública en Vercel y luego la secreta en *Supabase → Authentication → Attack Protection*, en ese orden ([DEPLOYMENT.md §4](../DEPLOYMENT.md#4-vercel)) |
-| **E2E sin limpieza manual** | Que las pruebas se puedan correr varias veces seguidas | ⏳ Código listo: `tests/e2e/global-setup.ts` reinicia los límites por hora y la reputación de las cuentas de prueba con `e2e_reset_rate_limits`. **Falta aplicar** la migración `20261021130000_e2e_rate_limit_reset` en staging (§5.1.2) |
+| **E2E sin limpieza manual** | Que las pruebas se puedan correr varias veces seguidas | ✅ Hecho el 21/10: `tests/e2e/global-setup.ts` reinicia los límites por hora y la reputación de las cuentas de prueba con `e2e_reset_rate_limits`. Tres corridas seguidas pasaron, 17/17 cada una |
 | **E2E en la CI** | Hoy Playwright y axe se corren a mano antes de subir | ⏳ `.github/workflows/e2e.yml` listo (construye la app en el runner y prueba con Chromium contra staging). **Falta** crear el entorno `e2e-staging` con sus 3 secretos y la variable `E2E_ENABLED=true` ([ADR-025](decisions/ADR-025-e2e-contra-staging.md)) |
 | ✅ ~~**Simulacro de restauración**~~ | Hecho el 21/10/2026: la copia diaria cifrada del 20/10 y la última copia local se restauraron en PGlite con todas las migraciones, con los mismos conteos por tabla y sin claves foráneas huérfanas | Repetirlo con `npm run backup:check` antes de la demo; procedimiento en [DEPLOYMENT.md §8.1](../DEPLOYMENT.md#81-copias-de-seguridad) |
 | **Correcciones de la prueba con vecinos** | Lo que salga de la ronda 1 | Un *issue* `ux` por problema, corregido antes de la ronda 2 |
 | **Propuestas de la revisión de UX del 21/10** | Lo que cambia un flujo o la estructura de una pantalla y no se tocó en esa revisión (§5.1.1) | Decidir cuáles entran antes de la ronda 1 con vecinos |
-| **Aplicar 3 migraciones en staging** | El código ya las usa, pero funciona sin ellas (sin aviso de reporte parecido, sin reinicio de límites en las E2E) | `npx supabase migration list` muestra las 30 aplicadas (§5.1.2) |
 | **Propuestas de la limpieza de código** | Cambios de organización que mueven muchos archivos y no se hicieron para no arriesgar (§5.1.3) | Decidir después de la demo |
 
 ### 5.1.1 Revisión de UX del 21/10
@@ -76,17 +75,15 @@ Recorrido de todas las pantallas a 360 y 1280 px, en claro y oscuro (público, v
 7. **"Lo más visto" sin tabla en el teléfono.** Las columnas *Cómo llegar* y *WhatsApp* quedan ocultas a la derecha.
 8. **Contenido:** la ruta "De Monción a la Presa" dice en público "conviene validarlo con el municipio antes de recomendarlo" (es una nota interna; va con la validación de rutas de §5.3).
 
-### 5.1.2 Migraciones por aplicar en staging
+### 5.1.2 Migraciones aplicadas el 21/10
 
-Staging tiene 27 de las 30 migraciones. Faltan estas, **en este orden**:
+Las 30 migraciones están aplicadas en staging (`npx supabase migration list` las muestra alineadas) y `npm run db:audit` no encuentra problemas. Las tres últimas se aplicaron en orden, después de `npm run backup` y de `db push --dry-run`:
 
-| # | Migración | Qué trae | Sin ella |
-|---|---|---|---|
-| 1 | `20261021130000_e2e_rate_limit_reset` | `e2e_reset_rate_limits`, para que las E2E se puedan repetir ([DATABASE.md §5.22](../DATABASE.md#522-e2e-repetibles--20261021130000_e2e_rate_limit_resetsql)) | `global-setup.ts` avisa y sigue; tras varias corridas en una hora, el límite de 5 alertas corta la prueba |
-| 2 | `20261022120000_attachment_credit` | Columna `attachments.credit` para el crédito de las fotos libres. Es una **propuesta** ([DATABASE.md §5.24](../DATABASE.md#524-crédito-de-las-fotos-con-licencia-libre--20261022120000_attachment_creditsql-propuesta-sin-aplicar)) | Nada cambia: el crédito sigue al final de la descripción |
-| 3 | `20261022130000_similar_reports` | `find_similar_reports`, el aviso de reporte parecido ([DATABASE.md §5.23](../DATABASE.md#523-aviso-de-reporte-parecido-cercano--20261022130000_similar_reportssql)) | `/reportar` sigue sin aviso y sin error |
-
-Pasos (§7): `npm run backup` → `npx supabase db push --dry-run` (debe listar solo estas 3) → `npx supabase db push` → `npm run db:audit`.
+| # | Migración | Qué trae |
+|---|---|---|
+| 1 | `20261021130000_e2e_rate_limit_reset` | `e2e_reset_rate_limits`, para que las E2E se puedan repetir ([DATABASE.md §5.22](../DATABASE.md#522-e2e-repetibles--20261021130000_e2e_rate_limit_resetsql)). Comprobado: 3 corridas seguidas, 17/17 cada una |
+| 2 | `20261022120000_attachment_credit` | Columna `attachments.credit` para el crédito de las fotos libres ([DATABASE.md §5.24](../DATABASE.md#524-crédito-de-las-fotos-con-licencia-libre--20261022120000_attachment_creditsql)) |
+| 3 | `20261022130000_similar_reports` | `find_similar_reports`, el aviso de reporte parecido ([DATABASE.md §5.23](../DATABASE.md#523-aviso-de-reporte-parecido-cercano--20261022130000_similar_reportssql)) |
 
 ### 5.1.3 Propuestas de la limpieza de código
 
@@ -114,7 +111,7 @@ La limpieza del 21/10 quitó código muerto, unificó ayudas repetidas y puso al
 - **21 lugares** publicados en staging (eran 16): 5 nuevos (Parque Nacional José Armando Bermúdez y Reserva Forestal Río Cana en Sabaneta; Parque Nacional Piky Lora y Monasterio Carmelita en Monción; La Peonía en Villa Los Almácigos).
 - **13 con descripción** con fuente (8 completados y 5 nuevos) y **5 con foto libre** (Presa de Monción, Iglesia y Parque Central de Monción, Armando Bermúdez y La Peonía), con el crédito al final de la descripción.
 - Ruta **De Monción a la Presa**: puntos de referencia y foto.
-- Propuesta sin aplicar: columna `attachments.credit` para el crédito de las fotos ([DATABASE.md §5.24](../DATABASE.md#524-crédito-de-las-fotos-con-licencia-libre--20261022120000_attachment_creditsql-propuesta-sin-aplicar)).
+- Aplicada el 21/10: columna `attachments.credit` para el crédito de las fotos ([DATABASE.md §5.24](../DATABASE.md#524-crédito-de-las-fotos-con-licencia-libre--20261022120000_attachment_creditsql)).
 
 **Lo que falta** (la lista completa está en `por_confirmar` y `sin_fuente` del JSON):
 
@@ -141,7 +138,7 @@ La limpieza del 21/10 quitó código muerto, unificó ayudas repetidas y puso al
 
 Solo si sobra tiempo después de §5.1–§5.3:
 
-- ✅ **Hecho:** avisar de un reporte parecido cercano antes de enviar uno nuevo (`ST_DWithin`), para evitar duplicados. Después de elegir tipo y lugar, si hay una alerta o un reporte al municipio abierto del mismo tipo a menos de 150 m, el asistente pregunta "Ya hay un reporte parecido aquí. ¿Quieres apoyarlo en lugar de crear otro?" con **Apoyarlo**, **Ver el reporte** y **Crear el mío igual**; nunca bloquea el envío ([DATABASE.md §5.23](../DATABASE.md#523-aviso-de-reporte-parecido-cercano--20261022130000_similar_reportssql)). **Falta aplicar** la migración `20261022130000_similar_reports` (sin ella la app funciona igual, sin aviso).
+- ✅ **Hecho:** avisar de un reporte parecido cercano antes de enviar uno nuevo (`ST_DWithin`), para evitar duplicados. Después de elegir tipo y lugar, si hay una alerta o un reporte al municipio abierto del mismo tipo a menos de 150 m, el asistente pregunta "Ya hay un reporte parecido aquí. ¿Quieres apoyarlo en lugar de crear otro?" con **Apoyarlo**, **Ver el reporte** y **Crear el mío igual**; nunca bloquea el envío ([DATABASE.md §5.23](../DATABASE.md#523-aviso-de-reporte-parecido-cercano--20261022130000_similar_reportssql)).
 - Frases de "aspectos destacados" también en el PDF semanal.
 - Capa de "puntos calientes" con los reportes más frecuentes.
 

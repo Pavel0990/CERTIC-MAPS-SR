@@ -11,7 +11,7 @@
 
 | Qué | Cifra | Cómo se comprueba |
 |---|---|---|
-| Migraciones | **30**; 27 aplicadas en el Supabase de staging. Faltan, en este orden: `20261021130000_e2e_rate_limit_reset`, `20261022120000_attachment_credit` (propuesta, §5.24) y `20261022130000_similar_reports` | `ls supabase/migrations` · `npx supabase migration list` |
+| Migraciones | **30**, todas aplicadas en el Supabase de staging (las tres últimas el 21/10) | `ls supabase/migrations` · `npx supabase migration list` |
 | Funciones en `public` | **51** (§6) | `grep -ohE "function public\.[a-z_]+" supabase/migrations/*.sql \| sort -u \| wc -l` |
 | Pruebas de la base | **195**, en 26 secciones (A–W, AV, SR y AC), todas pasan en cada push (CI) | `npm run test:db` |
 | Motor de las pruebas | PostgreSQL 18.3 + PostGIS 3.6.2 en PGlite. Staging: PostgreSQL 17 + PostGIS 3.3 | — |
@@ -405,9 +405,9 @@ Antes de enviar una alerta de tránsito o un reporte al municipio, `/reportar` p
 
 Pruebas W1–W14 (cerca, lejos, otro tipo, cerrados y viejos, privados de otra persona, propios, otro municipio, máximo 3 por distancia, sin datos personales, apoyo ya dado, entradas inválidas, anon sin permiso, `EXECUTE` explícito y límite de uso).
 
-### 5.24 Crédito de las fotos con licencia libre — `20261022120000_attachment_credit.sql` (propuesta, sin aplicar)
+### 5.24 Crédito de las fotos con licencia libre — `20261022120000_attachment_credit.sql`
 
-Las fotos de Wikimedia Commons que carga [`scripts/load-places-content.mjs`](scripts/load-places-content.mjs) son CC BY o CC BY-SA: hay que mostrar autor y licencia. Hoy el crédito va al final de la descripción de la ficha. La migración propone guardarlo junto a la foto:
+Las fotos de Wikimedia Commons que carga [`scripts/load-places-content.mjs`](scripts/load-places-content.mjs) son CC BY o CC BY-SA: hay que mostrar autor y licencia. El crédito se ve al final de la descripción de la ficha y, desde el 21/10, también se puede guardar junto a la foto:
 
 | Pieza | Diseño |
 |---|---|

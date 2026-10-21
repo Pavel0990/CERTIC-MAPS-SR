@@ -95,7 +95,7 @@ Verificado como correcto: CSRF por origen en toda escritura, `getClaims()` (firm
 
 ### Funciones agregadas después de la revisión
 
-Las tres migraciones posteriores (todavía sin aplicar en staging, [DATABASE.md](DATABASE.md#estado-verificado)) siguen las mismas reglas y tienen sus pruebas de ataque en `npm run test:db`:
+Las tres migraciones posteriores (aplicadas en staging el 21/10, [DATABASE.md](DATABASE.md#estado-verificado)) siguen las mismas reglas y tienen sus pruebas de ataque en `npm run test:db`:
 
 | Pieza | Quién la ejecuta | Protección |
 |---|---|---|

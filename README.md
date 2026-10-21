@@ -119,7 +119,7 @@ Nunca pegues claves en un chat ni las subas a git: van en `.env.local` (y en Ver
 | 6 | Notificaciones push | Avisos en el teléfono | Claves VAPID: `npx web-push generate-vapid-keys` | ✅ En Vercel |
 | 7 | **Supabase de producción** | Separar la demo de los datos reales | Segundo proyecto en la misma organización | Después de la demo |
 
-Ya listos: **GitHub** (con CI y copia de seguridad diaria cifrada, a activar), **Vercel** (publica solo desde `main`) y **Supabase `staging`**, con 27 de las 30 migraciones aplicadas (las 3 que faltan, en orden, en [docs/ESTADO-Y-PENDIENTES.md §5.1.2](docs/ESTADO-Y-PENDIENTES.md#512-migraciones-por-aplicar-en-staging)) y datos reales de OpenStreetMap. Paso a paso: [DEPLOYMENT.md](DEPLOYMENT.md).
+Ya listos: **GitHub** (con CI y copia de seguridad diaria cifrada, a activar), **Vercel** (publica solo desde `main`) y **Supabase `staging`**, con las 30 migraciones aplicadas y datos reales de OpenStreetMap. Paso a paso: [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ### 2. Construir lo que falta
 
