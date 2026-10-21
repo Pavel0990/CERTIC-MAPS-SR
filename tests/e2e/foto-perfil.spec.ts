@@ -24,7 +24,10 @@ test('una persona pone su foto de perfil, la ve en la barra y la quita', async (
     g.fillStyle = '#f2b01e'; g.beginPath(); g.arc(300, 200, 120, 0, Math.PI * 2); g.fill();
     return c.toDataURL('image/png').split(',')[1]!;
   });
-  await page.locator('input[type=file][accept="image/*"]').setInputFiles({ name: 'cara.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
+  // Como una persona: toca «Poner una foto» y elige el archivo. El selector solo se abre cuando la página ya
+  // está lista (hidratada); entregar el archivo antes lo perdía y la prueba fallaba de vez en cuando.
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.getByRole('button', { name: 'Poner una foto' }).click()]);
+  await chooser.setFiles({ name: 'cara.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
   await expect(page.getByText('Foto actualizada.')).toBeVisible();
 
   // La foto llega por la URL pública con versión y es WebP pequeño
