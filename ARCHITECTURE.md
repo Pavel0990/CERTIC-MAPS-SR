@@ -1265,7 +1265,14 @@ cd supabase/tests && npm install && npm test
 - Server Components para todo lo no interactivo;
 - `next/image` y fotos en WebP;
 - payload mínimo por viewport y geometrías simplificadas;
-- regiones de Vercel y Supabase cercanas entre sí.
+- regiones de Vercel y Supabase cercanas entre sí (iad1 y us-east-1).
+
+**Navegación (medida el 21/10 con `tests/e2e/navegacion-rapida.spec.ts`):** la pantalla reacciona en 20–40 ms desde el toque. Antes del ajuste se quedaba quieta entre 216 y 396 ms, y hasta 1,2 s en el panel. La prueba falla si alguna pestaña tarda más de 400 ms en reaccionar.
+- **`loading.tsx` en cada sección** (un solo componente, `RouteLoading`, que dibuja la forma de lo que viene: mapa, ficha, formulario o lista). Las páginas son dinámicas por la CSP con nonce y, sin un `loading.tsx`, Next no las precarga ni muestra nada hasta que responde el servidor.
+- **Precarga solo donde se toca seguido:** la barra principal y el menú del panel se precargan al aparecer; el resto de los enlaces (filas de listas, filtros, tarjetas) usa `prefetch={false}` y se precarga al tocarlo o al pasar el mouse. Así se bajó de 14–19 a 9–10 las peticiones al servidor por pantalla abierta.
+- **Caché del navegador de 30 s** (`staleTimes.dynamic`): volver a una pantalla recién vista es instantáneo. Lo que la persona guarda la refresca igual, porque las Server Actions llaman a `revalidatePath`.
+- **Catálogos en caché entre requests** (`unstable_cache`, etiqueta `catalogs`, 1 h): son 4 consultas que casi todas las pantallas repetían. Editar un catálogo en el panel lo invalida al instante (`updateTag`), y un fallo de lectura nunca se guarda en la caché.
+- **Listas por partes:** negocios y lugares muestran 24 filas y un botón «Ver más» (`?ver=48`); es un enlace normal, que funciona sin JavaScript y no mueve la pantalla.
 
 Antes de producción se revisa `EXPLAIN (ANALYZE, BUFFERS)` de `map_features`, `search_all` y `kpi_summary` con volumen realista.
 

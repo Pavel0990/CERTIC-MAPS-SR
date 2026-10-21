@@ -56,7 +56,7 @@ export default async function NotificationsPage() {
               </>
             );
             const cls = 'flex items-center gap-3 rounded-[16px] bg-surface p-4 shadow-[var(--shadow-card)]';
-            return <li key={n.id}>{n.href ? <Link href={n.href} className={cn(cls, 'hover:bg-canvas')}>{inner}</Link> : <div className={cls}>{inner}</div>}</li>;
+            return <li key={n.id}>{n.href ? <Link prefetch={false} href={n.href} className={cn(cls, 'hover:bg-canvas')}>{inner}</Link> : <div className={cls}>{inner}</div>}</li>;
           })}
         </ul>
       )}

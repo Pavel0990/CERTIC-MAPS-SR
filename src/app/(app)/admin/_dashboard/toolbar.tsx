@@ -31,7 +31,7 @@ export function DashboardToolbar({ days, municipio, updatedAt, csv, csvName }: {
     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between print:hidden">
       <nav aria-label="Periodo" className="inline-flex self-start rounded-full bg-ink p-1 shadow-[var(--shadow-card)]">
         {PERIODS.map((d) => (
-          <Link key={d} href={hrefFor(d)} scroll={false} aria-current={d === days ? 'true' : undefined}
+          <Link prefetch={false} key={d} href={hrefFor(d)} scroll={false} aria-current={d === days ? 'true' : undefined}
             className={cn('press inline-flex min-h-11 items-center rounded-full px-4 text-[15px] font-semibold md:min-h-10', d === days ? 'bg-surface text-ink' : 'text-on-ink/75 hover:text-on-ink')}>
             {d} días
           </Link>

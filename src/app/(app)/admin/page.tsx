@@ -33,7 +33,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
     return (
       <Card className="p-6">
         <Notice tone="danger">No pudimos cargar los indicadores.</Notice>
-        <Link href={`/admin?periodo=${range.days}`} className="press mt-4 inline-flex min-h-11 items-center rounded-[12px] bg-ink px-4 font-semibold text-on-ink">Reintentar</Link>
+        <Link prefetch={false} href={`/admin?periodo=${range.days}`} className="press mt-4 inline-flex min-h-11 items-center rounded-[12px] bg-ink px-4 font-semibold text-on-ink">Reintentar</Link>
       </Card>
     );
   }
@@ -150,7 +150,7 @@ function Overview({ d, labels }: { d: Dashboard; labels: { trafficTypes: Record<
             <ol className="flex flex-col">
               {k.requests.top_supported.map((r, i) => (
                 <li key={r.id}>
-                  <Link href={`/consultas/${r.id}`} className="press-soft flex min-h-12 items-center gap-3 rounded-[12px] px-2 hover:bg-canvas">
+                  <Link prefetch={false} href={`/consultas/${r.id}`} className="press-soft flex min-h-12 items-center gap-3 rounded-[12px] px-2 hover:bg-canvas">
                     <span className={cn('grid size-7 shrink-0 place-items-center rounded-full font-mono text-sm font-bold', i === 0 ? 'bg-warn-bright text-ink' : 'bg-canvas text-muted')}>{i + 1}</span>
                     <span className="min-w-0 flex-1 truncate font-semibold">{r.title}</span>
                     <span className="flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 font-mono text-sm font-bold text-brand-strong"><ThumbsUp className="size-3.5" aria-hidden />{r.support_count}</span>
@@ -176,7 +176,7 @@ function Overview({ d, labels }: { d: Dashboard; labels: { trafficTypes: Record<
                   {d.topViewed.map((v) => (
                     <tr key={v.id} className="border-b border-line last:border-0">
                       <td className="px-5 py-2.5">
-                        <Link href={v.href} className="flex items-center gap-2.5 font-semibold hover:text-brand">
+                        <Link prefetch={false} href={v.href} className="flex items-center gap-2.5 font-semibold hover:text-brand">
                           <span className={cn('h-6 w-1 shrink-0 rounded-full', v.entity === 'business' ? 'bg-layer-business' : v.entity === 'tourism_place' ? 'bg-layer-tourism' : 'bg-layer-route')} aria-hidden />
                           <span className="truncate">{v.name}</span>
                         </Link>
@@ -226,7 +226,7 @@ function Kpi({ icon, label, value, detail, delta: dl, help, href, tone }: {
   return (
     <div className="relative">
       {href ? (
-        <Link href={href} className="press-soft group block h-full rounded-[18px] border border-line bg-surface p-5 shadow-[var(--shadow-card)] hover:border-line-strong hover:shadow-[var(--shadow-float)]">
+        <Link prefetch={false} href={href} className="press-soft group block h-full rounded-[18px] border border-line bg-surface p-5 shadow-[var(--shadow-card)] hover:border-line-strong hover:shadow-[var(--shadow-float)]">
           {body}
           <ArrowRight className="absolute bottom-5 right-5 size-4 text-subtle transition group-hover:translate-x-0.5 group-hover:text-ink" aria-hidden />
         </Link>
@@ -268,7 +268,7 @@ function Panel({ title, sub, action, icon, children }: { title: string; sub?: st
           <h3 className="flex items-center gap-2 text-[17px] font-bold">{icon}{title}</h3>
           {sub && <p className="text-sm text-muted">{sub}</p>}
         </div>
-        {action && <Link href={action.href} className="press -my-2 -mr-2 inline-flex min-h-11 shrink-0 items-center px-2 text-sm font-semibold text-brand hover:underline print:hidden">{action.label}</Link>}
+        {action && <Link prefetch={false} href={action.href} className="press -my-2 -mr-2 inline-flex min-h-11 shrink-0 items-center px-2 text-sm font-semibold text-brand hover:underline print:hidden">{action.label}</Link>}
       </div>
       {children}
     </Card>
@@ -292,7 +292,7 @@ function Bars({ rows, color }: { rows: { key: string; label: string; value: numb
             {r.extra && <p className="mt-1 text-[13px] text-muted">{r.extra}</p>}
           </>
         );
-        return <li key={r.key}>{r.href ? <Link href={r.href} className="press-soft -mx-2 block rounded-[12px] p-2 hover:bg-canvas">{inner}</Link> : inner}</li>;
+        return <li key={r.key}>{r.href ? <Link prefetch={false} href={r.href} className="press-soft -mx-2 block rounded-[12px] p-2 hover:bg-canvas">{inner}</Link> : inner}</li>;
       })}
     </ul>
   );
@@ -304,7 +304,7 @@ function Empty({ children }: { children: React.ReactNode }) {
 
 function Pill({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
   return (
-    <Link href={href} scroll={false} aria-current={active ? 'page' : undefined}
+    <Link prefetch={false} href={href} scroll={false} aria-current={active ? 'page' : undefined}
       className={cn('press inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-[15px] font-semibold md:min-h-10', active ? 'bg-ink text-on-ink' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
       {children}
     </Link>

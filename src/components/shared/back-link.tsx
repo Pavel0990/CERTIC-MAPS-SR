@@ -11,7 +11,7 @@ import { ChevronLeft } from 'lucide-react';
 export function BackLink({ href, label }: { href: string; label: string }) {
   const router = useRouter();
   return (
-    <Link
+    <Link prefetch={false}
       href={href}
       onClick={(e) => {
         const fromApp = typeof document !== 'undefined' && document.referrer.startsWith(window.location.origin);

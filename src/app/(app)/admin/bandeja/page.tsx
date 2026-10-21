@@ -97,7 +97,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         </div>
       )}
       <p className="mt-6 text-sm text-muted">
-        Ordenado por gravedad y antigüedad (tránsito) o por apoyos de los vecinos (reportes). <Link href="/admin" className="font-semibold text-brand hover:underline">Ver resumen</Link>
+        Ordenado por gravedad y antigüedad (tránsito) o por apoyos de los vecinos (reportes). <Link prefetch={false} href="/admin" className="font-semibold text-brand hover:underline">Ver resumen</Link>
       </p>
     </>
   );
@@ -114,7 +114,7 @@ function FilterGroup({ label, children }: { label: string; children: React.React
 
 function Chip({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
   return (
-    <Link href={href} aria-current={active ? 'true' : undefined} className={cn('press inline-flex min-h-11 shrink-0 items-center rounded-full px-3.5 text-sm font-semibold md:min-h-8', active ? 'bg-brand text-on-brand' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
+    <Link prefetch={false} href={href} aria-current={active ? 'true' : undefined} className={cn('press inline-flex min-h-11 shrink-0 items-center rounded-full px-3.5 text-sm font-semibold md:min-h-8', active ? 'bg-brand text-on-brand' : 'bg-surface text-muted shadow-[var(--shadow-card)] hover:text-ink')}>
       {children}
     </Link>
   );

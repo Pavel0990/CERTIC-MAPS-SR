@@ -28,7 +28,7 @@ export default async function RoutesPage({ searchParams }: { searchParams: Promi
       </div>
       <p className="mb-2 text-[15px] text-muted" aria-live="polite">{items.length === 1 ? '1 ruta' : `${items.length} rutas`}</p>
       {items.length === 0 ? (
-        <Card><EmptyState icon={<Route className="size-7" />} title="No hay rutas en este municipio" action={<Link href="/rutas" className="font-semibold text-brand underline">Ver todas</Link>} /></Card>
+        <Card><EmptyState icon={<Route className="size-7" />} title="No hay rutas en este municipio" action={<Link prefetch={false} href="/rutas" className="font-semibold text-brand underline">Ver todas</Link>} /></Card>
       ) : (
         <Card className="overflow-hidden">
           <ListGrid>
@@ -51,7 +51,7 @@ export default async function RoutesPage({ searchParams }: { searchParams: Promi
           </ListGrid>
         </Card>
       )}
-      <p className="mt-4 text-[15px]">¿Haces una ruta que falta? <Link href="/proponer?que=ruta" className="font-semibold text-brand underline">Propónla</Link> dibujándola en el mapa o con un archivo GPX.</p>
+      <p className="mt-4 text-[15px]">¿Haces una ruta que falta? <Link prefetch={false} href="/proponer?que=ruta" className="font-semibold text-brand underline">Propónla</Link> dibujándola en el mapa o con un archivo GPX.</p>
       <OsmCredit />
     </PageShell>
   );

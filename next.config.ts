@@ -23,10 +23,13 @@ const DEV_TUNNELS = ['**.devtunnels.ms'];
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
-  ...(isDev && {
-    allowedDevOrigins: DEV_TUNNELS,
-    experimental: { serverActions: { allowedOrigins: DEV_TUNNELS } },
-  }),
+  ...(isDev && { allowedDevOrigins: DEV_TUNNELS }),
+  experimental: {
+    // Volver a una pantalla visitada hace menos de 30 s es instantáneo (sin pedirla otra vez al servidor).
+    // Lo que la persona guarda la refresca igual: las Server Actions llaman a revalidatePath.
+    staleTimes: { dynamic: 30 },
+    ...(isDev && { serverActions: { allowedOrigins: DEV_TUNNELS } }),
+  },
   images: {
     remotePatterns: [{ protocol: 'https', hostname: supabaseHost, pathname: '/storage/v1/object/public/**' }],
   },

@@ -37,7 +37,7 @@ export function SelectedCard({ feature, catalogs, userLocation, onClose }: { fea
       )}
       <div className="mt-4 flex gap-2">
         {href && (
-          <Link href={href} className="press inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-ink px-4 font-semibold text-on-ink hover:bg-ink-strong">
+          <Link prefetch={false} href={href} className="press inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-ink px-4 font-semibold text-on-ink hover:bg-ink-strong">
             Ver detalles <ArrowRight className="size-4" aria-hidden />
           </Link>
         )}

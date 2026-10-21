@@ -14,7 +14,7 @@ export function WizardHeader({ step, total, onBack, cancelHref = '/perfil', canc
           <ChevronLeft className="size-5" />
         </button>
       ) : (
-        <Link href={cancelHref} aria-label={cancelLabel} className="press flex size-11 items-center justify-center rounded-full bg-surface shadow-[var(--shadow-card)]">
+        <Link prefetch={false} href={cancelHref} aria-label={cancelLabel} className="press flex size-11 items-center justify-center rounded-full bg-surface shadow-[var(--shadow-card)]">
           <X className="size-5" />
         </Link>
       )}
@@ -59,8 +59,8 @@ export function DoneScreen({
       <div className="mt-2 text-[17px] text-muted">{message}</div>
       {photoError && <div className="mt-4 w-full"><Notice tone="warn">Algunas fotos no se pudieron subir: {photoError}</Notice></div>}
       <div className="mt-8 flex w-full flex-col gap-2">
-        <Link href={primary.href} className="press inline-flex h-13 min-h-[52px] items-center justify-center rounded-full bg-ink font-semibold text-on-ink">{primary.label}</Link>
-        {secondary && <Link href={secondary.href} className="press inline-flex h-12 items-center justify-center rounded-full font-semibold text-ink hover:bg-surface">{secondary.label}</Link>}
+        <Link prefetch={false} href={primary.href} className="press inline-flex h-13 min-h-[52px] items-center justify-center rounded-full bg-ink font-semibold text-on-ink">{primary.label}</Link>
+        {secondary && <Link prefetch={false} href={secondary.href} className="press inline-flex h-12 items-center justify-center rounded-full font-semibold text-ink hover:bg-surface">{secondary.label}</Link>}
       </div>
     </section>
   );

@@ -41,7 +41,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
             <EmptyState
               icon={<Inbox className="size-7" />}
               title="Todavía no has reportado nada"
-              action={<Link href="/reportar" className="mt-2 inline-flex h-12 items-center rounded-full bg-ink px-5 font-semibold text-on-ink">Hacer mi primer reporte</Link>}
+              action={<Link prefetch={false} href="/reportar" className="mt-2 inline-flex h-12 items-center rounded-full bg-ink px-5 font-semibold text-on-ink">Hacer mi primer reporte</Link>}
             >
               Cuando reportes un bache, basura o una consulta al municipio, aquí verás cómo avanza.
             </EmptyState>
@@ -51,7 +51,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
             {mine.map((item) =>
               item.kind === 'request' ? (
                 <li key={item.id}>
-                  <Link href={`/consultas/${item.id}`} className="group flex items-center gap-4 rounded-[18px] bg-surface p-4 shadow-[var(--shadow-card)] transition hover:shadow-[var(--shadow-float)]">
+                  <Link prefetch={false} href={`/consultas/${item.id}`} className="group flex items-center gap-4 rounded-[18px] bg-surface p-4 shadow-[var(--shadow-card)] transition hover:shadow-[var(--shadow-float)]">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <RequestStatusBadge status={item.r.status} />
@@ -89,7 +89,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
             <ul className="flex flex-col gap-3">
               {publicRequests.map((r) => (
                 <li key={r.id}>
-                  <Link href={`/consultas/${r.id}`} className="group flex items-center gap-4 rounded-[18px] bg-surface p-4 shadow-[var(--shadow-card)] transition hover:shadow-[var(--shadow-float)]">
+                  <Link prefetch={false} href={`/consultas/${r.id}`} className="group flex items-center gap-4 rounded-[18px] bg-surface p-4 shadow-[var(--shadow-card)] transition hover:shadow-[var(--shadow-float)]">
                     <div className="flex w-14 shrink-0 flex-col items-center rounded-[12px] bg-brand-soft py-2 text-brand-strong">
                       <ThumbsUp className="size-4" aria-hidden />
                       <span className="text-lg font-extrabold">{r.support_count}</span>

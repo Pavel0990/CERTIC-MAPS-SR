@@ -1,9 +1,10 @@
 'use server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { z } from 'zod';
 import { moderateTrafficReport, escalateTrafficReport } from '@/modules/traffic/server';
 import { assignRequest, changeRequestStatus, setRequestPublic } from '@/modules/citizen-reports/server';
 import { assignRole, authorizeReportDownload, requestWeeklyReport, reviewContent, revokeRole, saveCatalogItem, type ContentEntity } from '@/modules/admin/server';
+import { CATALOGS_TAG } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
 import type { RpcResult } from '@/lib/http';
 
@@ -93,5 +94,7 @@ export async function saveCatalog(catalog: string, code: string | null, changes:
   if (!['traffic_types', 'request_categories', 'business_categories'].includes(catalog)) return { status: 'rejected', reason: 'invalid_catalog' } as ActionResult;
   const parsed = catalogChanges.safeParse(changes);
   if (!parsed.success) return { status: 'rejected', reason: 'invalid_field' } as ActionResult;
-  return run((s) => saveCatalogItem(s, catalog, code, parsed.data), ['/admin/catalogos']);
+  const r = await run((s) => saveCatalogItem(s, catalog, code, parsed.data), ['/admin/catalogos']);
+  if (r.status === 'ok') updateTag(CATALOGS_TAG); // el cambio se ve enseguida en el mapa y los formularios
+  return r;
 }

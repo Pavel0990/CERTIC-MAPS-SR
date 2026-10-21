@@ -3,7 +3,7 @@ import { Skeleton } from '@/components/ui/primitives';
 /** Mientras carga el panel: la forma de lo que viene (encabezado, tarjetas y paneles), no un spinner suelto. */
 export default function AdminLoading() {
   return (
-    <div className="flex flex-col gap-5" aria-busy="true" aria-label="Cargando el panel">
+    <div data-loading className="flex flex-col gap-5" aria-busy="true" aria-label="Cargando el panel">
       <div className="flex flex-col gap-2">
         <Skeleton className="h-3 w-40" />
         <Skeleton className="h-9 w-72 max-w-full" />

@@ -71,7 +71,7 @@ export function PlaceWizard({ staff }: { staff: boolean }) {
         <section className="animate-step-in flex flex-col gap-5 px-4 pb-8 pt-5">
           <StepTitle headingRef={heading} title="Proponer un lugar" hint="Un sitio bonito o importante de la provincia que todos deberían conocer." />
           <p className="-mt-2 text-[15px]">
-            ¿Es un recorrido o sendero? <Link href="/proponer?que=ruta" className="font-semibold text-brand underline">Proponer una ruta</Link>
+            ¿Es un recorrido o sendero? <Link prefetch={false} href="/proponer?que=ruta" className="font-semibold text-brand underline">Proponer una ruta</Link>
           </p>
           <ChoiceGrid legend="¿Qué tipo de lugar es?" options={PLACE_KINDS.map((k) => ({ value: k, label: PLACE_KIND[k] ?? k }))} value={kind} onChange={setKind} />
           <Field label="Nombre del lugar" hint="Como lo llama la gente. Por ejemplo: «Mirador de La Leonor».">

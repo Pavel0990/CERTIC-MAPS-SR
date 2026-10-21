@@ -135,7 +135,7 @@ export function RouteWizard({ staff }: { staff: boolean }) {
         <section className="animate-step-in flex flex-col gap-5 px-4 pb-8 pt-5">
           <StepTitle headingRef={heading} title="Proponer una ruta" hint="Un sendero o recorrido para caminar, ir en bicicleta o conocer la provincia." />
           <p className="-mt-2 text-[15px]">
-            ¿Es un solo sitio? <Link href="/proponer" className="font-semibold text-brand underline">Proponer un lugar</Link>
+            ¿Es un solo sitio? <Link prefetch={false} href="/proponer" className="font-semibold text-brand underline">Proponer un lugar</Link>
           </p>
           <Field label="Nombre de la ruta" hint="Por ejemplo: «Sendero del río Inaje».">
             {(a) => <Input {...a} value={name} maxLength={120} onChange={(e) => setName(e.target.value)} />}

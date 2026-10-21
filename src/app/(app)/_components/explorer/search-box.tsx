@@ -117,7 +117,7 @@ export function SearchBox({ onPick }: { onPick: (hit: SearchHit) => void }) {
             <X className="size-5" />
           </button>
         )}
-        <Link
+        <Link prefetch={false}
           href="/reportar"
           className="press inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-danger-soft px-3 text-[15px] font-semibold text-danger-strong hover:bg-danger-soft-strong"
         >
