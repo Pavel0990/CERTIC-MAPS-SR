@@ -57,22 +57,22 @@ La revisión del 17/10 y la del 21/10 están detalladas en [SECURITY.md](../SECU
 | **E2E en la CI** | Hoy Playwright y axe se corren a mano antes de subir | ⏳ `.github/workflows/e2e.yml` listo (construye la app en el runner y prueba con Chromium contra staging). **Falta** crear el entorno `e2e-staging` con sus 3 secretos y la variable `E2E_ENABLED=true` ([ADR-025](decisions/ADR-025-e2e-contra-staging.md)) |
 | ✅ ~~**Simulacro de restauración**~~ | Hecho el 21/10/2026: la copia diaria cifrada del 20/10 y la última copia local se restauraron en PGlite con todas las migraciones, con los mismos conteos por tabla y sin claves foráneas huérfanas | Repetirlo con `npm run backup:check` antes de la demo; procedimiento en [DEPLOYMENT.md §8.1](../DEPLOYMENT.md#81-copias-de-seguridad) |
 | **Correcciones de la prueba con vecinos** | Lo que salga de la ronda 1 | Un *issue* `ux` por problema, corregido antes de la ronda 2 |
-| **Propuestas de la revisión de UX del 21/10** | Lo que cambia un flujo o la estructura de una pantalla y no se tocó en esa revisión (§5.1.1) | Decidir cuáles entran antes de la ronda 1 con vecinos |
+| **Propuestas de la revisión de UX del 21/10** | Lo que cambia un flujo o la estructura de una pantalla y no se tocó en esa revisión (§5.1.1) | ⏳ 4 de 8 hechas el 22/10 (1, 2, 6 y 7, solo interfaz). Quedan la 3 y la 5 (necesitan una migración), la 4 (probarla con vecinos) y la 8 (va con la validación de rutas) |
 | **Propuestas de la limpieza de código** | Cambios de organización que mueven muchos archivos y no se hicieron para no arriesgar (§5.1.3) | Decidir después de la demo |
 
 ### 5.1.1 Revisión de UX del 21/10
 
 Recorrido de todas las pantallas a 360 y 1280 px, en claro y oscuro (público, vecino, negocio, moderación y administración). **Ya corregido:** el panel del teléfono se deslizaba casi un segundo después de cada cambio de pantalla y quedaba 84 px abajo, con el menú "Panel municipal" fuera de la vista (`data-scroll-behavior="smooth"` en `<html>`, requisito de Next 16); todos los botones y enlaces quedan en 44 px también en tableta y computadora (antes bajaban a 32–40 px); el gráfico del panel se lee en palabras y sus fechas ya no miden 6 px en el teléfono; los botones del panel llevan ícono y texto; "Prioridades" pasa a "Apoyar reportes"; la auditoría muestra el rol en español y "Qué hizo" sin deslizar; los asistentes dicen qué falta cuando "Seguir" está desactivado; arreglos de diseño en el aviso de registrar negocio, el equipo y los datos de una ruta.
 
-**Propuestas (no implementadas, cambian un flujo o una pantalla):**
+**Propuestas (cambian un flujo o una pantalla):**
 
-1. **Quitar un rol pide confirmación.** Hoy *Equipo → Quitar* actúa con un solo toque.
-2. **Informes en tarjetas en el teléfono.** La tabla deja *Descargar PDF* fuera de la vista a 360 px.
-3. **Reporte al municipio sin texto obligatorio.** §6.2 dice que basta tipo, ubicación y foto; hoy el reporte al municipio exige título y 10 letras de descripción.
+1. ✅ ~~**Quitar un rol pide confirmación.**~~ Hecho el 22/10: *Equipo → Quitar* abre un diálogo que nombra a la persona y explica qué pasa, con **Cancelar** y **Quitar** (`ActionButton` acepta `confirm`).
+2. ✅ ~~**Informes en tarjetas en el teléfono.**~~ Hecho el 22/10: por debajo de 768 px cada informe es una tarjeta con *Descargar PDF* a la vista; la tabla queda para tableta y computadora.
+3. **Reporte al municipio sin texto obligatorio.** §6.2 dice que basta tipo, ubicación y foto; hoy el reporte al municipio exige título y 10 letras de descripción. Necesita una migración (la RPC también lo exige).
 4. **Primer paso de Reportar más corto.** Muestra 14 opciones en tres grupos; probar con vecinos si conviene elegir primero el grupo.
-5. **Avisos con el tipo de reporte.** "Tu reporte de tránsito cambió de estado" se repite igual en todos; mejor "Tu alerta de *Bache* ya está en el mapa".
-6. **Tarjetas del panel en dos columnas en el teléfono.** Hoy son 12 tarjetas a lo ancho y el resumen mide unas 9 pantallas.
-7. **"Lo más visto" sin tabla en el teléfono.** Las columnas *Cómo llegar* y *WhatsApp* quedan ocultas a la derecha.
+5. **Avisos con el tipo de reporte.** "Tu reporte de tránsito cambió de estado" se repite igual en todos; mejor "Tu alerta de *Bache* ya está en el mapa". El texto lo escribe la base (`private.notify`): necesita una migración.
+6. ✅ ~~**Tarjetas del panel en dos columnas en el teléfono.**~~ Hecho el 22/10: las 12 tarjetas van de dos en dos (en las filas de tres, la última ocupa el ancho), con icono, cifra y relleno más compactos por debajo de 640 px. El resumen pasa de unas 9 pantallas a unas 5 a 360 px.
+7. ✅ ~~**"Lo más visto" sin tabla en el teléfono.**~~ Hecho el 22/10: por debajo de 768 px es una lista con las visitas, "cómo llegar" y WhatsApp escritos debajo de cada ficha.
 8. **Contenido:** la ruta "De Monción a la Presa" dice en público "conviene validarlo con el municipio antes de recomendarlo" (es una nota interna; va con la validación de rutas de §5.3).
 
 ### 5.1.2 Migraciones aplicadas el 21/10

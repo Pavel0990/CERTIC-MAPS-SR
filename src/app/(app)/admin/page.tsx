@@ -91,7 +91,7 @@ function Overview({ d, labels }: { d: Dashboard; labels: { trafficTypes: Record<
       {/* 1 · Lo que hay que atender */}
       <section aria-labelledby="atender" className="flex flex-col gap-3">
         <h2 id="atender" className="text-lg font-bold">Lo que hay que atender</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <Kpi icon={<Inbox />} label="Abiertos ahora" value={k.requests.open_now} href="/admin/bandeja?ver=consultas"
             help="Reportes al municipio que todavía no se resolvieron ni se descartaron, sin importar cuándo llegaron. Es la cifra de hoy, no del periodo."
             tone={k.requests.open_now > 0 ? 'warn' : undefined} />
@@ -108,7 +108,7 @@ function Overview({ d, labels }: { d: Dashboard; labels: { trafficTypes: Record<
       {/* 2 · Cómo va el periodo */}
       <section aria-labelledby="periodo" className="flex flex-col gap-3">
         <h2 id="periodo" className="text-lg font-bold">Cómo va el periodo</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <Kpi icon={<AlertTriangle />} label="Reportes recibidos" value={received} delta={delta(received, receivedPrev, false)}
             help="Alertas de tránsito más reportes al municipio que llegaron en el periodo." detail={`${k.traffic.received} de tránsito · ${k.requests.received} al municipio`} />
           <Kpi icon={<CheckCircle2 />} label="Resueltos" value={k.requests.resolved} delta={delta(k.requests.resolved, p.requests.resolved, true)} tone="ok"
@@ -162,7 +162,24 @@ function Overview({ d, labels }: { d: Dashboard; labels: { trafficTypes: Record<
         </Panel>
         <Panel title="Lo más visto" sub="Fichas con más visitas en el periodo">
           {d.topViewed.length === 0 ? <Empty>Todavía no hay visitas a fichas en este periodo.</Empty> : (
-            <div className="-mx-5 overflow-x-auto">
+            <>
+            {/* Teléfono: lista, para que «Cómo llegar» y «WhatsApp» no queden ocultos a la derecha */}
+            <ol className="flex flex-col md:hidden">
+              {d.topViewed.map((v) => (
+                <li key={v.id} className="border-b border-line last:border-0">
+                  <Link prefetch={false} href={v.href} className="press-soft flex min-h-12 items-start gap-2.5 rounded-[12px] px-1 py-2.5 hover:bg-canvas">
+                    <span className={cn('mt-0.5 h-10 w-1 shrink-0 rounded-full', v.entity === 'business' ? 'bg-layer-business' : v.entity === 'tourism_place' ? 'bg-layer-tourism' : 'bg-layer-route')} aria-hidden />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold">{v.name}</span>
+                      <span className="mt-0.5 block text-sm text-muted tabular-nums">
+                        {formatNumber(v.views)} {v.views === 1 ? 'visita' : 'visitas'} · {formatNumber(v.directions)} cómo llegar · {formatNumber(v.whatsapp)} WhatsApp
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+            <div className="-mx-5 hidden overflow-x-auto md:block">
               <table className="w-full min-w-[420px] text-left text-[15px]">
                 <thead className="border-b border-line text-[14px] font-semibold text-muted">
                   <tr>
@@ -189,13 +206,14 @@ function Overview({ d, labels }: { d: Dashboard; labels: { trafficTypes: Record<
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </Panel>
       </div>
 
       <section aria-labelledby="contexto" className="flex flex-col gap-3">
         <h2 id="contexto" className="text-lg font-bold">Contenido del mapa</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
           <Kpi icon={<ClipboardCheck />} label="Negocios activos" value={k.businesses.approved_total} href="/negocios" help="Negocios aprobados que hoy aparecen en el mapa." detail={k.businesses.pending_now ? `${k.businesses.pending_now} por aprobar` : 'sin solicitudes pendientes'} />
           <Kpi icon={<Navigation />} label="Turismo publicado" value={k.tourism.places_published + k.tourism.routes_published} href="/turismo" help="Lugares y rutas publicados en el mapa." detail={`${k.tourism.places_published} lugares · ${k.tourism.routes_published} rutas`} />
           <Kpi icon={<Eye />} label="Visitas a fichas" value={k.engagement.views} delta={delta(k.engagement.views, p.engagement.views, true)} help="Cuántas veces se abrió la ficha de un negocio, lugar o ruta (una por persona y sesión). Siempre de toda la provincia." detail={d.byMunicipality ? undefined : 'de toda la provincia'} />
@@ -214,10 +232,10 @@ function Kpi({ icon, label, value, detail, delta: dl, help, href, tone }: {
 }) {
   const body = (
     <>
-      <span className="grid size-11 shrink-0 place-items-center rounded-[12px] bg-ink text-on-ink [&>svg]:size-5" aria-hidden>{icon}</span>
-      <p className="mt-4 pr-6 text-[14px] font-semibold text-muted">{label}</p>
+      <span className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-ink text-on-ink sm:size-11 sm:rounded-[12px] [&>svg]:size-5" aria-hidden>{icon}</span>
+      <p className="mt-3 pr-6 text-[14px] font-semibold leading-snug text-muted sm:mt-4">{label}</p>
       <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
-        <p className={cn('text-[32px] font-extrabold leading-none tracking-tight tabular-nums', tone && TONE[tone])}>{typeof value === 'number' ? formatNumber(value) : value}</p>
+        <p className={cn('text-[26px] font-extrabold leading-tight tracking-tight tabular-nums sm:text-[32px] sm:leading-none', tone && TONE[tone])}>{typeof value === 'number' ? formatNumber(value) : value}</p>
         {dl && <DeltaPill d={dl} />}
       </div>
       {detail && <p className="mt-2 text-sm text-muted">{detail}</p>}
@@ -226,12 +244,12 @@ function Kpi({ icon, label, value, detail, delta: dl, help, href, tone }: {
   return (
     <div className="relative">
       {href ? (
-        <Link prefetch={false} href={href} className="press-soft group block h-full rounded-[18px] border border-line bg-surface p-5 shadow-[var(--shadow-card)] hover:border-line-strong hover:shadow-[var(--shadow-float)]">
+        <Link prefetch={false} href={href} className="press-soft group block h-full rounded-[18px] border border-line bg-surface p-4 pb-10 shadow-[var(--shadow-card)] hover:border-line-strong hover:shadow-[var(--shadow-float)] sm:p-5 sm:pb-5">
           {body}
-          <ArrowRight className="absolute bottom-5 right-5 size-4 text-subtle transition group-hover:translate-x-0.5 group-hover:text-ink" aria-hidden />
+          <ArrowRight className="absolute bottom-4 right-4 size-4 sm:bottom-5 sm:right-5 text-subtle transition group-hover:translate-x-0.5 group-hover:text-ink" aria-hidden />
         </Link>
       ) : (
-        <div className="h-full rounded-[18px] border border-line bg-surface p-5 shadow-[var(--shadow-card)]">{body}</div>
+        <div className="h-full rounded-[18px] border border-line bg-surface p-4 shadow-[var(--shadow-card)] sm:p-5">{body}</div>
       )}
       <Help text={help} label={label} />
     </div>
@@ -328,7 +346,7 @@ function ModeratorHome({ counts, scopeNames }: { counts: { trafficPending: numbe
       {counts.trafficPending + counts.requestsPending + counts.requestsInReview + counts.validations === 0 && (
         <Notice tone="ok"><span className="inline-flex items-center gap-2 font-semibold"><CheckCircle2 className="size-5 shrink-0" aria-hidden />Todo al día: no hay nada pendiente por ahora.</span></Notice>
       )}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
         <Kpi icon={<TrafficCone />} label="Alertas por confirmar" value={counts.trafficPending} href="/admin/bandeja" help="Alertas de tránsito que esperan que las publiques o descartes." tone={counts.trafficPending ? 'danger' : undefined} />
         <Kpi icon={<Inbox />} label="Reportes por revisar" value={counts.requestsPending + counts.requestsInReview} href="/admin/bandeja?ver=consultas" help="Reportes al municipio nuevos o en revisión." tone={counts.requestsPending ? 'warn' : undefined} />
         <Kpi icon={<ClipboardCheck />} label="Por validar" value={counts.validations} href="/admin/validaciones" help="Negocios, lugares, rutas, promociones y fotos que esperan aprobación." />

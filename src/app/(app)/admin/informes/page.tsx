@@ -53,7 +53,29 @@ export default async function ReportsPage() {
       {runs.length === 0 ? (
         <Card><EmptyState icon={<FileText className="size-7" />} title="Todavía no hay informes">El primero se genera solo el lunes siguiente a la publicación.</EmptyState></Card>
       ) : (
-        <Card className="relative overflow-x-auto">
+        <>
+        {/* Teléfono: tarjetas, para que «Descargar PDF» quede siempre a la vista */}
+        <ul className="flex flex-col gap-3 md:hidden">
+          {runs.map((r) => {
+            const st = RUN_STATUS[r.status as keyof typeof RUN_STATUS] ?? RUN_STATUS.running;
+            return (
+              <li key={r.id}>
+                <Card className="flex flex-col gap-3 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="font-semibold">{formatDate(r.period_start + 'T12:00:00')} – {formatDate(r.period_end + 'T12:00:00')}</p>
+                    <Badge tone={st.tone}>{st.label}</Badge>
+                  </div>
+                  <p className="text-[15px] text-muted">
+                    <span className="tabular-nums">Versión {r.version}</span>{r.trigger === 'manual' ? ' · manual' : ''}
+                    {r.finished_at ? ` · ${formatDateTime(r.finished_at)}` : ''}
+                  </p>
+                  {r.status === 'succeeded' && <DownloadButton runId={r.id} />}
+                </Card>
+              </li>
+            );
+          })}
+        </ul>
+        <Card className="relative hidden overflow-x-auto md:block">
           <table className="w-full min-w-[560px] text-left text-[15px]">
             <thead className="border-b border-line text-sm text-muted">
               <tr>
@@ -80,6 +102,7 @@ export default async function ReportsPage() {
             </tbody>
           </table>
         </Card>
+        </>
       )}
     </>
   );

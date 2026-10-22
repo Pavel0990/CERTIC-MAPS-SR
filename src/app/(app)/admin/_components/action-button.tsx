@@ -16,13 +16,15 @@ interface Props {
   icon?: React.ReactNode;
   /** Pide un texto antes de ejecutar (motivo del rechazo, nota de resolución…). */
   ask?: { title: string; label: string; hint?: string; required?: boolean };
+  /** Pide confirmar antes de una acción que no se deshace con un toque (quitar un rol…). */
+  confirm?: { title: string; message: string };
 }
 
 /**
  * Botón de una acción del panel. Muestra el resultado en lenguaje simple; si otra persona se adelantó
  * (stale_state, compare-and-set), refresca la vista para mostrar el estado actual.
  */
-export function ActionButton({ label, done, run, variant = 'secondary', icon, ask }: Props) {
+export function ActionButton({ label, done, run, variant = 'secondary', icon, ask, confirm }: Props) {
   const router = useRouter();
   const toast = useToast();
   const [pending, start] = useTransition();
@@ -43,6 +45,31 @@ export function ActionButton({ label, done, run, variant = 'secondary', icon, as
     });
   }
 
+  if (confirm) {
+    return (
+      <>
+        <Button size="sm" variant={variant} icon={icon} onClick={() => setOpen(true)}>
+          {label}
+        </Button>
+        <Sheet
+          open={open}
+          onClose={() => setOpen(false)}
+          title={confirm.title}
+          side="center"
+          footer={
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button className="flex-1" variant={variant} loading={pending} onClick={() => execute()}>
+                {label}
+              </Button>
+            </div>
+          }
+        >
+          <p className="text-[17px]">{confirm.message}</p>
+        </Sheet>
+      </>
+    );
+  }
   if (!ask) {
     return (
       <Button size="sm" variant={variant} icon={icon} loading={pending} onClick={() => execute()}>

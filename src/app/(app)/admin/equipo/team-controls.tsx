@@ -50,6 +50,10 @@ export function RevokeButton({ userId, role, municipalityId, name }: { userId: s
       label="Quitar"
       done={`Se quitó el rol a ${name}.`}
       variant="danger"
+      confirm={{
+        title: `¿Quitar el rol a ${name}?`,
+        message: `${name} dejará de ver y atender lo de su municipio en el panel. Si fue un error, se le puede volver a dar el rol desde esta misma pantalla.`,
+      }}
       run={() => removeRole(userId, role, municipalityId)}
     />
   );
