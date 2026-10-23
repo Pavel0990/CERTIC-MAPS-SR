@@ -190,7 +190,7 @@ Lo que está instalado y en uso. Las versiones exactas están en `package.json`.
 
 | Área | Tecnología | Nota |
 |---|---|---|
-| Framework | Next.js 16.3 (App Router) + React 19.3 + TypeScript 6.0 `strict` | `proxy.ts` (antes `middleware.ts`) refresca la sesión y aplica la CSP. TypeScript 6.0 y no 7: `typescript-eslint` exige < 6.1 |
+| Framework | Next.js 16.4 (App Router) + React 19.3 + TypeScript 6.0 `strict` | `proxy.ts` (antes `middleware.ts`) refresca la sesión y aplica la CSP. TypeScript 6.0 y no 7: `typescript-eslint` exige < 6.1 |
 | Lint | ESLint 9 + `eslint-config-next` + `typescript-eslint` + `eslint-plugin-boundaries` | ESLint 9 y no 10: los plugins de `eslint-config-next` aún no soportan ESLint 10 |
 | UI | Tailwind CSS 4 + componentes propios (`src/components/ui`) + `lucide-react` | Sin librería de componentes: pocos componentes, escritos a medida para la UX de §6.2 |
 | Formularios | `useActionState` + Server Actions + Zod 4 | Zod valida la forma; la RPC decide (§3) |

@@ -103,6 +103,18 @@ Las tres migraciones posteriores (aplicadas en staging el 21/10, [DATABASE.md](D
 | `e2e_reset_rate_limits` (E2E repetibles) | Solo `service_role` | Solo toca cuentas `@example.com`; `security_audit.sql` marca cualquier `e2e_*` ejecutable por clientes (V1–V3) |
 | `attachments.credit` (crédito de fotos, propuesta) | Lectura pública, como el resto del adjunto | Nadie la escribe desde la API, ni el personal (AC4) |
 
+## Aviso de Next.js del 23/10/2026
+
+La auditoría automática de dependencias (`security.yml`) falló al publicarse avisos nuevos para Next.js 16.0.0–16.4.0, uno de ellos **crítico**:
+
+| Aviso | Nos afectaba | Corrección |
+|---|---|---|
+| Ejecución remota de código en la optimización de imágenes con archivos SVG ([GHSA-2464-fhr4-w9xw](https://github.com/advisories/GHSA-2464-fhr4-w9xw)) | No: `next/image` no acepta SVG (`dangerouslyAllowSVG` sin activar) | Actualizado a **16.4.2** (y `eslint-config-next`) |
+| Denegación de servicio en el App Router con Server Actions ([GHSA-p3m5-59mp-jv5r](https://github.com/advisories/GHSA-p3m5-59mp-jv5r)) | Sí: la app usa Server Actions | Igual |
+| Ejecución remota de código en funciones `use cache` que devuelven arreglos tipados ([GHSA-673q-mjm6-r5xr](https://github.com/advisories/GHSA-673q-mjm6-r5xr)) | No: la app no usa `use cache` | Igual |
+
+Verificado tras la actualización: `npm audit` sin vulnerabilidades, `npm run check`, 195/195 pruebas de la base, build y 17/17 E2E (la navegación sigue en 21–39 ms y la CSP con nonce sin cambios).
+
 ## Pendientes conocidos
 
 | Pendiente | Riesgo | Plan |
