@@ -98,6 +98,7 @@ La limpieza del 21/10 quitó código muerto, unificó ayudas repetidas y puso al
 
 | Tarea | Detalle |
 |---|---|
+| **Rama de producción en Vercel** | Hoy Vercel publica desde `feat/app-mvp`, no desde `main` (comprobado el 26/10). Cambiarlo en *Settings → Git → Production Branch* → `main`, con una cuenta dueña del equipo `certic-sr-maps`. Mientras tanto, cada cambio de `main` se lleva también a `feat/app-mvp` ([DEPLOYMENT.md §4.1](../DEPLOYMENT.md#41-estado-actual-05102026)) |
 | **Supabase de producción** | Hoy la app publicada usa la base de staging. Pasos: [DEPLOYMENT.md §3](../DEPLOYMENT.md#3-supabase-de-producción) |
 | **Correo con Resend y dominio propio** | Hoy los correos de acceso salen por un Gmail personal |
 | **Cloudflare** | Para el captcha (gratis). El código ya está; pasos en [DEPLOYMENT.md §4](../DEPLOYMENT.md#4-vercel) |

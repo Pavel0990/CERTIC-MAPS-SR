@@ -129,7 +129,8 @@ Hazlo en un proyecto **separado** de `staging`, para que la demo y los datos rea
 ### 4.1 Estado actual (05/10/2026)
 
 - **Proyecto:** `sr-conecta`, en el equipo CERTIC SR MAPS de Vercel, conectado al repositorio de GitHub.
-- **Producción:** cada push a **`main`** publica en https://sr-conecta.vercel.app. Nadie publica a mano con `vercel deploy --prod`.
+- **Producción:** la *Production Branch* del proyecto en Vercel es **`feat/app-mvp`** (comprobado el 26/10/2026: los commits que solo llegaron a `main` quedaron como Preview, y apenas `feat/app-mvp` recibió el mismo commit se publicó en https://sr-conecta.vercel.app). Por eso cada cambio de `main` se lleva también a `feat/app-mvp` (`git push origin main:feat/app-mvp`, sin forzar). Nadie publica a mano con `vercel deploy --prod`.
+- **Pendiente (dueño del equipo en Vercel):** *Settings → Git → Production Branch* → `main`. Después de cambiarlo, un push a `main` publica directo y `feat/app-mvp` deja de hacer falta.
 - **Base de datos:** la de **staging**. Las migraciones se aplican antes de subir el código que las usa.
 - **Vistas previas:** las demás ramas generan una vista previa cada una (solo visible para el equipo).
 - **Pendiente:** cuando exista el Supabase de producción, se activa el workflow `deploy.yml` (`DEPLOY_ENABLED=true`), que migra y luego publica, y se desactiva el despliegue automático de Vercel para `main` en `vercel.json` (ADR-019).

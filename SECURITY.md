@@ -115,6 +115,8 @@ La auditoría automática de dependencias (`security.yml`) falló al publicarse 
 
 Verificado tras la actualización: `npm audit` sin vulnerabilidades, `npm run check`, 195/195 pruebas de la base, build y 17/17 E2E (la navegación sigue en 21–39 ms y la CSP con nonce sin cambios).
 
+**26/10/2026 — Zod.** La auditoría programada falló por [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5) (alta): Zod < 4.6.6 puede agotar la memoria al validar colecciones muy grandes con límites. Nos afectaba, porque Zod valida la entrada de las Server Actions y de la API. Se corrigió con el PR #18 de Dependabot (Zod 4.6.7 y 11 actualizaciones menores, entre ellas MapLibre 6.15 y React 19.3.1), verificado antes de fusionar: `npm audit` limpio, `check`, 195/195 de la base, build y 18/18 E2E en local y en producción. Al revisarlo se agregó una E2E que falla si el mapa queda en blanco (el worker de MapLibre se sirve desde `public/vendor/maplibre/<versión>`).
+
 ## Pendientes conocidos
 
 | Pendiente | Riesgo | Plan |
