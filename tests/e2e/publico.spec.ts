@@ -35,3 +35,19 @@ test('la búsqueda tolera nombres sin tilde', async ({ page }) => {
   await page.goto('/negocios?q=moncion');
   await expect(page.locator('main li').first()).toContainText(/Monci[oó]n/i);
 });
+
+// El mapa es lo primero que se ve en la demo. Su web worker se sirve desde public/vendor/maplibre/<versión>
+// (lo copia `prebuild`): si falta, el mapa queda en blanco sin que falle ninguna otra prueba. Esta lo detecta.
+test('el mapa dibuja la provincia sin errores', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await page.goto('/mapa');
+  const canvas = page.locator('canvas.maplibregl-canvas');
+  await expect(canvas).toBeVisible();
+  // Solo el lienzo (sin buscador ni botones encima): en blanco su captura pesa ~11 KB; con calles,
+  // límites y marcadores, cientos de KB. Se espera a que tenga dibujo de verdad.
+  const onlyCanvas = '*{visibility:hidden!important} canvas.maplibregl-canvas{visibility:visible!important}';
+  await expect.poll(async () => (await canvas.screenshot({ style: onlyCanvas })).length, { timeout: 20_000 }).toBeGreaterThan(60_000);
+  expect(errors.filter((e) => /worker|maplibre|webgl/i.test(e))).toEqual([]);
+});
