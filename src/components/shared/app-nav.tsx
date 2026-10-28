@@ -31,8 +31,9 @@ export function AppNav({ signedIn, isStaff, isEntrepreneur, unread, avatar }: Na
   return (
     <>
       {/* Escritorio y tableta: riel lateral */}
-      <nav aria-label="Principal" className="fixed inset-y-0 left-0 z-40 hidden w-[88px] flex-col items-center gap-1 border-r border-line bg-surface py-4 md:flex">
-        <Link href="/" aria-label="SR Conecta, inicio" className="mb-4">
+      {/* Con el teléfono en horizontal (poca altura) el riel se compacta y, si aun así no cabe, se desplaza */}
+      <nav aria-label="Principal" className="fixed inset-y-0 left-0 z-40 hidden w-[88px] flex-col items-center gap-1 overflow-y-auto border-r border-line bg-surface py-4 md:flex short:gap-0.5 short:py-2">
+        <Link href="/" aria-label="SR Conecta, inicio" className="mb-4 short:hidden">
           <Logo className="size-11" />
         </Link>
         {tabs.map((t) => (
@@ -56,15 +57,16 @@ export function AppNav({ signedIn, isStaff, isEntrepreneur, unread, avatar }: Na
 
       {/* Móvil: barra inferior */}
       <nav aria-label="Principal" className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-        <ul className="mx-auto flex h-[68px] max-w-lg items-stretch justify-around px-1">
+        <ul className="mx-auto flex h-[68px] max-w-lg items-stretch justify-around">
           {tabs.map((t) => {
             const active = t.match(pathname);
             return (
-              <li key={t.href} className="flex flex-1">
+              <li key={t.href} className="flex min-w-0 flex-1">
+                {/* En teléfonos de 320 px cada pestaña mide ~64 px: la letra baja un punto para que "Actividad" no choque */}
                 <Link
                   href={t.href}
                   aria-current={active ? 'page' : undefined}
-                  className={cn('press relative flex flex-1 flex-col items-center justify-center gap-0.5 text-[14px] font-semibold', active ? 'text-ink' : 'text-subtle')}
+                  className={cn('press relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 whitespace-nowrap text-[13px] font-semibold tracking-[-0.01em] min-[360px]:text-[14px] min-[360px]:tracking-normal', active ? 'text-ink' : 'text-subtle')}
                 >
                   {t.primary ? (
                     <span className="flex size-11 items-center justify-center rounded-full bg-danger text-white shadow-[0_6px_16px_rgb(229_72_77/0.35)]">
@@ -93,7 +95,7 @@ function RailLink({ href, label, active, primary, badge = 0, children }: { href:
       href={href}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'press relative flex w-[76px] flex-col items-center gap-1 rounded-[14px] px-1 py-2 text-center text-[14px] font-semibold leading-tight',
+        'press relative flex w-[76px] shrink-0 flex-col items-center gap-1 rounded-[14px] px-1 py-2 text-center text-[14px] font-semibold leading-tight short:gap-0.5 short:py-1',
         primary ? 'text-danger-strong hover:bg-danger-soft' : active ? 'bg-brand-soft text-brand-strong' : 'text-muted hover:bg-canvas',
       )}
     >

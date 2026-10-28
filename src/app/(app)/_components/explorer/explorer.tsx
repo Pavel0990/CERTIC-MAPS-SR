@@ -81,7 +81,7 @@ export function Explorer({
   }
 
   return (
-    <div className="relative h-full min-h-[480px] w-full overflow-hidden">
+    <div className="relative h-full min-h-[480px] w-full overflow-hidden short:min-h-0">
       <MapCanvas
         className="absolute inset-0"
         features={visible}

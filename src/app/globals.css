@@ -219,3 +219,11 @@
 /* MapLibre: los controles y popups siguen la identidad */
 .maplibregl-ctrl-attrib { font-size: 11px; }
 .maplibregl-ctrl-group { border-radius: 12px !important; box-shadow: var(--shadow-card) !important; }
+
+/* Pantallas bajas (teléfono en horizontal): variante `short:` para compactar el riel y el mapa */
+@custom-variant short (@media (max-height: 520px));
+
+/* Pantallas táctiles: los botones de zoom del mapa miden 44 px (MapLibre trae 29 px) */
+@media (pointer: coarse) {
+  .maplibregl-ctrl-group button { width: 44px; height: 44px; }
+}
