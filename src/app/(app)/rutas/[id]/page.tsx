@@ -5,6 +5,8 @@ import { getRouteDetail } from '@/modules/routes/server';
 import { listServices } from '@/modules/tourism';
 import { listPhotos } from '@/modules/media/server';
 import { MapCanvas, type MapFeatureCollection, type StaticLayers } from '@/modules/map';
+import { ListenButton } from '@/components/shared/listen-button';
+import { readable, servicesSentence } from '@/utils/readable';
 import { PageShell } from '@/components/shared/page';
 import { TrackView } from '@/components/shared/engagement';
 import { Badge, Card, Eyebrow } from '@/components/ui/primitives';
@@ -63,6 +65,14 @@ export default async function RoutePage({ params }: { params: Promise<{ id: stri
       actions={
         <HeaderActions>
           <DirectionsButton entity="eco_route" id={r.id} point={r.start} label="Cómo llegar al inicio" />
+          <ListenButton text={readable([
+            r.name,
+            `Ruta ${(ROUTE_KIND[r.kind] ?? '').toLowerCase()}${r.municipalities.length ? ` en ${r.municipalities.join(' y ')}` : ''}`,
+            `Duración: ${formatMinutes(r.duration_min)}`,
+            difficulty && `Dificultad: ${difficulty.label.toLowerCase()}`,
+            r.description,
+            servicesSentence(listServices(r.services)),
+          ])} />
           {canEditContent(viewer, r.municipality_id, r.status) && <SecondaryLink href={`/rutas/${r.id}/editar`}>Editar</SecondaryLink>}
         </HeaderActions>
       }
