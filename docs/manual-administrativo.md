@@ -33,14 +33,14 @@ El panel se recorre con la **barra lateral** de la izquierda (en el teléfono, c
 
 1. **Periodo:** *7 días*, *30 días* o *90 días*. Queda en la dirección de la página, así que el enlace se puede compartir tal cual.
 2. **Territorio:** toda la provincia o un municipio (la administración provincial puede elegir).
-3. **Lo que hay que atender** (arriba, porque es lo urgente): reportes abiertos ahora, alertas por confirmar, contenido por validar y **la espera más antigua**. Tocar una tarjeta abre su lista.
-4. **Cómo va el periodo:** reportes recibidos, resueltos, tiempo para resolver y personas nuevas. Cada cifra trae una píldora ▲ / ▼ con el cambio frente al periodo anterior, **verde si mejora y roja si empeora** (más resueltos es bueno; más reportes recibidos, no).
+3. **Lo que hay que atender** (arriba, porque es lo urgente): una franja con reportes abiertos ahora, alertas por confirmar, contenido por validar y **la espera más antigua**. Cada parte lleva un punto de color (verde: al día; amarillo: pendiente; rojo: urgente) y al tocarla abre su lista. Si todo está en cero, un aviso verde dice **Todo al día**.
+4. **Cómo va el periodo:** la cifra grande es **reportes recibidos**, con una línea que muestra cómo fueron llegando (el punto dorado es lo más reciente). Al lado van resueltos (con su línea), tiempo para resolver y personas nuevas. Cada cifra trae una flecha con el cambio frente al periodo anterior, **verde si mejora y roja si empeora** (más resueltos es bueno; más reportes recibidos, no). Si antes había menos de 10, se muestra la diferencia («+3») y no un porcentaje, que exageraría.
 5. **Recibidos y resueltos:** gráfico por día (7 días) o por semana (30 y 90). Toca un punto, o usa las flechas del teclado, y arriba del gráfico se lee en palabras (por ejemplo, *mié: 2 recibidos · 1 resuelto*); *Ver como tabla* muestra los mismos números.
 6. **Aspectos destacados:** frases automáticas con lo más importante del periodo (por ejemplo, "Monción concentra el 60 % de los reportes").
 7. **Por municipio**, **tránsito por tipo**, **lo que más piden los vecinos** y **lo más visto** (las 5 fichas con más visitas, clics en *Cómo llegar* y en WhatsApp).
 8. **Contenido del mapa:** negocios activos, turismo publicado y visitas.
 
-El botón **?** de cada tarjeta explica qué mide en palabras simples. Arriba (en la computadora, a la derecha): **Actualizar** (con la hora de la última carga), **Descargar CSV** (se abre en Excel con tildes) e **Imprimir**.
+El botón **?** de cada tarjeta explica qué mide en palabras simples; se cierra tocando fuera o con la tecla Escape. Arriba: **Actualizar** (con la hora de la última carga), **Descargar Excel** (un archivo CSV que Excel abre con tildes) e **Imprimir** (solo en tableta y computadora).
 
 Las cifras salen de la misma función que el PDF semanal, así que siempre coinciden con el informe.
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buckets, buildSeries, delta, formatHours, insights, parsePeriod, periodRange, toCsv } from './dashboard';
+import { buckets, buildSeries, change, delta, formatHours, insights, kpiNumber, parsePeriod, periodRange, toCsv } from './dashboard';
 
 // 21/10/2026 a las 10:00 en Santo Domingo (UTC−4)
 const NOW = new Date('2026-10-21T14:00:00Z');
@@ -67,6 +67,30 @@ describe('comparación con el periodo anterior', () => {
   });
 });
 
+describe('comparación para leer de un vistazo', () => {
+  it('con poca base muestra la diferencia en unidades, no un porcentaje engañoso', () => {
+    expect(change(263, 1, true)).toMatchObject({ arrow: 'up', short: '+262', tone: 'good' });
+    expect(change(4, 1, false)).toMatchObject({ arrow: 'up', short: '+3', tone: 'bad' });
+    expect(change(5, 0, true).short).toBe('+5');
+  });
+  it('con base suficiente muestra el porcentaje', () => {
+    expect(change(30, 20, true)).toMatchObject({ short: '+50 %', tone: 'good' });
+    expect(change(15, 20, false)).toMatchObject({ arrow: 'down', short: '−25 %', tone: 'good' });
+  });
+  it('sin cambios es neutral y lo dice en palabras para lectores de pantalla', () => {
+    expect(change(3, 3, true)).toMatchObject({ arrow: 'same', short: 'igual', tone: 'neutral' });
+    expect(change(4, 1, false).spoken).toBe('subió 3 frente al periodo anterior, empeora');
+  });
+});
+
+describe('números de los indicadores', () => {
+  it('separador de miles hasta 9 999 y abreviado desde 10 000', () => {
+    expect(kpiNumber(9999)).toBe('9,999');
+    expect(kpiNumber(12345)).toBe('12.3 k'); // espacio que no se parte de línea
+    expect(kpiNumber(3_500_000)).toBe('3.5 M');
+  });
+});
+
 describe('tiempos legibles', () => {
   it('minutos, horas y días', () => {
     expect(formatHours(0.25)).toBe('15 min');
@@ -83,7 +107,10 @@ describe('aspectos destacados', () => {
       days: 7, received: 12, receivedPrev: 8, resolved: 3, openNow: 4, oldestPendingHours: 80,
       topTrafficType: { label: 'Bache', count: 5 }, topMunicipality: { name: 'Monción', share: 0.6 }, topViewed: { name: 'Presa de Monción', views: 40 },
     });
-    expect(out[0]).toBe('Llegaron 12 reportes: 50 % más que en los 7 días anteriores.');
+    // Con 8 de base (menos de 10) se dice la diferencia, igual que en las tarjetas: el porcentaje exageraría
+    expect(out[0]).toBe('Llegaron 12 reportes: 4 más que en los 7 días anteriores.');
+    const big = insights({ days: 30, received: 30, receivedPrev: 20, resolved: 0, openNow: 0, oldestPendingHours: null, topTrafficType: null, topMunicipality: null, topViewed: null });
+    expect(big[0]).toBe('Llegaron 30 reportes: 50 % más que en los 30 días anteriores.');
     expect(out).toContain('Hay un reporte esperando respuesta desde hace 3 d 8 h.');
     expect(out).toContain('Monción concentra el 60 % de los reportes.');
     expect(out.some((s) => s.includes('Presa de Monción'))).toBe(true);
