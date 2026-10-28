@@ -33,11 +33,11 @@ Quedan unas **5 semanas**. Casi todo lo que falta ya no es código: contenido, p
 
 | Criterio (puntos) | Qué lo respalda | Qué falta para el máximo |
 |---|---|---|
-| **Funcionalidad (25)** | F1–F6, panel, PDF, PWA; 195 pruebas de base de datos, 127 unitarias, 25 pruebas E2E en 9 archivos (19 sin la clave de prueba del captcha) y 3 pendientes de las cuentas externas (`plan-produccion.spec.ts`) | Contenido real en turismo y rutas; base de producción separada |
-| **UX/UI para baja alfabetización digital (20)** | Lenguaje sencillo, letra Lexend/Nunito, áreas táctiles de 44 px, contraste WCAG AA en claro y oscuro (axe en 16 pantallas), sin conexión | **Pruebas con vecinos** (dos rondas) y sus cifras en la presentación |
-| **Innovación (20)** | Confirmación comunitaria de alertas, reputación, aviso de reporte parecido cercano antes de enviar (`ST_DWithin`, 150 m), datos abiertos (OSM), costo casi cero | Ideas opcionales que quedan en §5.4 |
-| **Impacto territorial (15)** | Los 3 municipios, límites oficiales de OSM, indicadores por municipio | Contenido de Monción y Villa Los Almácigos; testimonios de la prueba con vecinos |
-| **Sostenibilidad (10)** | Planes gratuitos, copia diaria cifrada, manual administrativo, traspaso documentado | Cuentas a nombre de la organización (§5.2) |
+| **Funcionalidad (25)** | F1–F6, panel, PDF, PWA; 200 pruebas de base de datos, 151 unitarias, 35 pruebas E2E en 12 archivos (29 sin la clave de prueba del captcha) y 3 pendientes de las cuentas externas (`plan-produccion.spec.ts`) | Contenido real en turismo y rutas; base de producción separada |
+| **UX/UI para baja alfabetización digital (20)** | Botón **Escuchar** (lee fichas y pasos con la voz del teléfono, sin internet), lenguaje sencillo, letra Lexend/Nunito, áreas táctiles de 44 px, contraste WCAG AA en claro y oscuro (axe en 16 pantallas), sin conexión | **Pruebas con vecinos** (dos rondas) y sus cifras en la presentación |
+| **Innovación (20)** | Confirmación comunitaria de alertas, reputación, aviso de reporte parecido cercano antes de enviar (`ST_DWithin`, 150 m), **capa de zonas con más reportes** (cuadros de ~550 m, sin ubicar a nadie), **«Lo más importante de la semana»** redactado solo en el PDF, datos abiertos (OSM), costo casi cero | Mostrarlo en la demo |
+| **Impacto territorial (15)** | Los 3 municipios, límites oficiales de OSM, indicadores por municipio, categorías locales (casabe, productos de finca, agropecuaria, animales en la vía, camino vecinal) | Contenido de Monción y Villa Los Almácigos; testimonios de la prueba con vecinos |
+| **Sostenibilidad (10)** | Planes gratuitos, copia diaria cifrada, manual administrativo, [plan de operación municipal](plan-de-operacion.md) (costos, quién hace qué, qué hacer si algo falla), traspaso documentado | Cuentas a nombre de la organización (§5.2) |
 | **Código y documentación (10)** | Monolito modular con fronteras verificadas, RLS en todo, auditoría de seguridad repetible, ADR, manuales | Mantenerlo al día hasta el cierre |
 
 Las cifras de calidad (pruebas, migraciones, funciones) están en [DATABASE.md](../DATABASE.md) y [SECURITY.md](../SECURITY.md).
@@ -84,6 +84,15 @@ Las 30 migraciones están aplicadas en staging (`npx supabase migration list` la
 | 1 | `20261021130000_e2e_rate_limit_reset` | `e2e_reset_rate_limits`, para que las E2E se puedan repetir ([DATABASE.md §5.22](../DATABASE.md#522-e2e-repetibles--20261021130000_e2e_rate_limit_resetsql)). Comprobado: 3 corridas seguidas, 17/17 cada una |
 | 2 | `20261022120000_attachment_credit` | Columna `attachments.credit` para el crédito de las fotos libres ([DATABASE.md §5.24](../DATABASE.md#524-crédito-de-las-fotos-con-licencia-libre--20261022120000_attachment_creditsql)) |
 | 3 | `20261022130000_similar_reports` | `find_similar_reports`, el aviso de reporte parecido ([DATABASE.md §5.23](../DATABASE.md#523-aviso-de-reporte-parecido-cercano--20261022130000_similar_reportssql)) |
+
+### 5.1.4 Migraciones del 28/10 por aplicar
+
+Dos migraciones nuevas, probadas en PGlite (200/200) y con copia previa (`backups/staging-202610281123.json`). **Falta aplicarlas** en staging: `npx supabase db push --dry-run` y después `npx supabase db push`. Mientras no se apliquen, la app funciona igual: las categorías nuevas no aparecen y el mapa no ofrece la capa de calor.
+
+| # | Migración | Qué hace |
+|---|---|---|
+| 1 | `20261028120000_local_categories` | Categorías locales: casabe, productos de finca, agropecuaria, animales en la vía, camino vecinal o puente |
+| 2 | `20261028130000_report_hotspots` | `report_hotspots`: puntos calientes agregados en cuadros de ~550 m, solo con 2+ reportes públicos |
 
 ### 5.1.3 Propuestas de la limpieza de código
 
@@ -140,8 +149,8 @@ La limpieza del 21/10 quitó código muerto, unificó ayudas repetidas y puso al
 Solo si sobra tiempo después de §5.1–§5.3:
 
 - ✅ **Hecho:** avisar de un reporte parecido cercano antes de enviar uno nuevo (`ST_DWithin`), para evitar duplicados. Después de elegir tipo y lugar, si hay una alerta o un reporte al municipio abierto del mismo tipo a menos de 150 m, el asistente pregunta "Ya hay un reporte parecido aquí. ¿Quieres apoyarlo en lugar de crear otro?" con **Apoyarlo**, **Ver el reporte** y **Crear el mío igual**; nunca bloquea el envío ([DATABASE.md §5.23](../DATABASE.md#523-aviso-de-reporte-parecido-cercano--20261022130000_similar_reportssql)).
-- Frases de "aspectos destacados" también en el PDF semanal.
-- Capa de "puntos calientes" con los reportes más frecuentes.
+- ✅ **Hecho (28/10):** «Lo más importante de la semana» en el PDF semanal, con reglas fijas a partir de sus propias cifras.
+- ✅ **Hecho (28/10):** capa «Zonas con más reportes» en el mapa (`report_hotspots`, migración 20261028130000).
 
 ## 6. Riesgos
 
