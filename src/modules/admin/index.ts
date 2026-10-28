@@ -3,4 +3,4 @@
 // tránsito, consultas, contenido, informes, equipo, auditoría y catálogos. No es dueño de esos datos:
 // cada cambio de estado lo valida la RPC del dominio correspondiente en la base (ADR-018).
 // Su API está en server.ts (solo servidor).
-export { PERIODS, parsePeriod, periodRange, delta, change, kpiNumber, formatHours, waitingSince, insights, toCsv, type PeriodDays, type PeriodRange, type SeriesPoint, type Delta, type Change } from './dashboard';
+export { PERIODS, parsePeriod, periodRange, delta, change, kpiNumber, formatHours, waitingSince, insights, topTrafficType, topMunicipality, toCsv, type PeriodDays, type PeriodRange, type SeriesPoint, type Delta, type Change } from './dashboard';

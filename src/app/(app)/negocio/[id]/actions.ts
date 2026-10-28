@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { businessUpdateInput, hoursInput, promotionInput } from '@/modules/businesses';
 import { createPromotion, setBusinessHours, updateBusiness } from '@/modules/businesses/server';
 import { createClient } from '@/lib/supabase/server';
-import { fromRpc, invalid, unavailable, type ActionResult } from '../../_contenido/action-result';
+import { fromRpc, invalid, unavailable, type ActionResult } from '../../_content/action-result';
 
 function refresh(id: string) {
   revalidatePath(`/negocio/${id}`);

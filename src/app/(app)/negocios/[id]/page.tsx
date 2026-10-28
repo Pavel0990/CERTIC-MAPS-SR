@@ -14,8 +14,8 @@ import { WEEKDAYS } from '@/lib/vocabulary';
 import { createClient } from '@/lib/supabase/server';
 import { formatDate } from '@/utils/format';
 import { APP_TIMEZONE } from '@/utils/locale';
-import { DirectionsButton, HeaderActions, InfoRow, RejectedNotice, SecondaryLink, StatusLine, UUID } from '../../_contenido/detail';
-import { PhotoGallery } from '../../_contenido/photo-gallery';
+import { DirectionsButton, HeaderActions, InfoRow, RejectedNotice, SecondaryLink, StatusLine, UUID } from '../../_content/detail';
+import { PhotoGallery } from '../../_content/photo-gallery';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;

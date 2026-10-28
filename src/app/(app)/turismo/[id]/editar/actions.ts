@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { placeUpdateInput } from '@/modules/tourism';
 import { updatePlace } from '@/modules/tourism/server';
 import { createClient } from '@/lib/supabase/server';
-import { fromRpc, invalid, unavailable, type ActionResult } from '../../../_contenido/action-result';
+import { fromRpc, invalid, unavailable, type ActionResult } from '../../../_content/action-result';
 
 /** Guarda los cambios de un lugar (update_place). La base comprueba el permiso y la versión. */
 export async function savePlace(input: unknown): Promise<ActionResult> {

@@ -1,5 +1,5 @@
 import 'server-only';
-import type { Viewer } from '@/lib/auth';
+import { isStaffOf, type Viewer } from '@/lib/auth';
 
 /**
  * ¿Mostrar "Editar" en un lugar o una ruta? Solo decide la interfaz: update_place y update_route
@@ -10,14 +10,5 @@ import type { Viewer } from '@/lib/auth';
  */
 export function canEditContent(viewer: Viewer | null, municipalityId: string, status: string) {
   if (!viewer) return false;
-  const staffHere = viewer.roles.some(
-    (r) => (r.role === 'moderator' || r.role === 'municipal_admin') && (r.municipality_id === null || r.municipality_id === municipalityId),
-  );
-  return staffHere || status === 'pending';
-}
-
-export function isStaffOf(viewer: Viewer | null, municipalityId: string) {
-  return !!viewer?.roles.some(
-    (r) => (r.role === 'moderator' || r.role === 'municipal_admin') && (r.municipality_id === null || r.municipality_id === municipalityId),
-  );
+  return isStaffOf(viewer, municipalityId) || status === 'pending';
 }

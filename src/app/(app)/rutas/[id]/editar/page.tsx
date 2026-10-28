@@ -6,8 +6,8 @@ import { PageShell } from '@/components/shared/page';
 import { Card } from '@/components/ui/primitives';
 import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { UUID } from '../../../_contenido/detail';
-import { canEditContent } from '../../../_contenido/permissions';
+import { UUID } from '../../../_content/detail';
+import { canEditContent } from '../../../_content/permissions';
 import { RouteForm } from './route-form';
 
 export const metadata: Metadata = { title: 'Editar ruta' };

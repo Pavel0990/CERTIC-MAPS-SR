@@ -5,13 +5,12 @@ import { getBusinessDetail, getBusinessStats, isBusinessMember, listPromotions }
 import { listPhotos } from '@/modules/media/server';
 import { PageShell } from '@/components/shared/page';
 import { Badge, Card, Eyebrow, Notice } from '@/components/ui/primitives';
-import { requireViewer } from '@/lib/auth';
+import { isStaffOf, requireViewer } from '@/lib/auth';
 import { CONTENT_STATUS, type ContentStatus } from '@/lib/vocabulary';
 import { createClient } from '@/lib/supabase/server';
 import { formatDate, formatNumber } from '@/utils/format';
-import { HeaderActions, RejectedNotice, SecondaryLink, StatusLine, UUID } from '../../_contenido/detail';
-import { PhotoGallery } from '../../_contenido/photo-gallery';
-import { isStaffOf } from '../../_contenido/permissions';
+import { HeaderActions, RejectedNotice, SecondaryLink, StatusLine, UUID } from '../../_content/detail';
+import { PhotoGallery } from '../../_content/photo-gallery';
 import { AddPhotos, BusinessForm, HoursEditor, PromotionForm } from './owner-forms';
 
 export const metadata: Metadata = { title: 'Mi negocio' };

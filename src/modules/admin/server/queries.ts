@@ -1,6 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import type { ServerSupabase } from '@/lib/supabase/server';
+import { isStaffRole, STAFF_ROLES } from '@/types/roles';
 import type { KpiSummary } from '@/types/kpi';
 
 // Lecturas del panel municipal (§9.7). Todas usan el JWT del personal: RLS limita a su alcance.
@@ -9,7 +10,7 @@ export interface Municipality { id: string; name: string; code: string }
 
 /** Municipios que puede gestionar el usuario: todos si es provincial, si no los de sus roles. */
 export function scopeMunicipalities(all: Municipality[], roles: { role: string; municipality_id: string | null }[]) {
-  const staff = roles.filter((r) => r.role === 'moderator' || r.role === 'municipal_admin');
+  const staff = roles.filter((r) => isStaffRole(r.role));
   if (staff.some((r) => r.municipality_id === null)) return all;
   const ids = new Set(staff.map((r) => r.municipality_id));
   return all.filter((m) => ids.has(m.id));
@@ -114,11 +115,14 @@ export async function listAudit(supabase: ServerSupabase, opts: { action?: strin
 
 /** Personas con roles de personal en el alcance del administrador (para la sección Equipo). */
 export async function listTeam(supabase: ServerSupabase) {
-  const { data: roles } = await supabase.from('user_roles').select('id, user_id, role, municipality_id, created_at').in('role', ['moderator', 'municipal_admin']).order('created_at');
+  const { data: roles } = await supabase.from('user_roles').select('id, user_id, role, municipality_id, created_at').in('role', [...STAFF_ROLES]).order('created_at');
   const ids = [...new Set((roles ?? []).map((r) => r.user_id))];
   const { data: profiles } = ids.length ? await supabase.from('profiles').select('id, display_name, avatar_version').in('id', ids) : { data: [] };
   const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
-  return (roles ?? []).map((r) => ({ ...r, name: byId.get(r.user_id)?.display_name ?? 'Usuario', avatar_version: byId.get(r.user_id)?.avatar_version ?? null }));
+  // flatMap con isStaffRole para que `role` llegue como StaffRole (la consulta ya filtra solo personal)
+  return (roles ?? []).flatMap(({ role, ...r }) => isStaffRole(role)
+    ? [{ ...r, role, name: byId.get(r.user_id)?.display_name ?? 'Usuario', avatar_version: byId.get(r.user_id)?.avatar_version ?? null }]
+    : []);
 }
 
 /** Buscar personas registradas por nombre (el personal puede leer perfiles, §10.2). */

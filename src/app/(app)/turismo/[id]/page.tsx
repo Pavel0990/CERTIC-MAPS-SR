@@ -12,9 +12,9 @@ import { getViewer } from '@/lib/auth';
 import { PLACE_KIND } from '@/lib/vocabulary';
 import { createClient } from '@/lib/supabase/server';
 import { formatDate } from '@/utils/format';
-import { DirectionsButton, HeaderActions, InfoRow, PendingContentCard, RejectedNotice, SecondaryLink, ServicesCard, StatusLine, UUID } from '../../_contenido/detail';
-import { PhotoGallery } from '../../_contenido/photo-gallery';
-import { canEditContent } from '../../_contenido/permissions';
+import { DirectionsButton, HeaderActions, InfoRow, PendingContentCard, RejectedNotice, SecondaryLink, ServicesCard, StatusLine, UUID } from '../../_content/detail';
+import { PhotoGallery } from '../../_content/photo-gallery';
+import { canEditContent } from '../../_content/permissions';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
