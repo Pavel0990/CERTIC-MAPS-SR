@@ -1,7 +1,7 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import { formatNumber } from '@/utils/format';
 import { APP_TIMEZONE } from '@/utils/locale';
-import type { WeeklyReportData, WeeklyKpis } from '../index';
+import { weeklyHighlights, type WeeklyReportData, type WeeklyKpis } from '../index';
 
 // Colores de la marca (src/app/globals.css). Helvetica estándar: cubre tildes y eñes sin incrustar fuentes.
 const C = { ink: '#111418', muted: '#5b616b', line: '#e6e8eb', brand: '#2563eb', brandSoft: '#eaf1ff', ok: '#15803d', warn: '#8a5a00' };
@@ -23,6 +23,9 @@ const s = StyleSheet.create({
   barTrack: { height: 6, backgroundColor: C.brandSoft, borderRadius: 3, flexGrow: 1, marginHorizontal: 8 },
   bar: { height: 6, backgroundColor: C.brand, borderRadius: 3 },
   note: { fontSize: 9, color: C.muted, marginTop: 6 },
+  highlights: { backgroundColor: C.brandSoft, borderRadius: 6, padding: 12, marginBottom: 4 },
+  bullet: { flexDirection: 'row', marginTop: 4 },
+  dot: { width: 12, color: C.brand, fontFamily: 'Helvetica-Bold' },
   footer: { position: 'absolute', bottom: 24, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between', fontSize: 8, color: C.muted },
 });
 
@@ -86,6 +89,7 @@ export function WeeklyReportDocument({ data, generatedAt }: { data: WeeklyReport
   const period = periodLabel(data.period_start, data.period_end);
   const stamp = new Intl.DateTimeFormat('es-DO', { dateStyle: 'long', timeStyle: 'short', timeZone: APP_TIMEZONE }).format(generatedAt);
   const k = province;
+  const highlights = weeklyHighlights(data);
 
   return (
     <Document title={`Informe semanal ${data.province_name} · ${period}`} author="SR Conecta" subject="Informe semanal de gestión municipal" language="es">
@@ -96,7 +100,19 @@ export function WeeklyReportDocument({ data, generatedAt }: { data: WeeklyReport
           <Text style={s.subtitle}>Semana del {period} · versión {data.version}{data.trigger === 'manual' ? ' (regenerada)' : ''}</Text>
         </View>
 
-        <Text style={[s.h2, { marginTop: 0 }]}>Resumen de la semana</Text>
+        {highlights.length > 0 && (
+          <View style={s.highlights} wrap={false}>
+            <Text style={[s.h2, { marginTop: 0, marginBottom: 2 }]}>Lo más importante de la semana</Text>
+            {highlights.map((h) => (
+              <View key={h} style={s.bullet}>
+                <Text style={s.dot}>•</Text>
+                <Text style={{ flexGrow: 1, flexShrink: 1, fontSize: 10.5, lineHeight: 1.35 }}>{h}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <Text style={s.h2}>Resumen de la semana</Text>
         <View style={s.grid}>
           <Card value={n(k.traffic.received)} label="Alertas de tránsito recibidas" />
           <Card value={n(k.traffic.published)} label="Alertas publicadas en el mapa" />
@@ -166,6 +182,7 @@ export function WeeklyReportDocument({ data, generatedAt }: { data: WeeklyReport
           Periodo de lunes a domingo en hora de República Dominicana. Las cifras salen de una foto fija tomada al generar esta versión:
           son las mismas que mostraba el panel en ese momento y no cambian aunque el panel siga actualizándose. Si se regenera, se crea
           una versión nueva y las anteriores se conservan. El informe contiene solo cifras agregadas, sin datos personales.
+          «Lo más importante de la semana» se redacta solo, con reglas fijas a partir de estas mismas cifras.
         </Text>
         <Footer stamp={stamp} />
       </Page>

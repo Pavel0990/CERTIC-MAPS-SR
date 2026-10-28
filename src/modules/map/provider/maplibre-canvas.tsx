@@ -4,7 +4,7 @@ import { Map as MLMap, Marker, NavigationControl, setWorkerUrl, type GeoJSONSour
 import maplibrePkg from 'maplibre-gl/package.json';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { ICON_PATHS, LAYERS } from '../layers';
-import type { BBox, LatLng, MapFeature, MapFeatureCollection, StaticLayers } from '../types';
+import type { BBox, HotspotCollection, LatLng, MapFeature, MapFeatureCollection, StaticLayers } from '../types';
 
 // Proveedor MapLibre GL + OpenFreeMap (datos © OpenStreetMap): el mapa base definitivo del MVP (ADR-022,
 // que sustituye a ADR-004). El resto de la app no conoce esta librería.
@@ -15,6 +15,8 @@ setWorkerUrl(`/vendor/maplibre/${maplibrePkg.version}/maplibre-gl-worker.mjs`);
 export interface MapCanvasProps {
   features?: MapFeatureCollection;
   staticLayers?: StaticLayers | null;
+  /** Capa de calor de puntos calientes; `null` u omitida = oculta. */
+  hotspots?: HotspotCollection | null;
   initialView: { center: LatLng; zoom: number; bounds?: BBox };
   focus?: { center: LatLng; zoom?: number; key: string | number } | null;
   userLocation?: LatLng | null;
@@ -31,6 +33,7 @@ export interface MapCanvasProps {
 }
 
 const EMPTY: MapFeatureCollection = { type: 'FeatureCollection', features: [] };
+const EMPTY_HOT: HotspotCollection = { type: 'FeatureCollection', features: [] };
 
 function markerSvg(color: string, path: string, size = 44) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 44 44">
@@ -60,6 +63,7 @@ function loadImage(svg: string, px: number) {
 export default function MaplibreCanvas({
   features = EMPTY,
   staticLayers,
+  hotspots = null,
   initialView,
   focus,
   userLocation,
@@ -79,7 +83,7 @@ export default function MaplibreCanvas({
   // Callbacks y datos más recientes, leídos desde los eventos del mapa sin recrearlo
   const emitMove = useEffectEvent((v: Parameters<NonNullable<MapCanvasProps['onMoveEnd']>>[0]) => onMoveEnd?.(v));
   const emitSelect = useEffectEvent((id: string | null) => onSelect?.(id ? features.features.find((x) => x.properties.id === id) ?? null : null));
-  const current = useEffectEvent(() => ({ features, staticLayers, selectedId }));
+  const current = useEffectEvent(() => ({ features, staticLayers, selectedId, hotspots }));
 
   // Crear el mapa una sola vez
   useEffect(() => {
@@ -134,6 +138,21 @@ export default function MaplibreCanvas({
       map.addSource('routes', { type: 'geojson', data: current().staticLayers?.routes ?? { type: 'FeatureCollection', features: [] } });
       map.addLayer({ id: 'route-casing', type: 'line', source: 'routes', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 7 } });
       map.addLayer({ id: 'route-line', type: 'line', source: 'routes', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#0e9f9a', 'line-width': 4 } });
+
+      // Puntos calientes: debajo de los marcadores; el peso es el número de reportes del cuadro
+      const hot = current().hotspots;
+      map.addSource('hotspots', { type: 'geojson', data: hot ?? EMPTY_HOT });
+      map.addLayer({
+        id: 'hotspots-heat', type: 'heatmap', source: 'hotspots', layout: { visibility: hot ? 'visible' : 'none' },
+        paint: {
+          'heatmap-weight': ['interpolate', ['linear'], ['get', 'count'], 2, 0.35, 10, 1],
+          'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 8, 0.8, 14, 2],
+          'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 8, 18, 12, 34, 15, 60],
+          'heatmap-opacity': 0.72,
+          'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'],
+            0, 'rgba(250,204,21,0)', 0.2, 'rgba(250,204,21,0.55)', 0.5, 'rgba(249,115,22,0.75)', 0.8, 'rgba(229,72,77,0.85)', 1, 'rgba(185,28,28,0.9)'],
+        },
+      });
 
       map.addSource('points', { type: 'geojson', data: current().features, cluster: true, clusterRadius: 46, clusterMaxZoom: 15 });
       map.addLayer({
@@ -211,6 +230,14 @@ export default function MaplibreCanvas({
     (map.getSource('municipalities') as GeoJSONSource | undefined)?.setData(staticLayers.municipalities);
     (map.getSource('routes') as GeoJSONSource | undefined)?.setData(staticLayers.routes);
   }, [staticLayers]);
+
+  // Puntos calientes: mostrar, ocultar o actualizar
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready.current || !map.getLayer('hotspots-heat')) return;
+    (map.getSource('hotspots') as GeoJSONSource | undefined)?.setData(hotspots ?? EMPTY_HOT);
+    map.setLayoutProperty('hotspots-heat', 'visibility', hotspots ? 'visible' : 'none');
+  }, [hotspots]);
 
   // Resaltar el seleccionado
   useEffect(() => {

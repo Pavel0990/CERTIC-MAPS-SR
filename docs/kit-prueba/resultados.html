@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resultados — prueba con vecinos</title>
+<!-- Planilla de resultados de la prueba con vecinos (docs/prueba-con-vecinos.md). Funciona sin internet;
+     lo escrito se guarda solo en este navegador. «Descargar CSV» guarda una copia para el repositorio o Excel. -->
+<style>
+  :root { --ink: #111418; --muted: #5b616b; --line: #d6d9de; --brand: #1d4ed8; --ok: #15803d; --warn: #b45309; --bad: #b91c1c; --bg: #f3f4f6; --card: #fff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: 24px; margin: 0; }
+  .sub { color: var(--muted); margin: 4px 0 16px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+  label.round { font-weight: 600; }
+  select, input, button { font: inherit; }
+  select, input { min-height: 40px; border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; background: #fff; color: var(--ink); }
+  button { min-height: 44px; border: 0; border-radius: 999px; padding: 0 18px; font-weight: 600; cursor: pointer; background: #e0e7ff; color: #1e3a8a; }
+  button.primary { background: var(--brand); color: #fff; }
+  button.danger { background: transparent; color: var(--bad); }
+  .scroll { overflow-x: auto; background: var(--card); border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; min-width: 900px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 6px; text-align: left; }
+  th { font-size: 13px; color: var(--muted); background: #f9fafb; position: sticky; top: 0; }
+  td.total { font-weight: 700; text-align: center; }
+  input.who { width: 70px; } input.notes { width: 100%; min-width: 160px; }
+  select.t { width: 92px; }
+  select.t[data-v="si"] { background: #dcfce7; } select.t[data-v="ayuda"] { background: #fef3c7; } select.t[data-v="no"] { background: #fee2e2; }
+  tfoot td { font-weight: 700; background: #f9fafb; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 16px 0; }
+  .card { background: var(--card); border-radius: 12px; padding: 14px 16px; }
+  .card b { display: block; font-size: 28px; }
+  .card span { color: var(--muted); font-size: 13px; }
+  .phrase { background: var(--card); border-left: 4px solid var(--brand); border-radius: 8px; padding: 12px 14px; font-size: 16px; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink: #e8eaed; --muted: #a3a9b3; --line: #2c3238; --bg: #0e1114; --card: #171b1f; }
+    select, input { background: #1f2429; color: var(--ink); }
+    th, tfoot td { background: #1b2025; }
+    select.t[data-v="si"] { background: #14532d; } select.t[data-v="ayuda"] { background: #713f12; } select.t[data-v="no"] { background: #7f1d1d; }
+    button { background: #1e293b; color: #c7d2fe; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Resultados de la prueba con vecinos</h1>
+  <p class="sub">Una fila por persona. En cada tarea elige <b>Sí</b> (sin ayuda), <b>Con ayuda</b> o <b>No</b>. Se guarda solo en este navegador.</p>
+
+  <div class="bar">
+    <label class="round" for="round">Ronda</label>
+    <select id="round"><option value="1">1</option><option value="2">2</option></select>
+    <button id="add" class="primary">Agregar persona</button>
+    <button id="csv">Descargar CSV</button>
+    <button id="clear" class="danger">Borrar esta ronda</button>
+  </div>
+
+  <div class="scroll"><table>
+    <thead><tr id="head"></tr></thead>
+    <tbody id="rows"></tbody>
+    <tfoot><tr id="foot"></tr></tfoot>
+  </table></div>
+
+  <div class="cards" id="cards"></div>
+  <p class="phrase" id="phrase"></p>
+</main>
+<script>
+  const TASKS = ['Qué es', 'Farmacia y llamar', 'Reportar bache', 'Entrar', 'Estado del reporte', 'Lugar y cómo llegar', 'Avisos', 'Escuchar'];
+  const OPTS = [['', '—'], ['si', 'Sí'], ['ayuda', 'Con ayuda'], ['no', 'No']];
+  const key = () => 'srconecta-prueba-ronda-' + round.value;
+  const load = () => { try { return JSON.parse(localStorage.getItem(key())) || []; } catch { return []; } };
+  const save = (rows) => { try { localStorage.setItem(key(), JSON.stringify(rows)); } catch { /* modo privado: no se guarda */ } };
+  let rows = [];
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  function render() {
+    document.getElementById('head').innerHTML = '<th>Persona</th><th>Edad</th><th>Municipio</th>' + TASKS.map((t, i) => `<th>${i + 1}. ${t}</th>`).join('') + '<th>Fácil (1–5)</th><th>Sin ayuda</th><th>Notas</th><th></th>';
+    document.getElementById('rows').innerHTML = rows.map((r, ri) => `<tr>
+      <td><input class="who" data-r="${ri}" data-f="who" value="${esc(r.who)}" aria-label="Persona ${ri + 1}"></td>
+      <td><input class="who" data-r="${ri}" data-f="age" value="${esc(r.age)}" inputmode="numeric" aria-label="Edad"></td>
+      <td><input class="who" style="width:110px" data-r="${ri}" data-f="muni" value="${esc(r.muni)}" aria-label="Municipio"></td>
+      ${TASKS.map((t, ti) => `<td><select class="t" data-r="${ri}" data-t="${ti}" data-v="${r.t[ti] || ''}" aria-label="Tarea ${ti + 1}, persona ${ri + 1}">${OPTS.map(([v, l]) => `<option value="${v}"${r.t[ti] === v ? ' selected' : ''}>${l}</option>`).join('')}</select></td>`).join('')}
+      <td><select data-r="${ri}" data-f="ease" aria-label="Facilidad">${['', 1, 2, 3, 4, 5].map((v) => `<option${String(r.ease) === String(v) ? ' selected' : ''}>${v}</option>`).join('')}</select></td>
+      <td class="total">${r.t.filter((v) => v === 'si').length}/${TASKS.length}</td>
+      <td><input class="notes" data-r="${ri}" data-f="notes" value="${esc(r.notes)}" aria-label="Notas"></td>
+      <td><button class="danger" data-del="${ri}" aria-label="Quitar persona ${ri + 1}">✕</button></td></tr>`).join('');
+    const per = TASKS.map((_, ti) => rows.filter((r) => r.t[ti] === 'si').length);
+    document.getElementById('foot').innerHTML = `<td colspan="3">Sin ayuda, por tarea</td>` + per.map((n) => `<td>${n}/${rows.length}</td>`).join('') + '<td></td><td></td><td></td><td></td>';
+
+    const done = per.reduce((a, b) => a + b, 0);
+    const total = rows.length * TASKS.length;
+    const eases = rows.map((r) => Number(r.ease)).filter(Boolean);
+    const avg = eases.length ? (eases.reduce((a, b) => a + b, 0) / eases.length).toFixed(1) : '—';
+    const worst = rows.length ? TASKS.map((t, i) => ({ t, n: per[i] })).sort((a, b) => a.n - b.n)[0] : null;
+    document.getElementById('cards').innerHTML = `
+      <div class="card"><b>${rows.length}</b><span>personas</span></div>
+      <div class="card"><b>${done}/${total || 0}</b><span>tareas logradas sin ayuda${total ? ` (${Math.round((done / total) * 100)} %)` : ''}</span></div>
+      <div class="card"><b>${avg}</b><span>facilidad promedio (1–5)</span></div>
+      <div class="card"><b>${worst ? esc(worst.t) : '—'}</b><span>tarea más difícil${worst ? ` (${worst.n}/${rows.length} sin ayuda)` : ''}</span></div>`;
+    document.getElementById('phrase').textContent = rows.length
+      ? `Para la presentación: «Lo probamos con ${rows.length} vecinos de Santiago Rodríguez: lograron ${done} de ${total} tareas sin ayuda.»`
+      : 'Agrega a la primera persona para empezar.';
+  }
+
+  function refresh() { rows = load(); render(); }
+  document.addEventListener('change', (e) => {
+    const el = e.target; const r = rows[el.dataset.r]; if (!r) return;
+    if (el.dataset.t !== undefined) { r.t[el.dataset.t] = el.value; el.dataset.v = el.value; } else if (el.dataset.f) r[el.dataset.f] = el.value;
+    save(rows); render();
+  });
+  document.addEventListener('click', (e) => {
+    const d = e.target.closest('[data-del]'); if (!d) return;
+    if (confirm('¿Quitar a esta persona de la ronda?')) { rows.splice(Number(d.dataset.del), 1); save(rows); render(); }
+  });
+  document.getElementById('add').onclick = () => { rows.push({ who: '', age: '', muni: '', t: [], ease: '', notes: '' }); save(rows); render(); };
+  document.getElementById('clear').onclick = () => { if (confirm('¿Borrar todos los datos de esta ronda?')) { rows = []; save(rows); render(); } };
+  document.getElementById('csv').onclick = () => {
+    const q = (s) => `"${String(s ?? '').replace(/"/g, '""')}"`;
+    const head = ['ronda', 'persona', 'edad', 'municipio', ...TASKS.map((t, i) => `t${i + 1}`), 'facilidad', 'sin_ayuda', 'notas'];
+    const lines = rows.map((r) => [round.value, r.who, r.age, r.muni, ...TASKS.map((_, i) => r.t[i] || ''), r.ease, r.t.filter((v) => v === 'si').length, r.notes].map(q).join(','));
+    const blob = new Blob(['﻿' + [head.join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `prueba-vecinos-ronda-${round.value}.csv`; a.click(); URL.revokeObjectURL(a.href);
+  };
+  round.onchange = refresh;
+  refresh();
+</script>
+</body>
+</html>
