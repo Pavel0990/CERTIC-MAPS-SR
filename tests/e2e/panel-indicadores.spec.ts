@@ -23,9 +23,14 @@ test('la administración cambia el periodo, recorre el gráfico y abre una lista
   await page.getByText('Ver como tabla').click();
   await expect(page.getByRole('columnheader', { name: 'Recibidos' })).toBeVisible();
 
-  // Cada "?" explica el indicador en lenguaje sencillo
-  await page.getByLabel('Qué mide «Abiertos ahora»').click();
+  // Cada "?" explica el indicador en lenguaje sencillo; solo una abierta a la vez y Escape la cierra
+  const help = page.getByLabel('Qué mide «Abiertos ahora»');
+  await help.click();
   await expect(page.getByText(/todavía no se resolvieron ni se descartaron/)).toBeVisible();
+  await page.getByLabel('Qué mide «Reportes recibidos»').click();
+  await expect(help).toHaveAttribute('aria-expanded', 'false');
+  await page.keyboard.press('Escape');
+  await expect(page.getByLabel('Qué mide «Reportes recibidos»')).toHaveAttribute('aria-expanded', 'false');
 
   // Un indicador lleva a su lista
   await page.getByRole('link', { name: /Por validar/ }).click();

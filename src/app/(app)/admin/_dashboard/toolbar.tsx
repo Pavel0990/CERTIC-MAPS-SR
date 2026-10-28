@@ -28,7 +28,7 @@ export function DashboardToolbar({ days, municipio, updatedAt, csv, csvName }: {
   }
 
   return (
-    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between print:hidden">
+    <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between print:hidden">
       <nav aria-label="Periodo" className="inline-flex shrink-0 self-start rounded-full bg-ink p-1 shadow-[var(--shadow-card)]">
         {PERIODS.map((d) => (
           <Link prefetch={false} key={d} href={hrefFor(d)} scroll={false} aria-current={d === days ? 'true' : undefined}
@@ -38,19 +38,21 @@ export function DashboardToolbar({ days, municipio, updatedAt, csv, csvName }: {
         ))}
       </nav>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-1 w-full text-sm text-muted sm:w-auto" aria-live="polite">{pending ? 'Actualizando…' : `Actualizado a las ${time}`}</span>
+        <span className="w-full text-sm text-muted xl:mr-1 xl:w-auto" aria-live="polite">{pending ? 'Actualizando…' : `Actualizado a las ${time}`}</span>
         <IconAction label="Actualizar" onClick={() => start(() => router.refresh())} spin={pending}><RefreshCw className="size-4" /></IconAction>
-        <IconAction label="Descargar CSV" onClick={download}><Download className="size-4" /></IconAction>
-        <IconAction label="Imprimir" onClick={() => window.print()}><Printer className="size-4" /></IconAction>
+        {/* El archivo es CSV, pero quien lo usa lo reconoce como "Excel", que es donde se abre */}
+        <IconAction label="Descargar Excel" onClick={download}><Download className="size-4" /></IconAction>
+        {/* En el teléfono casi nadie imprime: sin este botón, las acciones caben en una línea */}
+        <IconAction label="Imprimir" onClick={() => window.print()} className="hidden sm:inline-flex"><Printer className="size-4" /></IconAction>
       </div>
     </div>
   );
 }
 
-function IconAction({ label, onClick, children, spin }: { label: string; onClick: () => void; children: React.ReactNode; spin?: boolean }) {
+function IconAction({ label, onClick, children, spin, className }: { label: string; onClick: () => void; children: React.ReactNode; spin?: boolean; className?: string }) {
   return (
     <button type="button" onClick={onClick} title={label}
-      className="press inline-flex h-11 items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-sm font-semibold text-ink hover:bg-canvas">
+      className={cn('press inline-flex h-11 items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-sm font-semibold text-ink transition-colors duration-200 hover:border-line-strong hover:bg-canvas', className)}>
       <span className={cn(spin && 'animate-spin')} aria-hidden>{children}</span>
       {/* Ícono y texto también en el teléfono (§6.2): un ícono solo no dice qué hace */}
       {label}

@@ -227,3 +227,23 @@
 @media (pointer: coarse) {
   .maplibregl-ctrl-group button { width: 44px; height: 44px; }
 }
+
+/* ── Panel de indicadores (/admin) ─────────────────────────────────────────────
+   Un solo momento de entrada al cargar (las tarjetas suben en cascada), el mini-gráfico
+   se descubre y las barras crecen. 160–700 ms con frenado suave. Con "reducir movimiento"
+   nada de esto se aplica: el contenido aparece quieto y completo. */
+@media (prefers-reduced-motion: no-preference) {
+  .kpi-rise {
+    animation: kpi-rise 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: calc(var(--i, 0) * 60ms);
+  }
+  /* Se descubre con un recorte y no con stroke-dasharray: el trazo sin escalar del SVG estirado rompe el guion en Chrome */
+  .kpi-reveal { animation: kpi-reveal 700ms 180ms cubic-bezier(0.4, 0, 0.2, 1) both; }
+  .kpi-pop { animation: pop-in 360ms 820ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  .kpi-tip { animation: kpi-tip 160ms cubic-bezier(0.2, 0.8, 0.2, 1) both; transform-origin: top right; }
+  .kpi-bar { animation: kpi-bar 600ms 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both; transform-origin: left center; }
+}
+@keyframes kpi-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes kpi-reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes kpi-tip { from { opacity: 0; transform: scale(0.96) translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes kpi-bar { from { transform: scaleX(0); } to { transform: scaleX(1); } }

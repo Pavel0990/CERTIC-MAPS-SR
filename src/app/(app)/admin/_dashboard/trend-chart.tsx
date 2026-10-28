@@ -2,27 +2,11 @@
 import { useId, useState } from 'react';
 import type { SeriesPoint } from '@/modules/admin';
 import { cn } from '@/utils/cn';
+import { monotonePath } from './path';
 
 const W = 640;
 const H = 220;
 const PAD = { top: 16, right: 16, bottom: 8, left: 16 };
-
-/** Curva suave (Catmull-Rom → Bézier) que nunca pasa por debajo de cero. */
-function smooth(pts: [number, number][]) {
-  if (pts.length < 2) return pts.length ? `M${pts[0]![0]},${pts[0]![1]}` : '';
-  let d = `M${pts[0]![0]},${pts[0]![1]}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] ?? pts[i]!;
-    const p1 = pts[i]!;
-    const p2 = pts[i + 1]!;
-    const p3 = pts[i + 2] ?? p2;
-    const base = H - PAD.bottom;
-    const c1y = Math.min(base, p1[1] + (p2[1] - p0[1]) / 6);
-    const c2y = Math.min(base, p2[1] - (p3[1] - p1[1]) / 6);
-    d += ` C${p1[0] + (p2[0] - p0[0]) / 6},${c1y} ${p2[0] - (p3[0] - p1[0]) / 6},${c2y} ${p2[0]},${p2[1]}`;
-  }
-  return d;
-}
 
 /**
  * Recibidos frente a resueltos. Se toca (o se recorre con las flechas del teclado) cada punto para ver su valor;
@@ -35,7 +19,7 @@ export function TrendChart({ series }: { series: SeriesPoint[] }) {
   const max = Math.max(1, ...series.map((p) => Math.max(p.received, p.resolved)));
   const x = (i: number) => PAD.left + (series.length === 1 ? (W - PAD.left - PAD.right) / 2 : (i * (W - PAD.left - PAD.right)) / (series.length - 1));
   const y = (v: number) => PAD.top + (1 - v / max) * (H - PAD.top - PAD.bottom);
-  const line = (key: 'received' | 'resolved') => smooth(series.map((p, i) => [x(i), y(p[key])]));
+  const line = (key: 'received' | 'resolved') => monotonePath(series.map((p, i) => [x(i), y(p[key])]));
   const area = `${line('received')} L${x(series.length - 1)},${H - PAD.bottom} L${x(0)},${H - PAD.bottom} Z`;
   const cur = series[active] ?? series.at(-1)!;
   const empty = series.every((p) => p.received === 0 && p.resolved === 0);
@@ -104,7 +88,9 @@ export function TrendChart({ series }: { series: SeriesPoint[] }) {
           {series.map((p, i) => (i === active || (i % labelStep === 0 && (labelStep === 1 || Math.abs(i - active) > 1))) && (
             <span key={p.from} style={{ left: `${(x(i) / W) * 100}%` }}
               className={cn('absolute top-1 -translate-x-1/2 whitespace-nowrap text-[13px] font-semibold', i === active ? 'font-bold text-ink' : 'text-subtle',
-                i === 0 && 'translate-x-0', i === series.length - 1 && '-translate-x-full')}>{p.label}</span>
+                i === 0 && 'translate-x-0', i === series.length - 1 && '-translate-x-full',
+                // En el teléfono, una fecha de cada dos (siempre la primera, la última y la elegida): si no, se encimaban
+                i % 2 === 1 && i !== active && i !== series.length - 1 && 'max-sm:hidden')}>{p.label}</span>
           ))}
         </div>
         {empty && <p className="pointer-events-none absolute inset-0 grid place-items-center text-[15px] text-muted">Todavía no hay reportes en este periodo.</p>}

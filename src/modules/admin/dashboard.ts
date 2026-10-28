@@ -75,6 +75,32 @@ export function delta(current: number, previous: number, higherIsBetter: boolean
   return { pct, direction, good, text: `${direction === 'up' ? 'subió' : 'bajó'} ${Math.abs(pct)} %` };
 }
 
+export interface Change { arrow: Direction; short: string; tone: 'good' | 'bad' | 'neutral'; spoken: string }
+
+/**
+ * Comparación para leer de un vistazo. Con poca base el porcentaje engaña (de 1 a 263 visitas es "26 200 %"),
+ * así que por debajo de 10 en el periodo anterior se muestra la diferencia en unidades: "+3".
+ */
+export function change(current: number, previous: number, higherIsBetter: boolean, unit = ''): Change {
+  const d = delta(current, previous, higherIsBetter);
+  const tone = d.good === null ? 'neutral' : d.good ? 'good' : 'bad';
+  if (d.direction === 'same') return { arrow: 'same', short: 'igual', tone, spoken: 'igual que el periodo anterior' };
+  const diff = current - previous;
+  const sign = diff > 0 ? '+' : '−';
+  const short = previous < 10 || d.pct === null ? `${sign}${formatInt(Math.abs(diff))}${unit}` : `${sign}${Math.abs(d.pct)} %`;
+  const verdict = tone === 'good' ? ', mejora' : tone === 'bad' ? ', empeora' : '';
+  return { arrow: d.direction, short, tone, spoken: `${diff > 0 ? 'subió' : 'bajó'} ${short.slice(1)} frente al periodo anterior${verdict}` };
+}
+
+const intFmt = new Intl.NumberFormat('es-DO', { maximumFractionDigits: 0 });
+const compactFmt = new Intl.NumberFormat('es-DO', { notation: 'compact', maximumFractionDigits: 1 });
+const formatInt = (n: number) => intFmt.format(n);
+
+/** Números de los indicadores: con separador de miles hasta 9 999 y abreviados desde 10 000 ("12 mil", "3,5 M"). */
+export function kpiNumber(n: number) {
+  return Math.abs(n) >= 10_000 ? compactFmt.format(n) : intFmt.format(n);
+}
+
 /** Horas → "45 min", "3 h 20 min", "2 d 5 h". */
 export function formatHours(hours: number | null | undefined) {
   if (hours == null || !Number.isFinite(hours)) return '—';
@@ -111,7 +137,9 @@ export function insights(i: InsightInput): string[] {
   const d = delta(i.received, i.receivedPrev, false);
   const n = `${i.received} ${i.received === 1 ? 'reporte' : 'reportes'}`;
   if (i.received === 0) out.push(`No llegaron reportes en los últimos ${i.days} días.`);
-  else if (d.pct !== null && d.direction !== 'same') out.push(`${i.received === 1 ? 'Llegó' : 'Llegaron'} ${n}: ${Math.abs(d.pct)} % ${d.direction === 'up' ? 'más' : 'menos'} que en los ${i.days} días anteriores.`);
+  else if (d.direction !== 'same' && d.pct !== null && i.receivedPrev >= 10) out.push(`${i.received === 1 ? 'Llegó' : 'Llegaron'} ${n}: ${Math.abs(d.pct)} % ${d.direction === 'up' ? 'más' : 'menos'} que en los ${i.days} días anteriores.`);
+  // Con poca base el porcentaje exagera (de 1 a 4 es "300 %"): se dice la diferencia, igual que en las tarjetas
+  else if (d.direction !== 'same') out.push(`${i.received === 1 ? 'Llegó' : 'Llegaron'} ${n}: ${Math.abs(i.received - i.receivedPrev)} ${d.direction === 'up' ? 'más' : 'menos'} que en los ${i.days} días anteriores.`);
   else out.push(`${i.received === 1 ? 'Llegó' : 'Llegaron'} ${n} en los últimos ${i.days} días.`);
   if (i.resolved > 0) out.push(`El municipio resolvió ${i.resolved} ${i.resolved === 1 ? 'reporte' : 'reportes'} en este periodo.`);
   if (i.oldestPendingHours != null && i.oldestPendingHours >= 72) out.push(`Hay un reporte esperando respuesta desde hace ${formatHours(i.oldestPendingHours)}.`);
