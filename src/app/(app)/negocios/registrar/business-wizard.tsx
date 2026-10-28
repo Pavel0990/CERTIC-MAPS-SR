@@ -9,9 +9,9 @@ import { Field, Input, Textarea } from '@/components/ui/form';
 import { ErrorNote } from '@/components/ui/primitives';
 import { newIdempotencyKey } from '@/lib/schemas';
 import { cn } from '@/utils/cn';
-import { LocationPicker } from '../../_contenido/location-picker';
-import { PhotoPicker, usePhotos } from '../../_contenido/photo-picker';
-import { DoneScreen, MissingHint, StepTitle, WizardHeader, WizardStep } from '../../_contenido/wizard';
+import { LocationPicker } from '../../_content/location-picker';
+import { PhotoPicker, usePhotos } from '../../_content/photo-picker';
+import { DoneScreen, MissingHint, StepTitle, WizardHeader, WizardStep } from '../../_content/wizard';
 import { registerBusiness } from './actions';
 
 export function BusinessWizard({ categories }: { categories: { slug: string; name: string; icon: string }[] }) {

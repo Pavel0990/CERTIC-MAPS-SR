@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { routeUpdateInput } from '@/modules/routes';
 import { updateRoute } from '@/modules/routes/server';
 import { createClient } from '@/lib/supabase/server';
-import { fromRpc, invalid, unavailable, type ActionResult } from '../../../_contenido/action-result';
+import { fromRpc, invalid, unavailable, type ActionResult } from '../../../_content/action-result';
 
 /** Guarda los cambios de una ruta (update_route). La base comprueba el permiso y la versión. */
 export async function saveRoute(input: unknown): Promise<ActionResult> {

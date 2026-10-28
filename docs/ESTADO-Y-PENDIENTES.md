@@ -89,7 +89,7 @@ Las 30 migraciones están aplicadas en staging (`npx supabase migration list` la
 
 La limpieza del 21/10 quitó código muerto, unificó ayudas repetidas y puso al día comentarios y cifras sin cambiar el comportamiento. Esto quedó como propuesta porque mueve muchos archivos o toca el diseño:
 
-1. **Pasar `src/app/(app)/_contenido/` a inglés (`_content/`)** o el resto de carpetas privadas a español: hoy conviven `_components`, `_dashboard` y `_contenido`. Toca unos 20 archivos.
+1. ✅ ~~**Pasar `src/app/(app)/_contenido/` a inglés (`_content/`)**~~ Hecho el 28/10: las carpetas privadas quedan todas en inglés (`_components`, `_content`, `_dashboard`). En la misma pasada: un solo tipo de rol del personal (`StaffRole`), una sola comprobación `isStaffOf` en `lib/auth.ts` y un solo `StatusResult` para las acciones del panel y del perfil.
 2. **Colores fijos que quedan fuera de los tokens:** el degradado de "Descubre" (`#0f172a`), el punto apagado de las capas (`#c9cdd3`), la sombra del botón Reportar y el texto blanco sobre `bg-danger`. En modo oscuro se ven igual a propósito; pasarlos a tokens (`--color-on-danger`, por ejemplo) es un cambio de diseño, no de limpieza.
 3. **Hora de "Se actualiza sola"** del panel: usa la hora del dispositivo y la barra del panel la de la provincia; unificarlas en `utils/format` cambia lo que ve alguien con el teléfono en otra zona horaria.
 4. **Mapeo de las RPC de lectura:** las consultas de `server/queries.ts` repiten `if (error) throw …; return data ?? []`. Una ayuda como `asRpcResult` para lecturas lo acortaría, pero cambia 22 lecturas en 9 archivos de 7 módulos.

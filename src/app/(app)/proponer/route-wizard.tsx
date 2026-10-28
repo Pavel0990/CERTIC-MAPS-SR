@@ -10,9 +10,9 @@ import { ErrorNote, Notice } from '@/components/ui/primitives';
 import { useToast } from '@/components/ui/toast';
 import { DIFFICULTY, ROUTE_KIND } from '@/lib/vocabulary';
 import { distanceKm, formatDistance } from '@/utils/format';
-import { LocationPicker } from '../_contenido/location-picker';
-import { PhotoPicker, usePhotos } from '../_contenido/photo-picker';
-import { ChoiceGrid, DoneScreen, MissingHint, StepTitle, WizardHeader, WizardStep } from '../_contenido/wizard';
+import { LocationPicker } from '../_content/location-picker';
+import { PhotoPicker, usePhotos } from '../_content/photo-picker';
+import { ChoiceGrid, DoneScreen, MissingHint, StepTitle, WizardHeader, WizardStep } from '../_content/wizard';
 import { submitRoute } from './actions';
 
 type Kind = (typeof ROUTE_KINDS)[number];

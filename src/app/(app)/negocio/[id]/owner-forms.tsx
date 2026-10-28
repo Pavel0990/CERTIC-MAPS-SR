@@ -8,8 +8,8 @@ import { Field, Input, Textarea } from '@/components/ui/form';
 import { ErrorNote } from '@/components/ui/primitives';
 import { useToast } from '@/components/ui/toast';
 import { WEEKDAYS } from '@/lib/vocabulary';
-import { PhotoPicker, usePhotos } from '../../_contenido/photo-picker';
-import { useSave } from '../../_contenido/use-save';
+import { PhotoPicker, usePhotos } from '../../_content/photo-picker';
+import { useSave } from '../../_content/use-save';
 import { addPromotion, saveBusiness, saveHours } from './actions';
 
 export interface BusinessFormValues {

@@ -2,7 +2,7 @@
 import { businessInput } from '@/modules/businesses';
 import { submitBusiness } from '@/modules/businesses/server';
 import { createClient } from '@/lib/supabase/server';
-import { fromRpc, invalid, unavailable, type ActionResult } from '../../_contenido/action-result';
+import { fromRpc, invalid, unavailable, type ActionResult } from '../../_content/action-result';
 
 /** Alta de un negocio (submit_business). La clave de idempotencia evita duplicados si se reintenta. */
 export async function registerBusiness(input: unknown): Promise<ActionResult> {

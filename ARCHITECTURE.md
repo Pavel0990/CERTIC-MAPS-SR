@@ -1310,13 +1310,15 @@ sr-conecta/
    ├─ app/
    │  ├─ (app)/                 páginas con su layout (§6.1)
    │  │  ├─ _components/        piezas de la portada y el mapa (explorer/: datos, búsqueda, capas, lista, ficha)
-   │  │  └─ _contenido/         piezas compartidas entre páginas: asistentes, fotos, fichas, listados
+   │  │  └─ _content/           piezas compartidas entre páginas: asistentes, fotos, fichas, listados
    │  ├─ api/v1/                Route Handlers (§12.2)
    │  ├─ auth/callback/  offline/  manifest.ts  layout.tsx
    ├─ modules/                  admin · businesses · citizen-reports · jobs · map · media
    │                            notifications · reports · routes · tourism · traffic
    │                            cada uno: index.ts (seguro para el cliente) + server.ts (solo servidor)
-   │                            + server/ (queries, commands) + schemas.ts
+   │                            + server/ (queries.ts y commands.ts cuando el dominio lee y escribe; jobs tiene
+   │                            runner.ts y reports generate.tsx; el mapa público lee las alertas por map)
+   │                            + schemas.ts cuando valida entradas
    ├─ components/               ui/ (primitivas) · shared/ (navegación, íconos de catálogo, service worker)
    ├─ lib/                      supabase/ (server · client · anon · admin), auth, catálogos, outbox, vocabulario,
    │                            schemas (validaciones comunes a varios módulos)
@@ -1333,9 +1335,9 @@ sr-conecta/
 - Las páginas leen y escriben **solo a través de los módulos** (o de `lib/auth` para el propio perfil); ninguna página consulta tablas directamente.
 - `admin` es el backend del panel: reúne lo que el personal necesita de varios dominios, pero cada cambio de estado lo valida la RPC del dominio en la base.
 - `server/queries.ts` y `server/commands.ts` son la frontera con la base; no hay capa "repositorio" adicional. Cada comando devuelve `asRpcResult('nombre_rpc', await supabase.rpc(...))` (`lib/rpc.ts`): un error de la base lanza una excepción con el nombre de la RPC, y un rechazo de negocio (`{ status: 'rejected', reason }`) se devuelve como resultado normal.
-- **Guardar desde un formulario:** los formularios de contenido usan `useSave()` (`(app)/_contenido/use-save.ts`), que muestra el rechazo en lenguaje simple, recarga si otra persona cambió la ficha (`version_conflict`) y avisa al terminar.
-- **Dónde va cada cosa:** los módulos guardan datos, reglas y validaciones (sin componentes de React, salvo el mapa y los *hooks* de cliente); las pantallas viven en `src/app`. Una pieza visual que usan varias páginas va en `(app)/_contenido/`; si no depende de ningún módulo, en `components/`.
-- **Una sola fuente para lo repetido:** la zona horaria (`utils/locale.ts`), la clave de idempotencia (`lib/schemas.ts`), los textos para personas (`lib/vocabulary.ts`), el resultado de una RPC (`lib/rpc.ts`) y el guardado de formularios (`_contenido/use-save.ts`). No se escriben a mano en otro lugar.
+- **Guardar desde un formulario:** los formularios de contenido usan `useSave()` (`(app)/_content/use-save.ts`), que muestra el rechazo en lenguaje simple, recarga si otra persona cambió la ficha (`version_conflict`) y avisa al terminar.
+- **Dónde va cada cosa:** los módulos guardan datos, reglas y validaciones (sin componentes de React, salvo el mapa y los *hooks* de cliente); las pantallas viven en `src/app`. Una pieza visual que usan varias páginas va en `(app)/_content/`; si no depende de ningún módulo, en `components/`.
+- **Una sola fuente para lo repetido:** la zona horaria (`utils/locale.ts`), la clave de idempotencia (`lib/schemas.ts`), los textos para personas (`lib/vocabulary.ts`), el resultado de una RPC (`lib/rpc.ts`), el guardado de formularios (`_content/use-save.ts`), los roles (`types/roles.ts`: `RoleName`, `StaffRole`), la comprobación de personal (`lib/auth.ts`: `STAFF_ROLES`, `isStaffOf`) y el resultado simple de una Server Action (`types/ui.ts`: `StatusResult`). No se escriben a mano en otro lugar.
 - **Excepción documentada:** `POST /api/v1/engagement` llama a `track_engagement` directamente: es una métrica de negocios, lugares y rutas a la vez, sin módulo dueño, y la RPC hace toda la validación.
 
 ---
