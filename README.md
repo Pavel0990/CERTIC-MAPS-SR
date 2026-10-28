@@ -132,7 +132,7 @@ Lo que falta hasta la entrega, con fechas, está en [docs/ESTADO-Y-PENDIENTES.md
 | Worker de la cola: fotos, avisos al personal, alertas a vecinos, push | ✅ |
 | PDF semanal: cron diario y "Generar ahora" | ✅ |
 | PWA: *service worker*, página sin conexión, envío de la cola al volver la red, push por dispositivo | ✅ |
-| Manual de despliegue y manual administrativo | ✅ [DEPLOYMENT.md](DEPLOYMENT.md) · [docs/manual-administrativo.md](docs/manual-administrativo.md) |
+| Manual de despliegue y manual administrativo | ✅ [DEPLOYMENT.md](DEPLOYMENT.md) · [docs/manual-administrativo.md](docs/manual-administrativo.md) · [plan de operación municipal](docs/plan-de-operacion.md) (costos, quién hace qué, qué hacer si algo falla) |
 | Negocios, turismo y rutas: fichas, alta de negocio, panel del comercio, propuestas y edición | ✅ |
 | Listados `/negocios`, `/turismo` y `/rutas` con filtros grandes, búsqueda sin tildes y "Llamar" | ✅ |
 | Datos reales de la provincia (OpenStreetMap) en lugar de la demo | ✅ [data/README.md](data/README.md) |
