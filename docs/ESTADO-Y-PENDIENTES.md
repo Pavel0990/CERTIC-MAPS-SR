@@ -140,7 +140,7 @@ La limpieza del 21/10 quitó código muerto, unificó ayudas repetidas y puso al
 Solo si sobra tiempo después de §5.1–§5.3:
 
 - ✅ **Hecho:** avisar de un reporte parecido cercano antes de enviar uno nuevo (`ST_DWithin`), para evitar duplicados. Después de elegir tipo y lugar, si hay una alerta o un reporte al municipio abierto del mismo tipo a menos de 150 m, el asistente pregunta "Ya hay un reporte parecido aquí. ¿Quieres apoyarlo en lugar de crear otro?" con **Apoyarlo**, **Ver el reporte** y **Crear el mío igual**; nunca bloquea el envío ([DATABASE.md §5.23](../DATABASE.md#523-aviso-de-reporte-parecido-cercano--20261022130000_similar_reportssql)).
-- Frases de "aspectos destacados" también en el PDF semanal.
+- ✅ **Hecho (28/10):** frases de "aspectos destacados" también en el PDF semanal, con las mismas reglas que el panel (`weeklyHighlights`, con pruebas).
 - Capa de "puntos calientes" con los reportes más frecuentes.
 
 ## 6. Riesgos

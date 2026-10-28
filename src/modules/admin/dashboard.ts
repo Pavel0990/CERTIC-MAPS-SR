@@ -122,7 +122,8 @@ export const waitingSince = (iso: string, now: Date = new Date()) => formatHours
 export interface InsightInput {
   days: number;
   received: number;
-  receivedPrev: number;
+  /** null cuando no hay periodo anterior con qué comparar (el PDF semanal solo guarda su semana). */
+  receivedPrev: number | null;
   resolved: number;
   openNow: number;
   oldestPendingHours: number | null;
@@ -134,12 +135,13 @@ export interface InsightInput {
 /** Aspectos destacados en frases cortas, generados de los datos del periodo (como en la UASD). */
 export function insights(i: InsightInput): string[] {
   const out: string[] = [];
-  const d = delta(i.received, i.receivedPrev, false);
+  const prev = i.receivedPrev;
+  const d = prev == null ? null : delta(i.received, prev, false);
   const n = `${i.received} ${i.received === 1 ? 'reporte' : 'reportes'}`;
   if (i.received === 0) out.push(`No llegaron reportes en los últimos ${i.days} días.`);
-  else if (d.direction !== 'same' && d.pct !== null && i.receivedPrev >= 10) out.push(`${i.received === 1 ? 'Llegó' : 'Llegaron'} ${n}: ${Math.abs(d.pct)} % ${d.direction === 'up' ? 'más' : 'menos'} que en los ${i.days} días anteriores.`);
+  else if (d && prev != null && d.direction !== 'same' && d.pct !== null && prev >= 10) out.push(`${i.received === 1 ? 'Llegó' : 'Llegaron'} ${n}: ${Math.abs(d.pct)} % ${d.direction === 'up' ? 'más' : 'menos'} que en los ${i.days} días anteriores.`);
   // Con poca base el porcentaje exagera (de 1 a 4 es "300 %"): se dice la diferencia, igual que en las tarjetas
-  else if (d.direction !== 'same') out.push(`${i.received === 1 ? 'Llegó' : 'Llegaron'} ${n}: ${Math.abs(i.received - i.receivedPrev)} ${d.direction === 'up' ? 'más' : 'menos'} que en los ${i.days} días anteriores.`);
+  else if (d && prev != null && d.direction !== 'same') out.push(`${i.received === 1 ? 'Llegó' : 'Llegaron'} ${n}: ${Math.abs(i.received - prev)} ${d.direction === 'up' ? 'más' : 'menos'} que en los ${i.days} días anteriores.`);
   else out.push(`${i.received === 1 ? 'Llegó' : 'Llegaron'} ${n} en los últimos ${i.days} días.`);
   if (i.resolved > 0) out.push(`El municipio resolvió ${i.resolved} ${i.resolved === 1 ? 'reporte' : 'reportes'} en este periodo.`);
   if (i.oldestPendingHours != null && i.oldestPendingHours >= 72) out.push(`Hay un reporte esperando respuesta desde hace ${formatHours(i.oldestPendingHours)}.`);

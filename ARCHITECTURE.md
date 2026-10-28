@@ -696,7 +696,8 @@ Vercel Cron DIARIO 10:00 UTC (06:00 America/Santo_Domingo)
   2. El servidor crea la URL firmada de 5 minutos **con el JWT del mismo usuario**, nunca con `service_role`.
   3. La política de Storage `reports_pdf_read_after_audit` solo deja leer el PDF a quien registró esa descarga en los últimos 5 minutos. Sin rastro en la auditoría no hay lectura, aunque se llame a Storage directamente.
 - **Contenido del PDF:**
-  - portada y resumen;
+  - portada y **aspectos destacados**: frases cortas escritas a partir de los datos con las mismas reglas que el panel (`insights()` de `modules/admin`, vía `weeklyHighlights()` en `reports/server/document.tsx`), sin la comparación con la semana anterior porque el snapshot solo guarda su semana;
+  - resumen;
   - KPIs por municipio;
   - tránsito por tipo y gravedad;
   - consultas y tiempos de resolución, con las más apoyadas;
