@@ -686,6 +686,13 @@ ok('R6 al quitar el último dispositivo se apaga el push de la cuenta',
 // ---------------------------------------------------------------------------------------------
 // T. Catálogos editables desde el panel (administración provincial)
 // ---------------------------------------------------------------------------------------------
+const localCats = {
+  business: (await as(db, null, `select slug from public.business_categories where active and slug in ('casabe', 'finca', 'agropecuaria')`)).rows.length,
+  traffic: (await as(db, null, `select code from public.traffic_report_types where active and code = 'animales'`)).rows.length,
+  request: (await as(db, null, `select code from public.request_categories where active and code = 'camino_vecinal' and kind = 'incident'`)).rows.length,
+};
+ok('T0 las categorías locales (casabe, finca, agropecuaria, animales en la vía, camino vecinal) están activas y las ve el público',
+   localCats.business === 3 && localCats.traffic === 1 && localCats.request === 1, JSON.stringify(localCats));
 ok('T1 solo la administración provincial ve y edita los catálogos',
    (await rpc(U.admMon, `public.catalog_admin_list()`)).reason === 'forbidden'
    && (await rpc(U.modSab, `public.save_catalog_item('traffic_types', 'bache', '{"name":"Hoyo"}')`)).reason === 'forbidden');
