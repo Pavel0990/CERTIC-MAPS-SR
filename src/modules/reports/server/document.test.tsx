@@ -32,7 +32,7 @@ describe('weeklyHighlights', () => {
       { municipality_id: 'b', municipality_name: 'Monción', metrics: kpis(1, 1) },
     ]));
     expect(h).toEqual([
-      'Llegaron 10 reportes en los últimos 7 días.',
+      'Llegaron 10 reportes en la semana del 19 – 25 de octubre de 2026.',
       'El municipio resolvió 2 reportes en este periodo.',
       'La alerta vial más común fue «Bache» (5).',
       'Sabaneta concentra el 80 % de los reportes.',

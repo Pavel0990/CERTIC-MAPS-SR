@@ -8,10 +8,9 @@ import { CATALOGS_TAG } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
 import type { RpcResult } from '@/lib/http';
 import type { StaffRole } from '@/types/roles';
-import type { StatusResult } from '@/types/ui';
+import { rejected, type StatusResult } from '@/types/ui';
 
 // Acciones del panel municipal. Validan la forma; la RPC decide permisos, alcance y transición (ADR-018).
-const rejected = (reason: string): StatusResult => ({ status: 'rejected', reason });
 
 const uuid = z.uuid();
 const text = (max: number) => z.string().trim().max(max).optional();

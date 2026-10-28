@@ -3,3 +3,9 @@ export type RoleName = 'citizen' | 'entrepreneur' | 'moderator' | 'municipal_adm
 
 /** Roles del personal municipal: los que el panel asigna y revoca (assign_role, revoke_role). */
 export type StaffRole = Extract<RoleName, 'moderator' | 'municipal_admin'>;
+
+export const STAFF_ROLES: readonly StaffRole[] = ['moderator', 'municipal_admin'];
+
+export function isStaffRole(role: string): role is StaffRole {
+  return (STAFF_ROLES as readonly string[]).includes(role);
+}

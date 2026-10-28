@@ -2,11 +2,8 @@ import 'server-only';
 import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import type { RoleName, StaffRole } from '@/types/roles';
+import { isStaffRole, STAFF_ROLES, type RoleName } from '@/types/roles';
 
-export type { RoleName, StaffRole };
-
-export const STAFF_ROLES: readonly StaffRole[] = ['moderator', 'municipal_admin'];
 export interface RoleScope { role: RoleName; municipality_id: string | null }
 
 export interface Viewer {
@@ -80,8 +77,4 @@ export async function updateOwnProfile(userId: string, data: { display_name: str
  */
 export function isStaffOf(viewer: Viewer | null, municipalityId: string) {
   return !!viewer?.roles.some((r) => isStaffRole(r.role) && (r.municipality_id === null || r.municipality_id === municipalityId));
-}
-
-export function isStaffRole(role: string): role is StaffRole {
-  return (STAFF_ROLES as readonly string[]).includes(role);
 }

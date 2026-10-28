@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Sparkles, ThumbsUp, TrafficCone } from 'lucide-react';
 import { getDashboard, getPanelCounts, scopeMunicipalities, type Dashboard } from '@/modules/admin/server';
-import { change, formatHours, insights, parsePeriod, periodRange, waitingSince } from '@/modules/admin';
+import { change, formatHours, insights, parsePeriod, periodRange, topMunicipality, topTrafficType, waitingSince } from '@/modules/admin';
 import { Card, Eyebrow, Notice } from '@/components/ui/primitives';
 import { requireStaff } from '@/lib/auth';
 import { getCatalogs, getLabelMaps } from '@/lib/catalogs';
@@ -82,12 +82,9 @@ function Overview({ d, labels }: { d: Dashboard; labels: { trafficTypes: Record<
   const now = new Date(d.generatedAt); // misma hora para toda la página (la de la consulta)
   const oldestHours = oldest ? (now.getTime() - new Date(oldest).getTime()) / 3_600_000 : null;
   const byType = Object.entries(k.traffic.by_type).sort((a, b) => b[1] - a[1]);
-  const topType = byType[0] ? { label: labels.trafficTypes[byType[0][0]] ?? byType[0][0], count: byType[0][1] } : null;
-  const muniTotal = d.byMunicipality?.reduce((n, m) => n + m.received, 0) ?? 0;
-  const topMuni = d.byMunicipality?.[0] && muniTotal ? { name: short(d.byMunicipality[0].name), share: d.byMunicipality[0].received / muniTotal } : null;
   const highlights = insights({
     days: d.range.days, received, receivedPrev, resolved: k.requests.resolved, openNow: k.requests.open_now, oldestPendingHours: oldestHours,
-    topTrafficType: topType, topMunicipality: topMuni, topViewed: d.topViewed[0] ? { name: d.topViewed[0].name, views: d.topViewed[0].views } : null,
+    topTrafficType: topTrafficType(k.traffic.by_type, labels.trafficTypes), topMunicipality: d.byMunicipality ? topMunicipality(d.byMunicipality) : null, topViewed: d.topViewed[0] ? { name: d.topViewed[0].name, views: d.topViewed[0].views } : null,
   });
   const pendingValidation = d.counts.validations;
   const versus = `frente a los ${d.range.days} días anteriores`;

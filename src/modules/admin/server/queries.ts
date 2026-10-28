@@ -1,7 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import type { ServerSupabase } from '@/lib/supabase/server';
-import { isStaffRole, STAFF_ROLES } from '@/lib/auth';
+import { isStaffRole, STAFF_ROLES } from '@/types/roles';
 import type { KpiSummary } from '@/types/kpi';
 
 // Lecturas del panel municipal (§9.7). Todas usan el JWT del personal: RLS limita a su alcance.

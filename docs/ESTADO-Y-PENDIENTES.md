@@ -89,7 +89,7 @@ Las 30 migraciones están aplicadas en staging (`npx supabase migration list` la
 
 La limpieza del 21/10 quitó código muerto, unificó ayudas repetidas y puso al día comentarios y cifras sin cambiar el comportamiento. Esto quedó como propuesta porque mueve muchos archivos o toca el diseño:
 
-1. ✅ ~~**Pasar `src/app/(app)/_contenido/` a inglés (`_content/`)**~~ Hecho el 28/10: las carpetas privadas quedan todas en inglés (`_components`, `_content`, `_dashboard`). En la misma pasada: un solo tipo de rol del personal (`StaffRole`), una sola comprobación `isStaffOf` en `lib/auth.ts` y un solo `StatusResult` para las acciones del panel y del perfil.
+1. ✅ ~~**Pasar `src/app/(app)/_contenido/` a inglés (`_content/`)**~~ Hecho el 27/10: las carpetas privadas quedan todas en inglés (`_components`, `_content`, `_dashboard`). En la misma pasada: un solo tipo de rol del personal (`StaffRole`), una sola comprobación `isStaffOf` en `lib/auth.ts` y un solo `StatusResult` para las acciones del panel y del perfil.
 2. **Colores fijos que quedan fuera de los tokens:** el degradado de "Descubre" (`#0f172a`), el punto apagado de las capas (`#c9cdd3`), la sombra del botón Reportar y el texto blanco sobre `bg-danger`. En modo oscuro se ven igual a propósito; pasarlos a tokens (`--color-on-danger`, por ejemplo) es un cambio de diseño, no de limpieza.
 3. **Hora de "Se actualiza sola"** del panel: usa la hora del dispositivo y la barra del panel la de la provincia; unificarlas en `utils/format` cambia lo que ve alguien con el teléfono en otra zona horaria.
 4. **Mapeo de las RPC de lectura:** las consultas de `server/queries.ts` repiten `if (error) throw …; return data ?? []`. Una ayuda como `asRpcResult` para lecturas lo acortaría, pero cambia 22 lecturas en 9 archivos de 7 módulos.
@@ -140,7 +140,7 @@ La limpieza del 21/10 quitó código muerto, unificó ayudas repetidas y puso al
 Solo si sobra tiempo después de §5.1–§5.3:
 
 - ✅ **Hecho:** avisar de un reporte parecido cercano antes de enviar uno nuevo (`ST_DWithin`), para evitar duplicados. Después de elegir tipo y lugar, si hay una alerta o un reporte al municipio abierto del mismo tipo a menos de 150 m, el asistente pregunta "Ya hay un reporte parecido aquí. ¿Quieres apoyarlo en lugar de crear otro?" con **Apoyarlo**, **Ver el reporte** y **Crear el mío igual**; nunca bloquea el envío ([DATABASE.md §5.23](../DATABASE.md#523-aviso-de-reporte-parecido-cercano--20261022130000_similar_reportssql)).
-- ✅ **Hecho (28/10):** frases de "aspectos destacados" también en el PDF semanal, con las mismas reglas que el panel (`weeklyHighlights`, con pruebas).
+- ✅ **Hecho (27/10):** frases de "aspectos destacados" también en el PDF semanal, con las mismas reglas que el panel (`weeklyHighlights`, con pruebas).
 - Capa de "puntos calientes" con los reportes más frecuentes.
 
 ## 6. Riesgos

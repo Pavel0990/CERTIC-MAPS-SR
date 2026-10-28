@@ -2,6 +2,7 @@
 // periodos, series para el gráfico, comparación con el periodo anterior, tiempos legibles,
 // aspectos destacados y CSV. Segura para el cliente y probada con vitest.
 import { APP_TIMEZONE } from '@/utils/locale';
+import { shortMunicipality } from '@/utils/format';
 
 export const PERIODS = [7, 30, 90] as const;
 export type PeriodDays = (typeof PERIODS)[number];
@@ -121,11 +122,14 @@ export const waitingSince = (iso: string, now: Date = new Date()) => formatHours
 
 export interface InsightInput {
   days: number;
+  /** Cómo nombrar el periodo en las frases. Por defecto "en los últimos N días" (el panel, relativo a hoy). */
+  period?: string;
   received: number;
   /** null cuando no hay periodo anterior con qué comparar (el PDF semanal solo guarda su semana). */
   receivedPrev: number | null;
   resolved: number;
-  openNow: number;
+  /** null cuando la cifra no es de hoy (el PDF): entonces no se afirma que no haya nada sin resolver. */
+  openNow: number | null;
   oldestPendingHours: number | null;
   topTrafficType: { label: string; count: number } | null;
   topMunicipality: { name: string; share: number } | null;
@@ -135,14 +139,16 @@ export interface InsightInput {
 /** Aspectos destacados en frases cortas, generados de los datos del periodo (como en la UASD). */
 export function insights(i: InsightInput): string[] {
   const out: string[] = [];
-  const prev = i.receivedPrev;
-  const d = prev == null ? null : delta(i.received, prev, false);
+  const period = i.period ?? `en los últimos ${i.days} días`;
   const n = `${i.received} ${i.received === 1 ? 'reporte' : 'reportes'}`;
-  if (i.received === 0) out.push(`No llegaron reportes en los últimos ${i.days} días.`);
-  else if (d && prev != null && d.direction !== 'same' && d.pct !== null && prev >= 10) out.push(`${i.received === 1 ? 'Llegó' : 'Llegaron'} ${n}: ${Math.abs(d.pct)} % ${d.direction === 'up' ? 'más' : 'menos'} que en los ${i.days} días anteriores.`);
+  const arrived = i.received === 1 ? 'Llegó' : 'Llegaron';
+  // La comparación solo existe si hay periodo anterior; así `prev` y `d` siempre van juntos
+  const cmp = i.receivedPrev == null ? null : { prev: i.receivedPrev, d: delta(i.received, i.receivedPrev, false) };
+  if (i.received === 0) out.push(`No llegaron reportes ${period}.`);
+  else if (cmp && cmp.d.direction !== 'same' && cmp.d.pct !== null && cmp.prev >= 10) out.push(`${arrived} ${n}: ${Math.abs(cmp.d.pct)} % ${cmp.d.direction === 'up' ? 'más' : 'menos'} que en los ${i.days} días anteriores.`);
   // Con poca base el porcentaje exagera (de 1 a 4 es "300 %"): se dice la diferencia, igual que en las tarjetas
-  else if (d && prev != null && d.direction !== 'same') out.push(`${i.received === 1 ? 'Llegó' : 'Llegaron'} ${n}: ${Math.abs(i.received - prev)} ${d.direction === 'up' ? 'más' : 'menos'} que en los ${i.days} días anteriores.`);
-  else out.push(`${i.received === 1 ? 'Llegó' : 'Llegaron'} ${n} en los últimos ${i.days} días.`);
+  else if (cmp && cmp.d.direction !== 'same') out.push(`${arrived} ${n}: ${Math.abs(i.received - cmp.prev)} ${cmp.d.direction === 'up' ? 'más' : 'menos'} que en los ${i.days} días anteriores.`);
+  else out.push(`${arrived} ${n} ${period}.`);
   if (i.resolved > 0) out.push(`El municipio resolvió ${i.resolved} ${i.resolved === 1 ? 'reporte' : 'reportes'} en este periodo.`);
   if (i.oldestPendingHours != null && i.oldestPendingHours >= 72) out.push(`Hay un reporte esperando respuesta desde hace ${formatHours(i.oldestPendingHours)}.`);
   else if (i.openNow === 0) out.push('No hay reportes al municipio sin resolver.');
@@ -150,6 +156,19 @@ export function insights(i: InsightInput): string[] {
   if (i.topMunicipality && i.topMunicipality.share >= 0.5) out.push(`${i.topMunicipality.name} concentra el ${Math.round(i.topMunicipality.share * 100)} % de los reportes.`);
   if (i.topViewed && i.topViewed.views > 0) out.push(`La ficha más vista fue ${i.topViewed.name}, con ${i.topViewed.views} ${i.topViewed.views === 1 ? 'visita' : 'visitas'}.`);
   return out;
+}
+
+/** El tipo de alerta más reportado, con su nombre para personas. Lo usan el panel y el PDF. */
+export function topTrafficType(byType: Record<string, number>, labels: Record<string, string>) {
+  const [code, count] = Object.entries(byType).sort((a, b) => b[1] - a[1])[0] ?? [];
+  return code && count ? { label: labels[code] ?? code, count } : null;
+}
+
+/** El municipio que más reportes recibió y su parte del total, con nombre corto. Lo usan el panel y el PDF. */
+export function topMunicipality(rows: { name: string; received: number }[]) {
+  const total = rows.reduce((t, m) => t + m.received, 0);
+  const top = [...rows].sort((a, b) => b.received - a.received)[0];
+  return top && total ? { name: shortMunicipality(top.name), share: top.received / total } : null;
 }
 
 /** CSV con separador ";" y BOM: Excel en español lo abre bien, con tildes. */

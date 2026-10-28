@@ -1,6 +1,6 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
-import { insights } from '@/modules/admin';
-import { formatNumber, shortMunicipality } from '@/utils/format';
+import { insights, topMunicipality, topTrafficType } from '@/modules/admin';
+import { formatNumber } from '@/utils/format';
 import { APP_TIMEZONE } from '@/utils/locale';
 import type { WeeklyReportData, WeeklyKpis } from '../index';
 
@@ -50,17 +50,20 @@ export function periodLabel(start: string, end: string) {
 export function weeklyHighlights(data: WeeklyReportData) {
   const k = data.snapshots.find((x) => x.municipality_id === null)?.metrics;
   if (!k) return [];
-  const received = k.traffic.received + k.requests.received;
-  const [topCode, topCount] = Object.entries(k.traffic.by_type).sort((a, b) => b[1] - a[1])[0] ?? [];
   const munis = data.snapshots
     .filter((x) => x.municipality_id !== null)
-    .map((x) => ({ name: x.municipality_name ?? '', received: x.metrics.traffic.received + x.metrics.requests.received }))
-    .sort((a, b) => b.received - a.received);
-  const muniTotal = munis.reduce((t, m) => t + m.received, 0);
+    .map((x) => ({ name: x.municipality_name ?? '', received: x.metrics.traffic.received + x.metrics.requests.received }));
   return insights({
-    days: 7, received, receivedPrev: null, resolved: k.requests.resolved, openNow: k.requests.open_now, oldestPendingHours: null,
-    topTrafficType: topCode && topCount ? { label: data.traffic_types[topCode] ?? topCode, count: topCount } : null,
-    topMunicipality: munis[0] && muniTotal ? { name: shortMunicipality(munis[0].name), share: munis[0].received / muniTotal } : null,
+    days: 7,
+    // La semana del informe, no "los últimos 7 días": el PDF se puede abrir o regenerar semanas después
+    period: `en la semana del ${periodLabel(data.period_start, data.period_end)}`,
+    received: k.traffic.received + k.requests.received,
+    receivedPrev: null,
+    resolved: k.requests.resolved,
+    openNow: null, // open_now es de cuando se tomó la foto, no de la semana: no se afirma "nada sin resolver"
+    oldestPendingHours: null,
+    topTrafficType: topTrafficType(k.traffic.by_type, data.traffic_types),
+    topMunicipality: topMunicipality(munis),
     topViewed: null,
   });
 }
