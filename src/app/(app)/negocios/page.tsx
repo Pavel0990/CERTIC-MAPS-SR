@@ -38,8 +38,9 @@ export default async function BusinessesPage({ searchParams }: { searchParams: P
         {cat && <input type="hidden" name="tipo" value={cat.slug} />}
         <label htmlFor="buscar-negocio" className="sr-only">Buscar por nombre</label>
         <input id="buscar-negocio" name="q" defaultValue={q} placeholder="Buscar por nombre" className="h-12 min-w-0 flex-1 rounded-[14px] border border-line-strong bg-surface px-4 text-[17px] focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15" />
-        <button type="submit" className="inline-flex h-12 items-center gap-2 rounded-full bg-brand px-5 text-[16px] font-semibold text-on-brand hover:bg-brand-strong">
-          <Search className="size-5" aria-hidden /> Buscar
+        {/* En 320 px el texto del botón le quitaba sitio a la búsqueda: ahí queda solo la lupa */}
+        <button type="submit" className="inline-flex h-12 min-w-12 shrink-0 items-center justify-center gap-2 rounded-full bg-brand px-3.5 text-[16px] font-semibold text-on-brand hover:bg-brand-strong min-[360px]:px-5">
+          <Search className="size-5" aria-hidden /> <span className="max-[359px]:sr-only">Buscar</span>
         </button>
       </form>
       <div className="mb-3 flex flex-col gap-2">
