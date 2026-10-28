@@ -51,3 +51,15 @@ test('el mapa dibuja la provincia sin errores', async ({ page }) => {
   await expect.poll(async () => (await canvas.screenshot({ style: onlyCanvas })).length, { timeout: 20_000 }).toBeGreaterThan(60_000);
   expect(errors.filter((e) => /worker|maplibre|webgl/i.test(e))).toEqual([]);
 });
+
+test('los buscadores reciben robots.txt y sitemap.xml: solo lo público', async ({ request }) => {
+  const robots = await (await request.get('/robots.txt')).text();
+  expect(robots).toContain('Disallow: /admin');
+  expect(robots).toContain('Disallow: /perfil');
+  expect(robots).toMatch(/Sitemap: https?:\/\/\S+\/sitemap\.xml/);
+  const res = await request.get('/sitemap.xml');
+  expect(res.ok()).toBeTruthy();
+  const sitemap = await res.text();
+  for (const path of ['/mapa', '/negocios', '/turismo', '/rutas']) expect(sitemap).toContain(`${path}</loc>`);
+  expect(sitemap).not.toContain('/admin');
+});
