@@ -14,6 +14,9 @@ export interface PointGeometry { type: 'Point'; coordinates: [number, number] }
 export interface MapFeature { type: 'Feature'; geometry: PointGeometry; properties: MapFeatureProps }
 export interface MapFeatureCollection { type: 'FeatureCollection'; features: MapFeature[]; truncated?: boolean }
 
+/** Puntos calientes: centro de cada cuadro de ~550 m con 2 o más reportes públicos (nunca un reporte exacto). */
+export interface HotspotCollection { type: 'FeatureCollection'; features: { type: 'Feature'; geometry: PointGeometry; properties: { count: number } }[] }
+
 export interface LineFeature {
   type: 'Feature';
   geometry: { type: 'LineString' | 'MultiLineString'; coordinates: unknown };
