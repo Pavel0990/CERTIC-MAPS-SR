@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Field, Select } from '@/components/ui/form';
 import { useToast } from '@/components/ui/toast';
 import { reasonMessage } from '@/lib/vocabulary';
+import type { StaffRole } from '@/types/roles';
 import { ActionButton } from '../_components/action-button';
 import { grantRole, removeRole } from '../actions';
 
 export function GrantForm({ people, municipalities, canGrantAdmin }: { people: { id: string; name: string }[]; municipalities: { id: string; name: string }[]; canGrantAdmin: boolean }) {
   const [person, setPerson] = useState(people[0]?.id ?? '');
-  const [role, setRole] = useState<'moderator' | 'municipal_admin'>('moderator');
+  const [role, setRole] = useState<StaffRole>('moderator');
   const [muni, setMuni] = useState(municipalities[0]?.id ?? '');
   const [pending, start] = useTransition();
   const toast = useToast();
@@ -44,7 +45,7 @@ export function GrantForm({ people, municipalities, canGrantAdmin }: { people: {
   );
 }
 
-export function RevokeButton({ userId, role, municipalityId, name }: { userId: string; role: 'moderator' | 'municipal_admin'; municipalityId: string; name: string }) {
+export function RevokeButton({ userId, role, municipalityId, name }: { userId: string; role: StaffRole; municipalityId: string; name: string }) {
   return (
     <ActionButton
       label="Quitar"

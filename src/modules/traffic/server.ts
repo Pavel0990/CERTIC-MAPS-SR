@@ -1,2 +1,3 @@
 // API de servidor del módulo "traffic".
-export { createTrafficReport, moderateTrafficReport, escalateTrafficReport, countActiveAlerts } from './server/commands';
+export { createTrafficReport, moderateTrafficReport, escalateTrafficReport } from './server/commands';
+export { countActiveAlerts } from './server/queries';

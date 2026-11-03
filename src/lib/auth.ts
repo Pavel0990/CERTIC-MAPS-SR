@@ -2,8 +2,8 @@ import 'server-only';
 import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { isStaffRole, STAFF_ROLES, type RoleName } from '@/types/roles';
 
-export type RoleName = 'citizen' | 'entrepreneur' | 'moderator' | 'municipal_admin';
 export interface RoleScope { role: RoleName; municipality_id: string | null }
 
 export interface Viewer {
@@ -43,7 +43,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     homeMunicipalityId: profile?.home_municipality_id ?? null,
     avatarVersion: profile?.avatar_version ?? null,
     roles: scopes,
-    isStaff: has('moderator') || has('municipal_admin'),
+    isStaff: STAFF_ROLES.some(has),
     isAdmin: has('municipal_admin'),
     isProvincialAdmin: scopes.some((s) => s.role === 'municipal_admin' && s.municipality_id === null),
     isEntrepreneur: has('entrepreneur'),
@@ -69,4 +69,12 @@ export async function updateOwnProfile(userId: string, data: { display_name: str
   const supabase = await createClient();
   const { error } = await supabase.from('profiles').update(data).eq('id', userId);
   return !error;
+}
+
+/**
+ * ¿Es personal (moderación o administración) de ese municipio? Un rol provincial (municipio NULL) vale para todos.
+ * Solo decide la interfaz: la RLS y las RPC lo vuelven a comprobar (ADR-018).
+ */
+export function isStaffOf(viewer: Viewer | null, municipalityId: string) {
+  return !!viewer?.roles.some((r) => isStaffRole(r.role) && (r.municipality_id === null || r.municipality_id === municipalityId));
 }

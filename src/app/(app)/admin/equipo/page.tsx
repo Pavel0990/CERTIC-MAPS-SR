@@ -42,7 +42,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
                 </span>
                 <Badge tone={t.role === 'municipal_admin' ? 'violet' : 'brand'}>{t.role === 'municipal_admin' ? 'Administración' : 'Moderación'}</Badge>
                 {t.municipality_id && t.user_id !== viewer.id && (t.role === 'moderator' || viewer.isProvincialAdmin) && (
-                  <RevokeButton userId={t.user_id} role={t.role as 'moderator' | 'municipal_admin'} municipalityId={t.municipality_id} name={t.name} />
+                  <RevokeButton userId={t.user_id} role={t.role} municipalityId={t.municipality_id} name={t.name} />
                 )}
               </li>
             ))}

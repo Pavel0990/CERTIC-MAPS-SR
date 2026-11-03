@@ -15,8 +15,8 @@ import { sendOrQueue, type SendResult } from '@/lib/outbox';
 import { newIdempotencyKey } from '@/lib/schemas';
 import { SEVERITY, reasonMessage } from '@/lib/vocabulary';
 import { cn } from '@/utils/cn';
-import { PhotoPicker, usePhotos } from '../_contenido/photo-picker';
-import { DoneScreen, MissingHint, StepTitle, WizardHeader, WizardStep } from '../_contenido/wizard';
+import { PhotoPicker, usePhotos } from '../_content/photo-picker';
+import { DoneScreen, MissingHint, StepTitle, WizardHeader, WizardStep } from '../_content/wizard';
 import { SimilarNotice } from './similar-notice';
 
 export interface ReportCatalogs {

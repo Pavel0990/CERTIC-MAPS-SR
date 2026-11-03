@@ -12,9 +12,9 @@ import { getViewer } from '@/lib/auth';
 import { DIFFICULTY, ROUTE_KIND } from '@/lib/vocabulary';
 import { createClient } from '@/lib/supabase/server';
 import { formatDate, formatDistance, formatMinutes } from '@/utils/format';
-import { DirectionsButton, HeaderActions, RejectedNotice, SecondaryLink, ServicesCard, StatusLine, UUID } from '../../_contenido/detail';
-import { PhotoGallery } from '../../_contenido/photo-gallery';
-import { canEditContent } from '../../_contenido/permissions';
+import { DirectionsButton, HeaderActions, RejectedNotice, SecondaryLink, ServicesCard, StatusLine, UUID } from '../../_content/detail';
+import { PhotoGallery } from '../../_content/photo-gallery';
+import { canEditContent } from '../../_content/permissions';
 
 /**
  * Centro y zoom para que el trazado quepa en un mapa de al menos 300×260 px (la tarjeta de la ficha).

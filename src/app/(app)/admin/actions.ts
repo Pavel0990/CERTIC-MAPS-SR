@@ -7,76 +7,77 @@ import { assignRole, authorizeReportDownload, requestWeeklyReport, reviewContent
 import { CATALOGS_TAG } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
 import type { RpcResult } from '@/lib/http';
+import type { StaffRole } from '@/types/roles';
+import { rejected, type StatusResult } from '@/types/ui';
 
 // Acciones del panel municipal. Validan la forma; la RPC decide permisos, alcance y transición (ADR-018).
-export type ActionResult = { status: 'ok' | 'rejected'; reason?: string };
 
 const uuid = z.uuid();
 const text = (max: number) => z.string().trim().max(max).optional();
 
-async function run(fn: (s: Awaited<ReturnType<typeof createClient>>) => Promise<RpcResult>, paths: string[]): Promise<ActionResult> {
+async function run(fn: (s: Awaited<ReturnType<typeof createClient>>) => Promise<RpcResult>, paths: string[]): Promise<StatusResult> {
   try {
     const r = await fn(await createClient());
     for (const p of paths) revalidatePath(p);
-    return r.status === 'rejected' ? { status: 'rejected', reason: r.reason } : { status: 'ok' };
+    return r.status === 'rejected' ? rejected(r.reason) : { status: 'ok' };
   } catch {
-    return { status: 'rejected', reason: 'unavailable' };
+    return rejected('unavailable');
   }
 }
 
 export async function moderateTraffic(id: string, expected: string, to: string, note?: string) {
-  if (!uuid.safeParse(id).success) return { status: 'rejected', reason: 'not_found' } as ActionResult;
+  if (!uuid.safeParse(id).success) return rejected('not_found');
   return run((s) => moderateTrafficReport(s, id, expected, to, text(500).parse(note)), ['/admin/bandeja', '/admin']);
 }
 
 export async function escalateTraffic(id: string, category: string) {
-  if (!uuid.safeParse(id).success) return { status: 'rejected', reason: 'not_found' } as ActionResult;
+  if (!uuid.safeParse(id).success) return rejected('not_found');
   return run((s) => escalateTrafficReport(s, id, category), ['/admin/bandeja']);
 }
 
 export async function changeStatus(id: string, expected: string, to: string, note?: string) {
-  if (!uuid.safeParse(id).success) return { status: 'rejected', reason: 'not_found' } as ActionResult;
+  if (!uuid.safeParse(id).success) return rejected('not_found');
   return run((s) => changeRequestStatus(s, id, expected, to, text(1000).parse(note)), ['/admin/bandeja', '/admin', `/consultas/${id}`]);
 }
 
 export async function assign(id: string, assignee: string) {
-  if (!uuid.safeParse(id).success || !uuid.safeParse(assignee).success) return { status: 'rejected', reason: 'not_found' } as ActionResult;
+  if (!uuid.safeParse(id).success || !uuid.safeParse(assignee).success) return rejected('not_found');
   return run((s) => assignRequest(s, id, assignee), ['/admin/bandeja']);
 }
 
 export async function makePublic(id: string, isPublic: boolean) {
-  if (!uuid.safeParse(id).success) return { status: 'rejected', reason: 'not_found' } as ActionResult;
+  if (!uuid.safeParse(id).success) return rejected('not_found');
   return run((s) => setRequestPublic(s, id, isPublic), ['/admin/bandeja', '/mapa']);
 }
 
 const ENTITIES: ContentEntity[] = ['business', 'place', 'route', 'promotion', 'attachment'];
 export async function review(entity: ContentEntity, id: string, expected: string, to: string, reason?: string) {
-  if (!ENTITIES.includes(entity) || !uuid.safeParse(id).success) return { status: 'rejected', reason: 'not_found' } as ActionResult;
+  if (!ENTITIES.includes(entity) || !uuid.safeParse(id).success) return rejected('not_found');
   return run((s) => reviewContent(s, entity, id, expected, to, text(500).parse(reason)), ['/admin/validaciones', '/admin', '/mapa']);
 }
 
-export async function grantRole(userId: string, role: 'moderator' | 'municipal_admin', municipalityId: string) {
-  if (!uuid.safeParse(userId).success || !uuid.safeParse(municipalityId).success) return { status: 'rejected', reason: 'not_found' } as ActionResult;
+export async function grantRole(userId: string, role: StaffRole, municipalityId: string) {
+  if (!uuid.safeParse(userId).success || !uuid.safeParse(municipalityId).success) return rejected('not_found');
   return run((s) => assignRole(s, userId, role, municipalityId), ['/admin/equipo']);
 }
 
-export async function removeRole(userId: string, role: 'moderator' | 'municipal_admin', municipalityId: string) {
-  if (!uuid.safeParse(userId).success || !uuid.safeParse(municipalityId).success) return { status: 'rejected', reason: 'not_found' } as ActionResult;
+export async function removeRole(userId: string, role: StaffRole, municipalityId: string) {
+  if (!uuid.safeParse(userId).success || !uuid.safeParse(municipalityId).success) return rejected('not_found');
   return run((s) => revokeRole(s, userId, role, municipalityId), ['/admin/equipo']);
 }
 
 /** Descarga auditada del PDF: devuelve una URL firmada de 5 minutos (ADR-021). */
-export async function downloadReport(runId: string): Promise<ActionResult & { url?: string }> {
-  if (!uuid.safeParse(runId).success) return { status: 'rejected', reason: 'not_found' };
+export async function downloadReport(runId: string): Promise<StatusResult & { url?: string }> {
+  if (!uuid.safeParse(runId).success) return rejected('not_found');
   try {
     return await authorizeReportDownload(await createClient(), runId);
   } catch {
-    return { status: 'rejected', reason: 'unavailable' };
+    return rejected('unavailable');
   }
 }
 
 export async function generateReport(periodStart: string) {
-  if (!z.iso.date().safeParse(periodStart).success) return { status: 'rejected', reason: 'invalid_period' } as ActionResult;
+  if (!z.iso.date().safeParse(periodStart).success) return rejected('invalid_period');
   return run((s) => requestWeeklyReport(s, periodStart), ['/admin/informes']);
 }
 
@@ -91,9 +92,9 @@ const catalogChanges = z.object({
 }).strict();
 
 export async function saveCatalog(catalog: string, code: string | null, changes: unknown) {
-  if (!['traffic_types', 'request_categories', 'business_categories'].includes(catalog)) return { status: 'rejected', reason: 'invalid_catalog' } as ActionResult;
+  if (!['traffic_types', 'request_categories', 'business_categories'].includes(catalog)) return rejected('invalid_catalog');
   const parsed = catalogChanges.safeParse(changes);
-  if (!parsed.success) return { status: 'rejected', reason: 'invalid_field' } as ActionResult;
+  if (!parsed.success) return rejected('invalid_field');
   const r = await run((s) => saveCatalogItem(s, catalog, code, parsed.data), ['/admin/catalogos']);
   if (r.status === 'ok') updateTag(CATALOGS_TAG); // el cambio se ve enseguida en el mapa y los formularios
   return r;

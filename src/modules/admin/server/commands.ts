@@ -2,6 +2,7 @@ import 'server-only';
 import type { ServerSupabase } from '@/lib/supabase/server';
 import type { RpcResult } from '@/lib/http';
 import { asRpcResult } from '@/lib/rpc';
+import type { StaffRole } from '@/types/roles';
 
 export type ContentEntity = 'business' | 'place' | 'route' | 'promotion' | 'attachment';
 
@@ -10,11 +11,11 @@ export async function reviewContent(supabase: ServerSupabase, entity: ContentEnt
   return asRpcResult('review_content', await supabase.rpc('review_content', { p_entity: entity, p_id: id, p_expected_status: expected, p_to: to, p_reason: reason || undefined }));
 }
 
-export async function assignRole(supabase: ServerSupabase, userId: string, role: 'moderator' | 'municipal_admin', municipalityId: string) {
+export async function assignRole(supabase: ServerSupabase, userId: string, role: StaffRole, municipalityId: string) {
   return asRpcResult('assign_role', await supabase.rpc('assign_role', { p_user_id: userId, p_role: role, p_municipality_id: municipalityId }));
 }
 
-export async function revokeRole(supabase: ServerSupabase, userId: string, role: 'moderator' | 'municipal_admin', municipalityId: string) {
+export async function revokeRole(supabase: ServerSupabase, userId: string, role: StaffRole, municipalityId: string) {
   return asRpcResult('revoke_role', await supabase.rpc('revoke_role', { p_user_id: userId, p_role: role, p_municipality_id: municipalityId }));
 }
 

@@ -4,7 +4,7 @@ import { proposePlace } from '@/modules/tourism/server';
 import { routeProposalInput } from '@/modules/routes';
 import { proposeRoute } from '@/modules/routes/server';
 import { createClient } from '@/lib/supabase/server';
-import { fromRpc, invalid, unavailable, type ActionResult } from '../_contenido/action-result';
+import { fromRpc, invalid, unavailable, type ActionResult } from '../_content/action-result';
 
 /** Propuesta de lugar (propose_place). El personal del municipio la publica directo. */
 export async function submitPlace(input: unknown): Promise<ActionResult> {

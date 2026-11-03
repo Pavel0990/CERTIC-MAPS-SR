@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Field, Input, Select, Textarea } from '@/components/ui/form';
 import { ErrorNote } from '@/components/ui/primitives';
 import { DIFFICULTY, ROUTE_KIND } from '@/lib/vocabulary';
-import { ServicesField } from '../../../_contenido/services-field';
-import { markedServices, useSave } from '../../../_contenido/use-save';
+import { ServicesField } from '../../../_content/services-field';
+import { markedServices, useSave } from '../../../_content/use-save';
 import { saveRoute } from './actions';
 
 export interface RouteFormValues {

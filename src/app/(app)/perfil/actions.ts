@@ -7,6 +7,7 @@ import { registerPushDevice, savePreferences as storePreferences, TOPICS, unregi
 import { setAvatar } from '@/modules/media/server';
 import { updateOwnProfile } from '@/lib/auth';
 import type { RpcResult } from '@/lib/http';
+import { rejected, type StatusResult } from '@/types/ui';
 
 export type FormState = { ok?: boolean; error?: string };
 
@@ -61,29 +62,28 @@ const deviceSchema = z.object({
   p256dh: z.string().min(1).max(200),
   auth: z.string().min(1).max(100),
 });
-export type PushActionResult = { status: 'ok' | 'rejected'; reason?: string };
 
 /** Notificaciones en este dispositivo (§9.5). La suscripción la crea el navegador; aquí solo se guarda. */
-export async function enablePush(sub: unknown): Promise<PushActionResult> {
+export async function enablePush(sub: unknown): Promise<StatusResult> {
   const parsed = deviceSchema.safeParse(sub);
-  if (!parsed.success) return { status: 'rejected', reason: 'invalid_subscription' };
+  if (!parsed.success) return rejected('invalid_subscription');
   try {
     const ua = (await headers()).get('user-agent');
     const r = await registerPushDevice(await createClient(), parsed.data, ua);
     revalidatePath('/perfil');
-    return r.status === 'rejected' ? { status: 'rejected', reason: r.reason } : { status: 'ok' };
+    return r.status === 'rejected' ? rejected(r.reason) : { status: 'ok' };
   } catch {
-    return { status: 'rejected', reason: 'unavailable' };
+    return rejected('unavailable');
   }
 }
 
-export async function disablePush(endpoint: string): Promise<PushActionResult> {
-  if (!z.url().safeParse(endpoint).success) return { status: 'rejected', reason: 'invalid_subscription' };
+export async function disablePush(endpoint: string): Promise<StatusResult> {
+  if (!z.url().safeParse(endpoint).success) return rejected('invalid_subscription');
   try {
     const r = await unregisterPushDevice(await createClient(), endpoint);
     revalidatePath('/perfil');
-    return r.status === 'rejected' ? { status: 'rejected', reason: r.reason } : { status: 'ok' };
+    return r.status === 'rejected' ? rejected(r.reason) : { status: 'ok' };
   } catch {
-    return { status: 'rejected', reason: 'unavailable' };
+    return rejected('unavailable');
   }
 }

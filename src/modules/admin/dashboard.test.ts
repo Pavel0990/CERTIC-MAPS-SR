@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buckets, buildSeries, change, delta, formatHours, insights, kpiNumber, parsePeriod, periodRange, toCsv } from './dashboard';
+import { buckets, buildSeries, change, delta, formatHours, insights, kpiNumber, parsePeriod, periodRange, toCsv, topMunicipality, topTrafficType } from './dashboard';
 
 // 21/10/2026 a las 10:00 en Santo Domingo (UTC−4)
 const NOW = new Date('2026-10-21T14:00:00Z');
@@ -132,5 +132,25 @@ describe('CSV', () => {
   });
   it('separador ;, BOM y comillas cuando hace falta', () => {
     expect(toCsv([['Indicador', 'Valor'], ['Abiertos; ahora', 3], ['Dice "hola"', null]])).toBe('﻿Indicador;Valor\r\n"Abiertos; ahora";3\r\n"Dice ""hola""";');
+  });
+});
+
+describe('topTrafficType y topMunicipality', () => {
+  it('eligen el mayor con su nombre para personas', () => {
+    expect(topTrafficType({ bache: 2, derrumbe: 5 }, { derrumbe: 'Derrumbe' })).toEqual({ label: 'Derrumbe', count: 5 });
+    expect(topTrafficType({ otro: 1 }, {})).toEqual({ label: 'otro', count: 1 });
+    expect(topMunicipality([{ name: 'Monción', received: 1 }, { name: 'San Ignacio de Sabaneta', received: 3 }])).toEqual({ name: 'Sabaneta', share: 0.75 });
+  });
+
+  it('sin datos devuelven null', () => {
+    expect(topTrafficType({}, {})).toBeNull();
+    expect(topMunicipality([{ name: 'Monción', received: 0 }])).toBeNull();
+  });
+});
+
+describe('insights sin periodo anterior', () => {
+  it('nombra el periodo dado y no compara', () => {
+    const out = insights({ days: 7, period: 'en la semana del 19 – 25 de octubre de 2026', received: 3, receivedPrev: null, resolved: 0, openNow: null, oldestPendingHours: null, topTrafficType: null, topMunicipality: null, topViewed: null });
+    expect(out).toEqual(['Llegaron 3 reportes en la semana del 19 – 25 de octubre de 2026.']);
   });
 });

@@ -6,12 +6,12 @@ import { Field, Textarea } from '@/components/ui/form';
 import { Sheet } from '@/components/ui/sheet';
 import { useToast } from '@/components/ui/toast';
 import { reasonMessage } from '@/lib/vocabulary';
-import type { ActionResult } from '../actions';
+import type { StatusResult } from '@/types/ui';
 
 interface Props {
   label: string;
   done: string;
-  run: (text?: string) => Promise<ActionResult>;
+  run: (text?: string) => Promise<StatusResult>;
   variant?: ButtonProps['variant'];
   icon?: React.ReactNode;
   /** Pide un texto antes de ejecutar (motivo del rechazo, nota de resolución…). */

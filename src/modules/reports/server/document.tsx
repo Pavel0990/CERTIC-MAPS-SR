@@ -1,4 +1,5 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
+import { insights, topMunicipality, topTrafficType } from '@/modules/admin';
 import { formatNumber } from '@/utils/format';
 import { APP_TIMEZONE } from '@/utils/locale';
 import type { WeeklyReportData, WeeklyKpis } from '../index';
@@ -23,6 +24,10 @@ const s = StyleSheet.create({
   barTrack: { height: 6, backgroundColor: C.brandSoft, borderRadius: 3, flexGrow: 1, marginHorizontal: 8 },
   bar: { height: 6, backgroundColor: C.brand, borderRadius: 3 },
   note: { fontSize: 9, color: C.muted, marginTop: 6 },
+  highlights: { backgroundColor: C.brandSoft, borderRadius: 6, padding: 12, marginBottom: 18 },
+  highlightsTitle: { fontSize: 11, fontFamily: 'Helvetica-Bold', marginBottom: 6 },
+  highlight: { flexDirection: 'row', marginTop: 3, fontSize: 10, lineHeight: 1.4 },
+  highlightDot: { width: 12, color: C.brand, fontFamily: 'Helvetica-Bold' },
   footer: { position: 'absolute', bottom: 24, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between', fontSize: 8, color: C.muted },
 });
 
@@ -38,6 +43,31 @@ export function periodLabel(start: string, end: string) {
   const from = sameMonth ? fmt(start, { day: 'numeric' }) : fmt(start, { day: 'numeric', month: 'long', ...(sameYear ? {} : { year: 'numeric' }) });
   return `${from} – ${fmt(end, { day: 'numeric', month: 'long', year: 'numeric' })}`;
 }
+/**
+ * Aspectos destacados de la semana en frases cortas: las mismas reglas que el panel (`insights`), con lo que guarda
+ * el snapshot. Sin la semana anterior ni las visitas por ficha, esas frases se omiten.
+ */
+export function weeklyHighlights(data: WeeklyReportData) {
+  const k = data.snapshots.find((x) => x.municipality_id === null)?.metrics;
+  if (!k) return [];
+  const munis = data.snapshots
+    .filter((x) => x.municipality_id !== null)
+    .map((x) => ({ name: x.municipality_name ?? '', received: x.metrics.traffic.received + x.metrics.requests.received }));
+  return insights({
+    days: 7,
+    // La semana del informe, no "los últimos 7 días": el PDF se puede abrir o regenerar semanas después
+    period: `en la semana del ${periodLabel(data.period_start, data.period_end)}`,
+    received: k.traffic.received + k.requests.received,
+    receivedPrev: null,
+    resolved: k.requests.resolved,
+    openNow: null, // open_now es de cuando se tomó la foto, no de la semana: no se afirma "nada sin resolver"
+    oldestPendingHours: null,
+    topTrafficType: topTrafficType(k.traffic.by_type, data.traffic_types),
+    topMunicipality: topMunicipality(munis),
+    topViewed: null,
+  });
+}
+
 const hours = (h: number | null) => (h == null ? '—' : h < 48 ? `${formatNumber(h)} h` : `${formatNumber(Math.round((h / 24) * 10) / 10)} días`);
 
 function Card({ value, label }: { value: string; label: string }) {
@@ -86,6 +116,7 @@ export function WeeklyReportDocument({ data, generatedAt }: { data: WeeklyReport
   const period = periodLabel(data.period_start, data.period_end);
   const stamp = new Intl.DateTimeFormat('es-DO', { dateStyle: 'long', timeStyle: 'short', timeZone: APP_TIMEZONE }).format(generatedAt);
   const k = province;
+  const highlights = weeklyHighlights(data);
 
   return (
     <Document title={`Informe semanal ${data.province_name} · ${period}`} author="SR Conecta" subject="Informe semanal de gestión municipal" language="es">
@@ -95,6 +126,18 @@ export function WeeklyReportDocument({ data, generatedAt }: { data: WeeklyReport
           <Text style={s.title}>Provincia {data.province_name}</Text>
           <Text style={s.subtitle}>Semana del {period} · versión {data.version}{data.trigger === 'manual' ? ' (regenerada)' : ''}</Text>
         </View>
+
+        {highlights.length > 0 && (
+          <View style={s.highlights} wrap={false}>
+            <Text style={s.highlightsTitle}>Aspectos destacados</Text>
+            {highlights.map((h) => (
+              <View key={h} style={s.highlight}>
+                <Text style={s.highlightDot}>•</Text>
+                <Text style={{ flexGrow: 1, flexShrink: 1 }}>{h}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         <Text style={[s.h2, { marginTop: 0 }]}>Resumen de la semana</Text>
         <View style={s.grid}>

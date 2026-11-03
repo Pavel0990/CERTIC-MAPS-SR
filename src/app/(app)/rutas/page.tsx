@@ -8,7 +8,7 @@ import { getCatalogs } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
 import { DIFFICULTY, ROUTE_KIND } from '@/lib/vocabulary';
 import { formatMinutes } from '@/utils/format';
-import { FilterChips, ListGrid, ListRow, OsmCredit } from '../_contenido/list';
+import { FilterChips, ListGrid, ListRow, OsmCredit } from '../_content/list';
 
 export const metadata: Metadata = { title: 'Rutas', description: 'Rutas para caminar y pedalear en Santiago Rodríguez, con distancia, tiempo y dificultad.' };
 

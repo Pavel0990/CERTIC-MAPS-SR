@@ -1,6 +1,8 @@
 # Actualizaciones de dependencias (SECURITY.md). Las de seguridad llegan en cuanto hay aviso;
 # las demás, agrupadas una vez por semana para no llenar el repositorio de PR.
-# Hasta el 27/10 el código está congelado: los PR que no sean de seguridad se revisan después de la demo.
+# Hasta la entrega del 27/11/2026 solo entran las de seguridad: las demás se revisan después de la demo (28–30/11).
+# cooldown: una versión nueva espera 7 días antes de proponerse (si sale con un problema, ya se habrá corregido);
+# no aplica a las actualizaciones de seguridad.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -9,6 +11,8 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
     # Las versiones mayores (TypeScript 7, ESLint 10…) cambian APIs: se planean a mano, no llegan solas.
     # Las alertas de seguridad siguen apareciendo en Security → Dependabot; si una corrección exige versión mayor, se hace a mano.
     ignore:
@@ -23,6 +27,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     ignore:
       - dependency-name: '*'
         update-types: [version-update:semver-major]

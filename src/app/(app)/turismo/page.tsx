@@ -7,7 +7,7 @@ import { Card, EmptyState } from '@/components/ui/primitives';
 import { getCatalogs } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
 import { PLACE_KIND } from '@/lib/vocabulary';
-import { FilterChips, ListGrid, ListRow, OsmCredit, PAGE_SIZE, ShowMore, shownCount } from '../_contenido/list';
+import { FilterChips, ListGrid, ListRow, OsmCredit, PAGE_SIZE, ShowMore, shownCount } from '../_content/list';
 
 export const metadata: Metadata = { title: 'Lugares para visitar', description: 'Presas, parques, miradores y áreas protegidas de Santiago Rodríguez.' };
 

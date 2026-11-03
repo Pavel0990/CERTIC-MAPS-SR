@@ -7,7 +7,7 @@ import { PageShell } from '@/components/shared/page';
 import { Badge, Card, EmptyState } from '@/components/ui/primitives';
 import { getCatalogs } from '@/lib/catalogs';
 import { createClient } from '@/lib/supabase/server';
-import { FilterChips, ListGrid, ListRow, OsmCredit, PAGE_SIZE, ShowMore, shownCount } from '../_contenido/list';
+import { FilterChips, ListGrid, ListRow, OsmCredit, PAGE_SIZE, ShowMore, shownCount } from '../_content/list';
 
 export const metadata: Metadata = { title: 'Negocios', description: 'Comercios y servicios de Santiago Rodríguez: colmados, comida, salud, alojamiento y más.' };
 
