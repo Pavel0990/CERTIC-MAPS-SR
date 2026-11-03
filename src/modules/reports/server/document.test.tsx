@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { WeeklyKpis, WeeklyReportData } from '../index';
-import { periodLabel, weeklyHighlights } from './document';
+import { periodLabel } from './document';
 
 describe('periodLabel', () => {
   it('no repite el mes ni el año cuando no hace falta', () => {
@@ -24,28 +24,8 @@ const report = (snapshots: WeeklyReportData['snapshots']): WeeklyReportData => (
   province_code: 'SR', province_name: 'Santiago Rodríguez', snapshots, traffic_types: { bache: 'Bache' },
 });
 
-describe('weeklyHighlights', () => {
-  it('resume la semana con las reglas del panel, sin inventar la comparación con la semana anterior', () => {
-    const h = weeklyHighlights(report([
-      { municipality_id: null, municipality_name: null, metrics: kpis(6, 4, { bache: 5 }) },
-      { municipality_id: 'a', municipality_name: 'San Ignacio de Sabaneta', metrics: kpis(5, 3) },
-      { municipality_id: 'b', municipality_name: 'Monción', metrics: kpis(1, 1) },
-    ]));
-    expect(h).toEqual([
-      'Llegaron 10 reportes en la semana del 19 – 25 de octubre de 2026.',
-      'El municipio resolvió 2 reportes en este periodo.',
-      'La alerta vial más común fue «Bache» (5).',
-      'Sabaneta concentra el 80 % de los reportes.',
-    ]);
-  });
-
-  it('sin snapshot provincial no hay frases', () => {
-    expect(weeklyHighlights(report([]))).toEqual([]);
-  });
-});
-
 describe('WeeklyReportDocument', () => {
-  it('genera un PDF válido con los aspectos destacados', async () => {
+  it('genera un PDF válido con «Lo más importante de la semana»', async () => {
     const { renderToBuffer } = await import('@react-pdf/renderer');
     const { WeeklyReportDocument } = await import('./document');
     const data = report([

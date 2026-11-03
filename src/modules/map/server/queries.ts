@@ -2,7 +2,7 @@ import 'server-only';
 import { municipalityNames } from '@/lib/catalogs';
 import { createAnonClient } from '@/lib/supabase/anon';
 import { ALL_LAYERS, clampBBox } from '../layers';
-import type { BBox, LayerId, MapFeatureCollection, MunicipalityAggregate, StaticLayers } from '../types';
+import type { BBox, HotspotCollection, LayerId, MapFeatureCollection, MunicipalityAggregate, StaticLayers } from '../types';
 
 /** Capas públicas del viewport. Se ejecuta como `anon`: la respuesta es cacheable y nunca personal. */
 export async function fetchFeatures(bbox: BBox, layers: LayerId[]) {
@@ -20,6 +20,17 @@ export async function fetchAggregates() {
   const { data, error } = await createAnonClient().rpc('map_aggregates');
   if (error) throw new Error(`map_aggregates: ${error.message}`);
   return (data ?? []) as unknown as MunicipalityAggregate[];
+}
+
+/**
+ * Puntos calientes de los últimos 90 días (cuadros con 2+ reportes públicos). Como `anon`: cacheable.
+ * `null` si la base todavía no tiene la función (migración 20261028130000 sin aplicar): la capa no se ofrece.
+ */
+export async function fetchHotspots(): Promise<HotspotCollection | null> {
+  const { data, error } = await createAnonClient().rpc('report_hotspots', { p_days: 90 });
+  if (error?.code === 'PGRST202') return null;
+  if (error) throw new Error(`report_hotspots: ${error.message}`);
+  return data as unknown as HotspotCollection;
 }
 
 /** Capas pequeñas y estables: límites municipales y trazados de rutas, simplificados (§7.1). */

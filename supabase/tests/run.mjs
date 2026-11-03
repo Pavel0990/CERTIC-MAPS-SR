@@ -37,7 +37,7 @@ ok('A1 RLS activado en todas las tablas de public', noRls.length === 0, noRls.ma
 
 const anonExec = await q(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
                           where n.nspname = 'public' and has_function_privilege('anon', p.oid, 'execute') order by 1`);
-ok('A2 anon solo ejecuta map_aggregates, map_features, search_all y track_engagement', anonExec.map(r => r.proname).join(',') === 'map_aggregates,map_features,search_all,track_engagement',
+ok('A2 anon solo ejecuta map_aggregates, map_features, report_hotspots (solo conteos agregados), search_all y track_engagement', anonExec.map(r => r.proname).join(',') === 'map_aggregates,map_features,report_hotspots,search_all,track_engagement',
    anonExec.map(r => r.proname).join(','));
 
 const anonWrite = await q(`select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
@@ -686,6 +686,13 @@ ok('R6 al quitar el último dispositivo se apaga el push de la cuenta',
 // ---------------------------------------------------------------------------------------------
 // T. Catálogos editables desde el panel (administración provincial)
 // ---------------------------------------------------------------------------------------------
+const localCats = {
+  business: (await as(db, null, `select slug from public.business_categories where active and slug in ('casabe', 'finca', 'agropecuaria')`)).rows.length,
+  traffic: (await as(db, null, `select code from public.traffic_report_types where active and code = 'animales'`)).rows.length,
+  request: (await as(db, null, `select code from public.request_categories where active and code = 'camino_vecinal' and kind = 'incident'`)).rows.length,
+};
+ok('T0 las categorías locales (casabe, finca, agropecuaria, animales en la vía, camino vecinal) están activas y las ve el público',
+   localCats.business === 3 && localCats.traffic === 1 && localCats.request === 1, JSON.stringify(localCats));
 ok('T1 solo la administración provincial ve y edita los catálogos',
    (await rpc(U.admMon, `public.catalog_admin_list()`)).reason === 'forbidden'
    && (await rpc(U.modSab, `public.save_catalog_item('traffic_types', 'bache', '{"name":"Hoyo"}')`)).reason === 'forbidden');
@@ -860,6 +867,30 @@ ok('W13 EXECUTE explícito: solo authenticated (ni anon ni PUBLIC)', wGrants.a =
 let evaLast;
 for (let i = 0; i < 61; i++) evaLast = await similar(eva, 'traffic', 'bache', W0);
 ok('W14 límite de uso: 60 consultas por hora, la 61 se rechaza', evaLast.reason === 'rate_limited', JSON.stringify(evaLast));
+
+// ---------------------------------------------------------------------------------------------
+// H. Puntos calientes (migración 20261028130000): cuadros de ~550 m, solo con 2+ reportes públicos
+// ---------------------------------------------------------------------------------------------
+// Zona libre lejos de las demás pruebas; dos puntos a ~100 m caen en el mismo cuadro de 0,005°.
+const H0 = [19.5512, -71.2512];
+const hotspots = async (days = 90) => (await as(db, null, `select public.report_hotspots($1) h`, [days])).rows[0].h;
+const cellAt = (fc, [lat, lng]) => fc.features.find((f) => Math.abs(f.geometry.coordinates[0] - lng) < 0.0026 && Math.abs(f.geometry.coordinates[1] - lat) < 0.0026);
+await addTraffic(U.ana, H0, 'bache');
+ok('HC1 un solo reporte no forma punto caliente (nadie queda ubicado)', !cellAt(await hotspots(), H0));
+await addRequest(U.beto, [H0[0] + 0.0009, H0[1]], 'alumbrado', 'approved', true);
+const hot = cellAt(await hotspots(), H0);
+ok('HC2 con dos reportes públicos en el cuadro aparece, con el conteo y el centro del cuadro (no la ubicación exacta)',
+   hot?.properties.count === 2 && hot.geometry.coordinates[0] !== H0[1] && hot.geometry.coordinates[1] !== H0[0]
+   && Math.abs(((hot.geometry.coordinates[0] / 0.005) % 1 + 1) % 1 - 0.5) < 1e-6, JSON.stringify(hot));
+const H1 = [19.5612, -71.2412];
+await addTraffic(U.ana, H1, 'bache', 'rejected');
+await addTraffic(U.ana, H1, 'bache', 'pending');
+await addRequest(U.beto, H1, 'alumbrado', 'approved', false);
+await addRequest(U.beto, H1, 'alumbrado', 'pending', true);
+ok('HC3 lo rechazado, pendiente o privado no cuenta', !cellAt(await hotspots(), H1));
+ok('HC4 el periodo se limita a 7–365 días y el público (anon) puede consultarlo',
+   (await hotspots(1)).type === 'FeatureCollection' && (await hotspots(100000)).type === 'FeatureCollection'
+   && (await one(`select has_function_privilege('anon', 'public.report_hotspots(integer)', 'execute') a`)).a === true);
 
 // ---------------------------------------------------------------------------------------------
 // AC. Crédito de las fotos con licencia libre (migración 20261022120000, propuesta)

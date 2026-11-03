@@ -10,7 +10,7 @@ El criterio **UX/UI para baja alfabetización digital** vale 20 de los 100 punto
 - alguien joven;
 - alguien de Monción o de Villa Los Almácigos.
 
-**Qué se necesita:** el teléfono **de la persona** (no el tuyo), la URL https://sr-conecta.vercel.app y esta hoja impresa.
+**Qué se necesita:** el teléfono **de la persona** (no el tuyo), la URL https://sr-conecta.vercel.app y la [hoja imprimible](kit-prueba/hoja-por-persona.html) (una por persona; ábrela en el navegador y elige *Imprimir*). Los resultados se pasan a la [planilla](kit-prueba/resultados.html).
 
 ---
 
@@ -33,6 +33,7 @@ El criterio **UX/UI para baja alfabetización digital** vale 20 de los 100 punto
 | 5 | "¿Qué pasó con tu reporte?" | Encuentra **Actividad** y entiende el estado ("Recibido", "En revisión"…) | 1 min |
 | 6 | "Busca un lugar para pasear el domingo y cómo llegar." | Llega a **Lugares** o **Rutas**, abre uno y toca **Cómo llegar** | 2 min |
 | 7 | "Quieres que te avisen si hay un accidente cerca. ¿Cómo?" | Encuentra **Perfil → Avisos** | 2 min |
+| 8 | "Imagina que no tienes los lentes. Haz que el teléfono te lea un lugar." | En una ficha toca **Escuchar** y oye la información | 1 min |
 
 ## Hoja por persona
 
@@ -48,6 +49,7 @@ Tarea | ¿Lo logró? (sí / con ayuda / no) | Tiempo | Dónde se trabó / palabr
   5   |                                  |        |
   6   |                                  |        |
   7   |                                  |        |
+  8   |                                  |        |
 
 Al final le preguntas:
 - Del 1 al 5, ¿qué tan fácil fue?  ____
@@ -56,9 +58,17 @@ Al final le preguntas:
 - ¿Qué le cambiarías?
 ```
 
+## Permiso para usar lo que diga
+
+Antes de empezar, lee esto a la persona y pídele que firme la hoja (está al final de la hoja imprimible):
+
+> "Esto es para mejorar la app. No anotamos tu nombre completo ni tu teléfono. ¿Nos permites contar lo que digas en la presentación ante el jurado? ¿Y usar una foto de tus manos con el teléfono, sin tu cara?"
+
+Sin firma, sus resultados cuentan pero **no se usan sus palabras ni fotos** en la demo.
+
 ## Después de la prueba
 
-1. **Pasa las hojas** a una tabla: tarea por tarea, cuántas personas la lograron sin ayuda.
+1. **Pasa las hojas** a la [planilla](kit-prueba/resultados.html) (se abre en cualquier navegador, sin internet): una fila por persona, y en cada tarea *Sí*, *Con ayuda* o *No*. La planilla cuenta sola cuántas tareas se lograron sin ayuda; ese número va a la tabla de **Resultados**.
 2. **Ordena los problemas** por cuántas personas los tuvieron. Uno que tuvieron 3 de 5 va primero.
 3. **Por cada problema**, describe qué vio la persona, qué esperaba y qué hizo. Ese texto es la tarea para corregirlo.
 4. **Guarda las conclusiones** en este documento, en "Resultados" (abajo). En la demo, decir "lo probamos con 6 vecinos y cambiamos esto" vale mucho.
@@ -67,5 +77,5 @@ Al final le preguntas:
 
 | Ronda | Fecha | Personas | Tareas logradas sin ayuda | Cambios hechos |
 |---|---|---|---|---|
-| 1 | | | /35 | |
-| 2 | | | /35 | |
+| 1 | | | /40 | |
+| 2 | | | /40 | |

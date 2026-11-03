@@ -2,7 +2,9 @@
 import Link from 'next/link';
 import type { ReactNode, RefObject } from 'react';
 import { Check, ChevronLeft, CloudOff, X } from 'lucide-react';
+import { ListenButton } from '@/components/shared/listen-button';
 import { Notice } from '@/components/ui/primitives';
+import { readable } from '@/utils/readable';
 import { cn } from '@/utils/cn';
 
 /** Barra de progreso de un asistente por pasos (mismo diseño que /reportar). */
@@ -39,6 +41,8 @@ export function StepTitle({ headingRef, title, hint }: { headingRef: RefObject<H
     <div>
       <h1 ref={headingRef} tabIndex={-1} className="text-[28px] font-extrabold outline-none">{title}</h1>
       {hint && <p className="mt-1 text-[17px] text-muted">{hint}</p>}
+      {/* Para quien lee con dificultad: el paso en voz alta con la voz del teléfono */}
+      <ListenButton text={readable([title, hint])} variant="compact" className="mt-3" />
     </div>
   );
 }

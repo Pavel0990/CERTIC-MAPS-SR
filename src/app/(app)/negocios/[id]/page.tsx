@@ -6,6 +6,8 @@ import { getBusinessDetail, isBusinessMember } from '@/modules/businesses/server
 import { formatTime, hoursByDay, isOpenNow } from '@/modules/businesses';
 import { listPhotos } from '@/modules/media/server';
 import { MapCanvas, type MapFeatureCollection } from '@/modules/map';
+import { ListenButton } from '@/components/shared/listen-button';
+import { readable } from '@/utils/readable';
 import { PageShell } from '@/components/shared/page';
 import { TrackView, TrackedLink } from '@/components/shared/engagement';
 import { Badge, Card, Eyebrow } from '@/components/ui/primitives';
@@ -56,6 +58,14 @@ export default async function BusinessPage({ params }: { params: Promise<{ id: s
       actions={
         <HeaderActions>
           <DirectionsButton entity="business" id={b.id} point={b.point} />
+          <ListenButton text={readable([
+            b.name,
+            `${b.category ?? 'Negocio'}${b.municipality ? ` en ${b.municipality}` : ''}`,
+            approved && b.hours.length > 0 && (open ? 'Abierto ahora' : 'Cerrado ahora'),
+            b.description,
+            b.address && `Dirección: ${b.address}`,
+            b.phone && `Teléfono: ${b.phone.replace(/\D/g, '').split('').join(' ')}`,
+          ])} />
           {approved && b.phone && (
             <a href={`tel:${b.phone.replace(/[^\d+]/g, '')}`} className="inline-flex min-h-[52px] flex-1 items-center justify-center gap-2 rounded-[14px] border border-line-strong bg-surface px-5 text-base font-semibold hover:bg-canvas sm:flex-none">
               <Phone className="size-5" aria-hidden /> Llamar

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { List, LocateFixed, Map as MapIcon, WifiOff } from 'lucide-react';
+import { Flame, List, LocateFixed, Map as MapIcon, WifiOff } from 'lucide-react';
 import { ALL_LAYERS, MapCanvas, type LatLng, type MapCanvasProps, type LayerId, type MapFeature, type MapFeatureCollection } from '@/modules/map';
 import { IconButton } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
@@ -13,6 +13,7 @@ import { LayerChips } from './layer-chips';
 import { SearchBox, type SearchHit } from './search-box';
 import { SelectedCard } from './selected-card';
 import type { ExplorerCatalogs } from './shared';
+import { useHotspots } from './use-hotspots';
 import { useMapData } from './use-map-data';
 
 export type { ExplorerCatalogs } from './shared';
@@ -32,6 +33,8 @@ export function Explorer({
   const { state: geo, locate } = useGeolocation();
   const { data, staticLayers, degraded, live, onMoveEnd } = useMapData(catalogs);
   const [layers, setLayers] = useState<LayerId[]>(initialLayers);
+  const hotspots = useHotspots();
+  const [heatOn, setHeatOn] = useState(false);
   const [selected, setSelected] = useState<MapFeature | null>(null);
   const [view, setView] = useState<'map' | 'list'>('map');
   const [focus, setFocus] = useState<{ center: LatLng; zoom?: number; key: number } | null>(null);
@@ -90,6 +93,7 @@ export function Explorer({
         focus={focus}
         userLocation={userLocation}
         selectedId={selected?.properties.id}
+        hotspots={heatOn && hotspots ? hotspots : null}
         onMoveEnd={onMoveEnd}
         onSelect={setSelected}
         overlayInsets
@@ -98,7 +102,15 @@ export function Explorer({
       {/* Panel superior: búsqueda, capas y aviso de conexión */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col gap-2 p-3 md:left-3 md:right-auto md:top-3 md:w-[400px] md:p-0">
         <SearchBox onPick={pickHit} />
-        <LayerChips layers={layers} onToggle={toggleLayer} />
+        <LayerChips layers={layers} onToggle={toggleLayer} heat={hotspots ? { on: heatOn, onToggle: () => setHeatOn((v) => !v) } : undefined} />
+        {heatOn && hotspots && (
+          <p role="status" className="pointer-events-auto flex items-center gap-2 self-start rounded-[14px] bg-surface/95 px-3.5 py-2 text-[15px] font-medium shadow-[var(--shadow-card)]">
+            <Flame className="size-4 shrink-0 text-[#f97316]" aria-hidden />
+            {hotspots.features.length > 0
+              ? 'Más rojo, más reportes en los últimos 90 días.'
+              : 'Todavía no hay zonas con varios reportes en los últimos 90 días.'}
+          </p>
+        )}
         {mode !== 'online' && (
           <div role="status" className="pointer-events-auto flex items-center gap-2 rounded-[14px] bg-warn-soft px-3.5 py-2.5 text-[15px] font-medium text-warn shadow-[var(--shadow-card)]">
             <WifiOff className="size-4 shrink-0" aria-hidden />

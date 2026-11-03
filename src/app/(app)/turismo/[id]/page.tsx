@@ -5,6 +5,8 @@ import { getPlaceDetail } from '@/modules/tourism/server';
 import { listServices } from '@/modules/tourism';
 import { listPhotos } from '@/modules/media/server';
 import { MapCanvas, type MapFeatureCollection } from '@/modules/map';
+import { ListenButton } from '@/components/shared/listen-button';
+import { readable, servicesSentence } from '@/utils/readable';
 import { PageShell } from '@/components/shared/page';
 import { TrackView } from '@/components/shared/engagement';
 import { Card, Eyebrow } from '@/components/ui/primitives';
@@ -45,6 +47,14 @@ export default async function TourismPlacePage({ params }: { params: Promise<{ i
       actions={
         <HeaderActions>
           <DirectionsButton entity="tourism_place" id={p.id} point={p.point} />
+          <ListenButton text={readable([
+            p.name,
+            `${PLACE_KIND[p.kind] ?? 'Lugar turístico'}${p.municipality ? ` en ${p.municipality}` : ''}`,
+            p.description,
+            p.opening_info && `Horario: ${p.opening_info}`,
+            p.accessibility && `Acceso: ${p.accessibility}`,
+            servicesSentence(listServices(p.services)),
+          ])} />
           {canEdit && <SecondaryLink href={`/turismo/${p.id}/editar`}>Editar</SecondaryLink>}
         </HeaderActions>
       }

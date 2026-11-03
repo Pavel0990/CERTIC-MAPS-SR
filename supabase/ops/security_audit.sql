@@ -5,7 +5,7 @@
 
 with
 -- Funciones que un visitante sin sesión puede ejecutar a propósito (ADR-018; DATABASE.md §6)
-anon_allowed(name) as (values ('map_aggregates'), ('map_features'), ('search_all'), ('track_engagement')),
+anon_allowed(name) as (values ('map_aggregates'), ('map_features'), ('report_hotspots'), ('search_all'), ('track_engagement')),
 fn as (
   select p.oid, n.nspname as schema, p.proname as name, p.prosecdef as definer, p.proconfig
   from pg_proc p join pg_namespace n on n.oid = p.pronamespace

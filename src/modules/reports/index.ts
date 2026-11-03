@@ -20,6 +20,9 @@ export interface WeeklyReportData {
   traffic_types: Record<string, string>;
 }
 
+/** «Lo más importante de la semana» (frases automáticas del informe). */
+export { weeklyHighlights } from './highlights';
+
 /** Ruta del PDF en el bucket privado reports-pdf (§9.6): {provincia}/{año}/semana-{nn}/v{n}.pdf */
 export function reportPath(provinceCode: string, periodStart: string, version: number) {
   const { year, week } = isoWeek(periodStart);
