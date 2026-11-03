@@ -16,7 +16,7 @@ try {
     const out = run('psql', [process.env.DATABASE_URL, '-X', '-q', '-v', 'ON_ERROR_STOP=1', '-A', '-t', '-F', '\t', '-f', sql]);
     problems = out.split('\n').filter(Boolean).map((l) => { const [problem, object] = l.split('\t'); return { problem, object }; });
   } else {
-    problems = JSON.parse(run('npx', ['supabase', 'db', 'query', '--linked', '-o', 'json', '-f', sql])).rows;
+    problems = JSON.parse(run('npx', ['supabase', 'db', 'query', '--remote', '--read-only', '-o', 'json', '-f', sql])).rows;
   }
 } catch (e) {
   console.error('No se pudo ejecutar la auditoría:', e.stderr?.toString().trim() || e.message);

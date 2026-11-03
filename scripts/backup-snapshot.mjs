@@ -11,7 +11,8 @@ const tmp = 'backups/.snapshot.sql';
 const run = (sql) => {
   fs.writeFileSync(tmp, sql);
   try {
-    const out = execFileSync('npx', ['supabase', 'db', 'query', '--linked', '-o', 'json', '-f', tmp], { encoding: 'utf8', maxBuffer: 1 << 30, shell: process.platform === 'win32', stdio: ['ignore', 'pipe', 'ignore'] });
+    // CLI v3: --linked pasó a --remote, y una consulta remota pide confirmación salvo --read-only (la copia solo lee)
+    const out = execFileSync('npx', ['supabase', 'db', 'query', '--remote', '--read-only', '-o', 'json', '-f', tmp], { encoding: 'utf8', maxBuffer: 1 << 30, shell: process.platform === 'win32', stdio: ['ignore', 'pipe', 'ignore'] });
     return JSON.parse(out.slice(out.indexOf('{'))).rows;
   } finally {
     fs.rmSync(tmp, { force: true });

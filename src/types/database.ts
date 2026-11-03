@@ -1611,6 +1611,7 @@ export type Database = {
         }
         Returns: Json
       }
+      report_hotspots: { Args: { p_days?: number }; Returns: Json }
       request_assignees: {
         Args: { p_ids: string[] }
         Returns: {
@@ -1619,7 +1620,6 @@ export type Database = {
           request_id: string
         }[]
       }
-      report_hotspots: { Args: { p_days?: number }; Returns: Json }
       request_upload: { Args: { p_ext: string }; Returns: Json }
       request_weekly_report: { Args: { p_period_start: string }; Returns: Json }
       review_content: {
