@@ -1,14 +1,11 @@
 'use client';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Copy, Plus, Trash2 } from 'lucide-react';
 import { promotionStartMin, type HourRange } from '@/modules/businesses';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Textarea } from '@/components/ui/form';
 import { ErrorNote } from '@/components/ui/primitives';
-import { useToast } from '@/components/ui/toast';
 import { WEEKDAYS } from '@/lib/vocabulary';
-import { PhotoPicker, usePhotos } from '../../_content/photo-picker';
 import { useSave } from '../../_content/use-save';
 import { addPromotion, saveBusiness, saveHours } from './actions';
 
@@ -152,35 +149,3 @@ export function PromotionForm({ businessId, approved }: { businessId: string; ap
   );
 }
 
-/** Agregar fotos a un negocio ya registrado. */
-export function AddPhotos({ businessId, room }: { businessId: string; room: number }) {
-  const router = useRouter();
-  const toast = useToast();
-  const photos = usePhotos(Math.max(0, room));
-  const [busy, setBusy] = useState(false);
-  if (room <= 0) return <p className="text-[15px] text-muted">Ya tienes el máximo de 10 fotos.</p>;
-  return (
-    <div className="flex flex-col gap-3">
-      <PhotoPicker state={photos} hint="La fachada, el interior y tus productos." />
-      {photos.photos.length > 0 && (
-        <Button
-          loading={busy}
-          className="self-start"
-          onClick={async () => {
-            setBusy(true);
-            const err = await photos.upload('business', businessId);
-            setBusy(false);
-            if (err) toast.show(err, 'error');
-            else {
-              toast.show('Subimos las fotos. Saldrán cuando las revise un moderador.');
-              photos.photos.forEach((p) => photos.remove(p));
-            }
-            router.refresh();
-          }}
-        >
-          Subir {photos.photos.length === 1 ? 'la foto' : `${photos.photos.length} fotos`}
-        </Button>
-      )}
-    </div>
-  );
-}
