@@ -1,0 +1,79 @@
+# 05 · Auditoría de base de datos (Fase 1, solo lectura)
+
+> 04/11/2026 · rama `auto/auditoria-integral` · proyecto Supabase `sdhhuacuevkfvefesapu` (la CLI lo marca **production**; es el mismo que se llama "staging" en la documentación).
+> Método: catálogo y conteos con `npx supabase db query --remote --read-only -o json` (usuario `supabase_read_only_user`), lectura de las 32 migraciones, `npm run db:audit` y `npm run test:db`. No se cambió nada. Solo se imprimen conteos y definiciones.
+> No repite la revisión de redundancias del 03/11 (DATABASE.md §5.10: FK sin índice, índices duplicados, PK, RLS sin políticas). Esta auditoría va más a fondo en las expresiones RLS, los grants por columna, la exposición de datos, la integridad de los datos reales, el rendimiento medido y las copias.
+
+## 1. Diagnóstico inicial
+
+La base está bien diseñada y bien defendida: RLS en las 27 tablas de `public`, grants por columna, todas las funciones `SECURITY DEFINER` con `search_path` fijo, transiciones de estado con compare-and-set, idempotencia y 200 pruebas en PGlite que pasan, ataques incluidos. **No hay hallazgos P0.** Los problemas reales son de tres tipos:
+
+1. **Integridad de los datos públicos:** los reportes de tránsito que nadie moderó caducan como `expired`, y `expired` cuenta como "publicado" en el mapa de calor y en los KPIs.
+2. **Datos personales de más para el personal:** la administración municipal lee IP y JSON de auditoría de los vecinos, y cualquier moderador ve el perfil de todos los vecinos de la provincia.
+3. **Operación:** las copias no incluyen los **archivos** de Storage, la base de demo es la misma que la de producción, y `cron.job_run_details` crece sin purga.
+
+## 2. Hallazgos
+
+| # | Sev. | Objeto | Evidencia | Causa | Impacto | Corrección propuesta |
+|---|---|---|---|---|---|---|
+| DB-01 | **P1** | Separación de entornos: un solo proyecto (`sdhhuacuevkfvefesapu`) | La CLI dice `Target: … · production`. `profiles` = 8 y `user_roles`: citizen=8, entrepreneur=2, municipal_admin=3, moderator=1 (las cuentas `@example.com` de las E2E viven ahí). `scripts/staging-test-users.mjs:13` se protege con `SUPABASE_ENV`, una variable que nadie define (no está en `.env.example`) | No existe el proyecto de producción (bloqueo conocido) | Las E2E, el seed de demo y `e2e_reset_rate_limits` escriben en la base que verán los vecinos el 28–30/11. Los KPIs y el PDF semanal mezclan datos de prueba. La protección del script no protege nada | Crear el proyecto de producción (DEPLOYMENT §3). Mientras tanto, definir `SUPABASE_ENV=staging` en `.env.local` y que el script **exija** el valor `staging` (no que rechace `prod`). Antes de la demo: `remove_demo_content.sql` y borrar las cuentas `@example.com` |
+| DB-02 | **P2** | `private.expire_traffic_reports()` (`20260924120130_worker_maintenance.sql:151`) + `public.report_hotspots` (`20261028130000_report_hotspots.sql:21`) + `public.kpi_summary` (`20260924120120_rpc_read.sql:156`) | `expire` pasa a `expired` también los `pending`. Hoy: tránsito expired=5, de los cuales **4 no tienen ninguna acción de moderación** y ninguna auditoría con `after.status` en active/verified (consultas c12 y a8) | `expired` significa a la vez "caducó después de publicarse" y "nadie la revisó nunca" | El mapa de calor público (anon) y el KPI `traffic.published` del panel y del PDF cuentan reportes que **nunca se aprobaron** (posibles falsos o abusivos). Rompe la promesa de la migración ("nada pendiente") y la regla "dashboard = PDF = realidad" | Migración propuesta abajo (§2.1): columna `published_at`, llenarla al activar, y filtrar por ella en `report_hotspots` y `kpi_summary` |
+| DB-03 | **P2** | Copias de seguridad (`.github/workflows/backup.yml`) | El `pg_dump` incluye el esquema `storage`, que solo guarda **metadatos**. Hay 5 objetos en `report-evidence` y las fotos de `public-media`, `avatars` y los 7 PDF (`report_runs` succeeded=7) que no se copian en ningún lado. Plan gratuito: sin PITR | La copia se pensó para la base y no para el servicio de archivos | Tras un desastre, la base se restaura con rutas a archivos que ya no existen: fichas sin fotos y PDF que no se descargan. RPO de la base: 24 h; RPO de los archivos: no hay | Añadir al workflow un paso que descargue los buckets con la API de Storage (`supabase storage cp -r ss:///public-media …` o un script con `service_role`), los cifre igual que el dump y los suba como otro artefacto. Repetir el simulacro (`backup:check`): el último fue el 21/10 y desde entonces hay 4 migraciones nuevas |
+| DB-04 | **P2** | Tabla `public.audit_logs`: grant de tabla completo (`20260924120200_rls_grants.sql:199`) y política `audit_read` (`:200`) | `authenticated` tiene `SELECT` sobre **todas** las columnas (`ip_observed`, `ip_declared`, `user_agent`, `before`, `after`, `actor_id`). Hay 5 filas de vecinos (`actor_role=citizen`) con IP y municipio: la administración de ese municipio las lee | Se concedió la tabla entera en lugar de columnas | IP y huella del navegador de vecinos visibles para el personal municipal. La Ley 172-13 exige minimizar los datos. La pantalla `/admin/auditoria` no usa esas columnas (`listAudit` pide 9 columnas sin IP) | `revoke select on public.audit_logs from authenticated; grant select (created_at, id, actor_id, actor_role, action, entity_type, entity_id, result, municipality_id) on public.audit_logs to authenticated;` La IP queda solo para `service_role` y el SQL Editor |
+| DB-05 | **P2** | Política `profiles_read_own_or_staff` (`20260924120200_rls_grants.sql:84`): `id = auth.uid() OR is_any_staff()` | Un moderador de Monción lee `display_name`, `home_municipality_id`, `reputation` y `location_consent` de **todos** los vecinos de la provincia. Lo mismo pasa con `moderation_read` (`:196`, `is_any_staff()`) y `engagement_read` | `is_any_staff()` no tiene alcance territorial | Personal de un municipio ve datos de vecinos de otro. Viola el modelo "personal (su municipio)" de la matriz §7 de DATABASE.md | Cambiar el `USING` a `id = (select auth.uid()) OR (select private.is_provincial_admin()) OR private.is_staff(home_municipality_id)`, más una función `private.can_see_profile(id)` (DEFINER) para los perfiles de los autores de reportes del municipio. Hay que revisar `searchPeople` y `listTeam` en `admin/server/queries.ts` para no romper el panel |
+| DB-06 | **P2** | `find_similar_reports` y `create_traffic_report` (medido en `extensions.pg_stat_statements`) | find_similar: 35 llamadas, **media de 304 ms, máximo de 1 889 ms**. create_traffic_report: 77 llamadas, media de 239 ms, máximo de 1 990 ms. `map_features`: 1 986 llamadas, media de 102 ms, máximo de 1 517 ms. Las tablas tienen decenas de filas | Lo más probable es `private.locate()`: `ST_Covers` sobre los polígonos oficiales de OSM sin subdividir (cada llamada recorre miles de vértices). No se pudo confirmar con EXPLAIN porque el usuario de solo lectura no ejecuta las RPC | El asistente de `/reportar` corta `find_similar` a los 1,5 s: en los picos el aviso de duplicado no sale. Con señal móvil, el alta de un reporte tarda 2 s o más | Medir con `EXPLAIN (ANALYZE, BUFFERS) select private.locate(private.make_point(19.47,-71.34))` en el SQL Editor. Si se confirma: tabla `private.municipality_parts` con `ST_Subdivide(geom, 64)` y su GiST, y que `locate()` busque ahí |
+| DB-07 | P3 | `cron.job_run_details` | 60 437 filas desde el 26/09, 9,7 MB, unas 1 500 filas al día (`sr-wake-worker` corre cada minuto) | pg_cron no purga solo | En 6 meses son unos 60 MB del plan gratuito (500 MB) | Nueva tarea `select cron.schedule('sr-purge-cron-log','0 5 * * *',$$delete from cron.job_run_details where end_time < now() - interval '7 days'$$);` (va en una migración, como las otras 4) |
+| DB-08 | P3 | Concurrencia en `save_catalog_item`, `set_business_hours` y `assign_request` | No tienen `p_version` ni `FOR UPDATE` (grep en las migraciones). Sí lo tienen negocios, lugares y rutas (`version`) y los estados (compare-and-set) | No se aplicó el patrón a estas tres | Dos administradores editando lo mismo: gana el último sin aviso. Es poco probable con 4 cuentas de personal | `assign_request(p_id, p_assignee, p_expected_assignee)` con `WHERE assigned_to IS NOT DISTINCT FROM p_expected_assignee`. Horarios: comparar con `businesses.version` |
+| DB-09 | P3 | Paginación en `src/modules/admin/server/queries.ts` | Bandejas `listTrafficInbox` y `listRequestInbox`: `.limit(100)` sin página siguiente. `listValidationQueue` (negocios, lugares, rutas y promociones) y `listTeam`: sin límite (el único tope es `max_rows = 1000` de PostgREST) | — | Con más de 100 pendientes, los de menor prioridad desaparecen sin aviso. Hoy no pasa | Paginación por cursor (`created_at,id`) y el aviso "Hay más; filtra por municipio" |
+| DB-10 | P3 | `CHECK` de negocio que faltan | `traffic_reports`: solo `expires_at > created_at` (sin tope de 30 días en la tabla). `businesses_website_check` acepta `https://` solo o con espacios. `businesses_phone_check` acepta `-------`. `request_status_history.from_status/to_status` sin `CHECK`. `engagement_daily.day` sin límite futuro | Las reglas están solo en las RPC | Un `service_role` o un script de carga puede guardar datos inválidos (los scripts `load_*` escriben directo) | Migración: `check (expires_at <= created_at + interval '30 days')`, `website ~* '^https://[^\s/]+\.[^\s]+$'`, `phone ~ '[0-9].*[0-9].*[0-9].*[0-9].*[0-9].*[0-9].*[0-9]'` y `check (to_status in (…))`. Todas `not valid` y después `validate` |
+| DB-11 | P3 | Datos | `c02`: **84 negocios vigentes sin dueño** (todos los importados de OSM). `c03`: 1 nombre de negocio repetido en el mismo municipio | La importación de OSM no crea miembros | Nadie puede reclamar ni editar su negocio salvo el personal. La rúbrica valora el auto-servicio del comerciante | Flujo "Este negocio es mío" (`claim_business`, con revisión del personal) y revisar el duplicado a mano |
+| DB-12 | P3 | `private.attachment_municipality(uuid)`: DEFINER, ejecutable por `anon` | Necesaria para `attachments_read`. Dado un id de adjunto, devuelve el municipio | — | Revela poco (el municipio de una evidencia privada si se conoce su UUID, que no es enumerable) | Aceptable; documentarlo en `security_audit.sql` |
+
+### 2.1 Migración propuesta para DB-02 (no se creó el archivo)
+
+```sql
+-- 2026110xxxxxxx_traffic_published_at.sql
+alter table public.traffic_reports add column published_at timestamptz;
+-- Rellenar: lo que la auditoría registró como activado o verificado
+update public.traffic_reports t set published_at = a.first_at
+from (select entity_id, min(created_at) first_at from public.audit_logs
+      where entity_type = 'traffic_report' and after->>'status' in ('active','verified') group by 1) a
+where a.entity_id = t.id;
+update public.traffic_reports set published_at = created_at
+where published_at is null and status in ('active','verified','resolved');
+-- Sellarlo en cada paso a active/verified: trigger BEFORE UPDATE OF status
+--   new.published_at := coalesce(old.published_at, case when new.status in ('active','verified') then now() end);
+-- report_hotspots y kpi_summary: reemplazar  status in ('active','verified','resolved','expired')
+--   por  published_at is not null
+-- Opcional: en expire_traffic_reports, los 'pending' pasan a 'rejected' con status_reason 'sin_revisar'
+--   (exige ajustar private.traffic_transitions y la prueba L2)
+```
+
+Con su prueba en `run.mjs`: un `pending` que vence no aparece en `report_hotspots` ni en `kpi_summary.traffic.published`.
+
+## 3. Verificado como correcto (con evidencia)
+
+| Qué | Evidencia |
+|---|---|
+| RLS activado en las 27 tablas de `public`; `private` sin grants a clientes | Consulta q1 (`relrowsecurity=true` en todas las de public) y `npm run db:audit` → "sin problemas" (11 reglas) |
+| 37 políticas (30 de tablas y 7 de Storage) leídas una a una (DATABASE.md dice 31 + 3: cifra desactualizada) | Consulta q2. Lo que se pensó en cada caso: **un vecino A no lee a B**: `citizen_requests`, `traffic_reports`, `notifications`, `push_subscriptions`, `request_votes` y `notification_preferences` filtran por `auth.uid()`; `request_status_history` va por `can_read_request()` (DEFINER, porque `requester_id` está oculto). **Moderación de otro municipio:** `is_staff(municipality_id)` → `user_has_role` exige el municipio exacto o un rol provincial de la misma provincia; con `municipality_id NULL` (`out_of_area`) solo entra lo provincial. **Anon:** solo lo aprobado, publicado o vigente. `business_hours` y `promotions` heredan la RLS de `businesses` por subconsulta |
+| Grants por columna | Consulta q3: anon no ve `reporter_id`, `requester_id`, `assigned_to`, `created_by`, `proposed_by`, `owner_id`, `idempotency_key`, `bytes`, ni la `geom` completa de los municipios. Las claves de push no son legibles (`push_subscriptions`: solo id, endpoint, user_agent y fechas). `profiles UPDATE` solo en 4 columnas; `notifications UPDATE` solo `read_at` |
+| Funciones | Consulta q4: todas las funciones DEFINER de `public` y `private` con `search_path`. anon solo ejecuta `map_aggregates`, `map_features`, `report_hotspots`, `search_all`, `track_engagement` y los helpers de RLS. `worker_*`, `weekly_report_finish` y `e2e_reset_rate_limits` solo `service_role`. Comprobación de quién llama: `kpi_summary` (is_service / is_admin), `catalog_admin_list` (is_provincial_admin), `request_assignees` y `staff_directory` (is_staff) |
+| `report_hotspots` (DEFINER para anon) | Solo devuelve el centro de cuadros de 0,005° con 2 o más reportes. Nunca ids ni coordenadas exactas (salvo DB-02) |
+| Storage | 4 buckets: `report-evidence` y `reports-pdf` privados; `public-media` y `avatars` públicos con MIME y tamaño limitados (64 KB los avatares). No hay política de listado en `public-media`. Subida de evidencia con permiso de un solo uso y tope por hora. PDF solo con descarga auditada |
+| Datos huérfanos (consulta q6) | 0 usuarios sin perfil, 0 adjuntos sin objeto, 0 objetos de public-media sin adjunto, 0 `incoming/` de más de 24 h, `support_count` cuadra con los votos, 0 rutas sin municipio, 0 promociones vencidas activas, 0 tablas sin PK |
+| Cola y cron | `private.jobs`: done=109, 0 failed/dead. 4 tareas de pg_cron activas, 0 fallos en 7 días (10 766 corridas correctas). Vault con `worker_url` y `jobs_secret`. 7 informes `succeeded` |
+| Límites de tiempo | `statement_timeout`: anon 3 s, authenticated 8 s, authenticator 8 s con `lock_timeout` de 8 s |
+| Pruebas | `npm run test:db` → **200/200 pruebas OK · 32 migraciones**. 32 migraciones aplicadas en remoto (la última, `20261028130000`) |
+| Copias | Workflow `backup` correcto el 01, 02 y 03/11 (`gh run list`); `BACKUP_ENABLED=true` y los secretos existen |
+
+## 4. No verificado
+
+- **EXPLAIN de las RPC del mapa y de la bandeja:** el usuario de solo lectura no tiene `EXECUTE` (`permission denied for function map_features`). Se usaron los tiempos reales de `pg_stat_statements`. Falta el plan de `private.locate()` (DB-06).
+- Los advisors de Supabase (panel) y la configuración de Auth (captcha, límites de OTP, SMTP).
+- Si el `pg_dump` del workflow restaura de verdad la versión actual: el último simulacro fue el 21/10.
+- La estructura interna de `audit_logs.before/after` por acción: puede haber más datos personales que la IP.
+
+## 5. Puntuación: 4/5
+
+El modelo, la RLS, los grants, las funciones y las pruebas están a nivel profesional: no hay forma de que un vecino lea a otro, ni de que un municipio modere a otro, ni de que anon escriba. Se pierde un punto por tres cosas que importan en la demo con vecinos reales: la misma base sirve a la demo y a las pruebas (DB-01), el mapa público y los KPIs cuentan reportes que nadie aprobó (DB-02) y las copias no recuperan los archivos (DB-03). Los ajustes de privacidad del personal (DB-04 y DB-05) son cambios de una migración cada uno.

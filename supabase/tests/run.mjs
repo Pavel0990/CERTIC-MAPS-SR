@@ -916,6 +916,14 @@ const pubRows = await q(`select status, published_at from public.traffic_reports
 ok('RV2 lo que se publicó y después venció sí cuenta: published_at sellado al publicar y el cuadro aparece con 2',
    pubRows.every((r) => r.status === 'expired' && r.published_at !== null) && cellAt(await hotspots(), H2)?.properties.count === 2, JSON.stringify(pubRows));
 
+// Lo que se publicó y después se rechazó (era falso) deja de contar
+const rejA = await addTraffic(U.ana, [H2[0] + 0.0018, H2[1]], 'bache', 'active');
+await db.query(`update public.traffic_reports set status = 'rejected' where id = $1`, [rejA]);
+const kRej = await rpc(U.admProv, `public.kpi_summary(current_date - 1, current_date + 1)`);
+const kRejCount = await one(`select count(*)::int n from public.traffic_reports where published_at is not null and status <> 'rejected' and created_at::date between current_date - 1 and current_date + 1`);
+ok('RV2b una alerta publicada y después rechazada no cuenta: el cuadro sigue en 2 y el KPI coincide con lo no rechazado',
+   cellAt(await hotspots(), H2)?.properties.count === 2 && kRej.traffic.published === kRejCount.n, JSON.stringify({ cell: cellAt(await hotspots(), H2)?.properties, published: kRej.traffic.published, expected: kRejCount.n }));
+
 // S-01: la asignación caduca con el rol
 const modTmp = await newUser('mod.tmp@ejemplo.do', 'Moderador temporal');
 await db.query(`insert into public.user_roles (user_id, role, province_id, municipality_id) values ($1, 'moderator', $2, $3)`, [modTmp, provinceId, muni.SAB]);

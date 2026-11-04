@@ -68,7 +68,7 @@ begin
     'municipality_id', m,
     'traffic', (select jsonb_build_object(
                   'received', count(*),
-                  'published', count(*) filter (where t.published_at is not null),
+                  'published', count(*) filter (where t.published_at is not null and t.status <> 'rejected'),
                   'rejected', count(*) filter (where t.status = 'rejected'),
                   'out_of_area', count(*) filter (where t.status = 'out_of_area'),
                   'by_type', coalesce((select jsonb_object_agg(x.type, x.n) from (
@@ -129,7 +129,7 @@ as $$
   ),
   pts as (
     select tr.geom from public.traffic_reports tr, params p
-    where tr.published_at is not null
+    where tr.published_at is not null and tr.status <> 'rejected'
       and tr.created_at >= now() - make_interval(days => p.days)
     union all
     select q.geom from public.citizen_requests q, params p

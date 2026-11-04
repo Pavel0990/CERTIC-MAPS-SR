@@ -99,7 +99,7 @@ export function ActionButton({ label, done, run, variant = 'secondary', icon, as
         }
       >
         <Field label={ask.label} hint={ask.hint} optional={!ask.required}>
-          {(a) => <Textarea {...a} value={text} onChange={(e) => setText(e.target.value)} maxLength={1000} autoFocus />}
+          {(a) => <Textarea {...a} value={text} onChange={(e) => setText(e.target.value)} maxLength={500} autoFocus />}
         </Field>
       </Sheet>
     </>
