@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { LAYER_BY_ID } from '@/modules/map';
@@ -8,6 +9,8 @@ export interface DiscoverItem {
   layer: 'tourism' | 'route';
   title: string;
   subtitle: string;
+  /** Foto aprobada de la ficha; sin foto, la tarjeta usa el color de la capa */
+  image?: string;
 }
 
 /** Hoja "Descubre" de la pantalla de inicio (del prototipo): turismo y rutas publicadas. */
@@ -52,9 +55,14 @@ export function Discover({ items, alerts }: { items: DiscoverItem[]; alerts: num
             <li key={it.id} className="w-[200px] shrink-0 snap-start">
               <Link prefetch={false} href={L.href(it.id) ?? '#'} className="group block">
                 <div className="relative h-[112px] overflow-hidden rounded-[16px]" style={{ background: `linear-gradient(135deg, ${L.color}, ${L.color}bb 60%, #0f172a)` }}>
-                  <svg viewBox="0 0 24 24" className="absolute -bottom-3 -right-3 size-24 text-white/25" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d={L.icon} />
-                  </svg>
+                  {it.image ? (
+                    // Foto decorativa: el nombre del lugar va debajo, como texto
+                    <Image src={it.image} alt="" fill sizes="200px" className="object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+                  ) : (
+                    <svg viewBox="0 0 24 24" className="absolute -bottom-3 -right-3 size-24 text-white/25" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d={L.icon} />
+                    </svg>
+                  )}
                   <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1.5 rounded-full bg-surface px-2.5 py-0.5 text-[14px] font-bold text-ink">
                     <span className="size-2 rounded-full" style={{ background: L.color }} aria-hidden />
                     {L.label}

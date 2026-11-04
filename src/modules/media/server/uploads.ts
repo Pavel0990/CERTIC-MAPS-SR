@@ -33,6 +33,21 @@ export interface PhotoView { id: string; url: string; status: string }
  * Fotos de una entidad. Las públicas (public-media) se sirven con URL pública;
  * la evidencia privada, con URL firmada de 5 minutos creada con el JWT del usuario (§10.5).
  */
+/**
+ * Primera foto aprobada y pública de cada lugar o ruta, en una sola consulta (portada de la pantalla de inicio).
+ * Solo `public-media` aprobado: lo mismo que ya ve cualquiera en la ficha.
+ */
+export async function coverPhotos(supabase: ServerSupabase, column: 'tourism_place_id' | 'eco_route_id', ids: string[]): Promise<Map<string, string>> {
+  const covers = new Map<string, string>();
+  if (ids.length === 0) return covers;
+  const { data } = await supabase.from('attachments').select(`${column}, path`).in(column, ids).eq('status', 'approved').eq('bucket', 'public-media').order('created_at');
+  for (const r of (data ?? []) as unknown as Record<string, string>[]) {
+    const id = r[column];
+    if (id && r.path && !covers.has(id)) covers.set(id, supabase.storage.from('public-media').getPublicUrl(r.path).data.publicUrl);
+  }
+  return covers;
+}
+
 export async function listPhotos(supabase: ServerSupabase, column: 'business_id' | 'tourism_place_id' | 'eco_route_id' | 'traffic_report_id' | 'citizen_request_id', id: string): Promise<PhotoView[]> {
   const { data } = await supabase.from('attachments').select('id, bucket, path, status').eq(column, id).neq('status', 'rejected').order('created_at');
   const rows = data ?? [];
