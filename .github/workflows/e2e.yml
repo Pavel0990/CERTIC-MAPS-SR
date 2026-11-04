@@ -1,0 +1,95 @@
+# Pruebas de punta a punta (Playwright, incluido axe en claro y oscuro y navegacion-rapida) contra staging
+# (ADR-025). Construye y arranca la app en el runner con `next start` y la prueba con Chromium.
+#
+# Apagado hasta configurar los secretos: se activa con la variable de repositorio E2E_ENABLED=true
+# (Settings → Secrets and variables → Actions → Variables). Los secretos van en el entorno
+# "e2e-staging" (Settings → Environments), así solo los ve este workflow:
+#   STAGING_SUPABASE_URL, STAGING_SUPABASE_ANON_KEY, STAGING_SUPABASE_SERVICE_ROLE_KEY
+# CRON_SECRET y JOBS_SECRET se generan al azar en cada corrida: las pruebas no llaman al cron ni al worker.
+name: e2e
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Las cuentas de prueba son compartidas: nunca dos corridas a la vez contra staging
+concurrency:
+  group: e2e-staging
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    # Solo PR del propio repositorio (los de forks y Dependabot no reciben los secretos)
+    if: >-
+      vars.E2E_ENABLED == 'true' &&
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: e2e-staging
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      APP_TIMEZONE: America/Santo_Domingo
+      DEFAULT_PROVINCE_CODE: SR
+      E2E_BASE_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Comprobar los secretos
+        run: |
+          for v in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY; do
+            if [ -z "${!v}" ]; then echo "::error::Falta el secreto de $v en el entorno e2e-staging"; exit 1; fi
+          done
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Secretos del servidor de un solo uso
+        run: |
+          for v in CRON_SECRET JOBS_SECRET; do
+            s=$(openssl rand -base64 48 | tr -d '\n=+/')
+            echo "::add-mask::$s"
+            echo "$v=$s" >> "$GITHUB_ENV"
+          done
+
+      - name: Construir la app
+        run: npm run build
+
+      - name: Arrancar la app
+        run: |
+          nohup npx next start -p 3000 > next.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -fsS -o /dev/null http://localhost:3000/api/v1/health && exit 0
+            sleep 2
+          done
+          echo "::error::La app no respondió en 2 minutos"; cat next.log; exit 1
+
+      - name: Pruebas E2E
+        run: npx playwright test
+
+      - name: Registro del servidor
+        if: failure()
+        run: tail -n 200 next.log || true
+
+      - name: Subir el reporte y las trazas
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14

@@ -1,0 +1,57 @@
+# Despliegue a producción (ADR-019): primero se migra la base y después se publica la app.
+# Nunca queda código nuevo sobre un esquema viejo; las migraciones son compatibles con el código anterior.
+#
+# Apagado hasta configurar producción: se activa con la variable de repositorio DEPLOY_ENABLED=true
+# (Settings → Secrets and variables → Actions). Pasos y secretos: DEPLOYMENT.md §4.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false # nunca cortar una migración a mitad
+
+jobs:
+  deploy:
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            supabase/tests/package-lock.json
+
+      # Las mismas comprobaciones que en cada PR: no se despliega nada que no pase
+      - run: npm ci
+      - run: npm run check
+      - run: npm ci --prefix supabase/tests
+      - run: npm run test:db
+
+      - name: Migrar la base de producción
+        run: |
+          npx --yes supabase@2.119.0 link --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}"
+          npx --yes supabase@2.119.0 db push --include-all --yes
+
+      - name: Publicar en Vercel
+        run: |
+          npx --yes vercel@62.2.0 pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx --yes vercel@62.2.0 build --prod --token="$VERCEL_TOKEN"
+          npx --yes vercel@62.2.0 deploy --prebuilt --prod --token="$VERCEL_TOKEN"

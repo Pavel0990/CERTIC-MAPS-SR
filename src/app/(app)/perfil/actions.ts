@@ -1,0 +1,89 @@
+'use server';
+import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
+import { z } from 'zod';
+import { createClient } from '@/lib/supabase/server';
+import { registerPushDevice, savePreferences as storePreferences, TOPICS, unregisterPushDevice } from '@/modules/notifications/server';
+import { setAvatar } from '@/modules/media/server';
+import { updateOwnProfile } from '@/lib/auth';
+import type { RpcResult } from '@/lib/http';
+import { rejected, type StatusResult } from '@/types/ui';
+
+export type FormState = { ok?: boolean; error?: string };
+
+/** Foto de perfil: el archivo ya se subió (o borró) desde el teléfono; aquí se registra su versión (RPC set_avatar). */
+export async function saveAvatar(present: boolean): Promise<RpcResult> {
+  if (typeof present !== 'boolean') return { status: 'rejected', reason: 'invalid_input' };
+  try {
+    const r = await setAvatar(await createClient(), present);
+    if (r.status === 'ok') {
+      revalidatePath('/', 'layout'); // la foto también aparece en la barra de navegación
+    }
+    return r;
+  } catch {
+    return { status: 'rejected', reason: 'upload_failed' };
+  }
+}
+
+const profileSchema = z.object({
+  display_name: z.string().trim().min(2, 'Escribe tu nombre (al menos 2 letras).').max(80),
+  home_municipality_id: z.union([z.uuid(), z.literal('')]).transform((v) => v || null),
+});
+
+/** Nombre y municipio de residencia. El usuario solo puede cambiar 4 columnas de su perfil (grant por columna). */
+export async function saveProfile(_prev: FormState, form: FormData): Promise<FormState> {
+  const parsed = profileSchema.safeParse({ display_name: form.get('display_name'), home_municipality_id: form.get('home_municipality_id') ?? '' });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  if (!claims?.claims.sub) return { error: 'Tu sesión venció. Entra de nuevo.' };
+  if (!(await updateOwnProfile(claims.claims.sub, parsed.data))) return { error: 'No pudimos guardar. Inténtalo otra vez.' };
+  revalidatePath('/perfil');
+  return { ok: true };
+}
+
+const TOPIC_IDS = TOPICS.map((t) => t.id) as string[];
+
+/** Qué avisos recibir y de qué municipios (§9.5). */
+export async function savePreferences(_prev: FormState, form: FormData): Promise<FormState> {
+  const topics = form.getAll('topics').map(String).filter((t) => TOPIC_IDS.includes(t));
+  const municipalities = form.getAll('municipalities').map(String).filter((m) => z.uuid().safeParse(m).success);
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const uid = claims?.claims.sub;
+  if (!uid) return { error: 'Tu sesión venció. Entra de nuevo.' };
+  if (!(await storePreferences(supabase, uid, topics, municipalities))) return { error: 'No pudimos guardar tus avisos. Inténtalo otra vez.' };
+  revalidatePath('/perfil');
+  return { ok: true };
+}
+
+const deviceSchema = z.object({
+  endpoint: z.url().startsWith('https://').max(1000),
+  p256dh: z.string().min(1).max(200),
+  auth: z.string().min(1).max(100),
+});
+
+/** Notificaciones en este dispositivo (§9.5). La suscripción la crea el navegador; aquí solo se guarda. */
+export async function enablePush(sub: unknown): Promise<StatusResult> {
+  const parsed = deviceSchema.safeParse(sub);
+  if (!parsed.success) return rejected('invalid_subscription');
+  try {
+    const ua = (await headers()).get('user-agent');
+    const r = await registerPushDevice(await createClient(), parsed.data, ua);
+    revalidatePath('/perfil');
+    return r.status === 'rejected' ? rejected(r.reason) : { status: 'ok' };
+  } catch {
+    return rejected('unavailable');
+  }
+}
+
+export async function disablePush(endpoint: string): Promise<StatusResult> {
+  if (!z.url().safeParse(endpoint).success) return rejected('invalid_subscription');
+  try {
+    const r = await unregisterPushDevice(await createClient(), endpoint);
+    revalidatePath('/perfil');
+    return r.status === 'rejected' ? rejected(r.reason) : { status: 'ok' };
+  } catch {
+    return rejected('unavailable');
+  }
+}

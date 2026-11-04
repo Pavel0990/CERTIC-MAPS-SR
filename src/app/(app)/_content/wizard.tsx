@@ -1,0 +1,108 @@
+'use client';
+import Link from 'next/link';
+import type { ReactNode, RefObject } from 'react';
+import { Check, ChevronLeft, CloudOff, X } from 'lucide-react';
+import { ListenButton } from '@/components/shared/listen-button';
+import { Notice } from '@/components/ui/primitives';
+import { readable } from '@/utils/readable';
+import { cn } from '@/utils/cn';
+
+/** Barra de progreso de un asistente por pasos (mismo diseño que /reportar). */
+export function WizardHeader({ step, total, onBack, cancelHref = '/perfil', cancelLabel = 'Cancelar' }: { step: number; total: number; onBack: () => void; cancelHref?: string; cancelLabel?: string }) {
+  return (
+    <div className="flex items-center gap-3 px-4 pt-4">
+      {step > 1 ? (
+        <button type="button" onClick={onBack} aria-label="Volver al paso anterior" className="press flex size-11 items-center justify-center rounded-full bg-surface shadow-[var(--shadow-card)]">
+          <ChevronLeft className="size-5" />
+        </button>
+      ) : (
+        <Link prefetch={false} href={cancelHref} aria-label={cancelLabel} className="press flex size-11 items-center justify-center rounded-full bg-surface shadow-[var(--shadow-card)]">
+          <X className="size-5" />
+        </Link>
+      )}
+      <ol className="flex flex-1 gap-1.5" aria-label={`Paso ${step} de ${total}`}>
+        {Array.from({ length: total }, (_, i) => (
+          <li key={i} className={cn('h-1.5 flex-1 rounded-full transition-colors duration-300', i < step ? 'bg-brand' : 'bg-line-strong')} />
+        ))}
+      </ol>
+      <span className="text-sm font-semibold text-muted">{step} de {total}</span>
+    </div>
+  );
+}
+
+/** Contenedor de un paso del asistente (entra con animación). `spaced`: separa sus bloques. */
+export function WizardStep({ spaced = true, children }: { spaced?: boolean; children: ReactNode }) {
+  return <section className={cn('animate-step-in flex flex-col px-4 pb-8 pt-5', spaced && 'gap-5')}>{children}</section>;
+}
+
+/** Título de un paso: recibe el foco al cambiar de paso (lectores de pantalla y teclado). */
+export function StepTitle({ headingRef, title, hint }: { headingRef: RefObject<HTMLHeadingElement | null>; title: string; hint?: string }) {
+  return (
+    <div>
+      <h1 ref={headingRef} tabIndex={-1} className="text-[28px] font-extrabold outline-none">{title}</h1>
+      {hint && <p className="mt-1 text-[17px] text-muted">{hint}</p>}
+      {/* Para quien lee con dificultad: el paso en voz alta con la voz del teléfono */}
+      <ListenButton text={readable([title, hint])} variant="compact" className="mt-3" />
+    </div>
+  );
+}
+
+/** Pantalla final de un envío. `queued`: quedó guardado en el teléfono y se enviará al volver la señal. */
+export function DoneScreen({
+  headingRef, title, message, photoError, primary, secondary, queued = false,
+}: {
+  headingRef: RefObject<HTMLHeadingElement | null>;
+  title: string;
+  message: ReactNode;
+  photoError?: string | null;
+  primary: { href: string; label: string };
+  secondary?: { href: string; label: string };
+  queued?: boolean;
+}) {
+  return (
+    <section className="mx-auto flex max-w-md flex-col items-center px-6 py-16 text-center">
+      <div className={cn('flex size-20 animate-pop-in items-center justify-center rounded-full', queued ? 'bg-warn-soft text-warn' : 'bg-ok-soft text-ok')}>
+        {queued ? <CloudOff className="size-10" aria-hidden /> : <Check className="size-10" aria-hidden />}
+      </div>
+      <h1 ref={headingRef} tabIndex={-1} className="mt-6 text-[28px] font-extrabold outline-none">{title}</h1>
+      <div className="mt-2 text-[17px] text-muted">{message}</div>
+      {photoError && <div className="mt-4 w-full"><Notice tone="warn">Algunas fotos no se pudieron subir: {photoError}</Notice></div>}
+      <div className="mt-8 flex w-full flex-col gap-2">
+        <Link prefetch={false} href={primary.href} className="press inline-flex h-13 min-h-[52px] items-center justify-center rounded-full bg-ink font-semibold text-on-ink">{primary.label}</Link>
+        {secondary && <Link prefetch={false} href={secondary.href} className="press inline-flex h-12 items-center justify-center rounded-full font-semibold text-ink hover:bg-surface">{secondary.label}</Link>}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Debajo de un botón desactivado: qué falta para poder seguir (§6.3, estado DISABLED con motivo).
+ * Un botón pálido solo no explica nada y la persona se queda sin saber qué hacer.
+ */
+export function MissingHint({ show, children }: { show: boolean; children: ReactNode }) {
+  if (!show) return null;
+  return <p className="-mt-2 text-center text-[15px] text-muted">{children}</p>;
+}
+
+/** Botones grandes para elegir una opción (tipo de lugar, dificultad…). */
+export function ChoiceGrid<T extends string>({ legend, options, value, onChange, columns = 2 }: { legend: string; options: { value: T; label: string }[]; value: T | ''; onChange: (v: T) => void; columns?: 2 | 3 }) {
+  return (
+    <fieldset>
+      <legend className="text-[15px] font-semibold">{legend}</legend>
+      <div className={cn('mt-2 grid gap-2', columns === 3 ? 'grid-cols-3' : 'grid-cols-2')}>
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            aria-pressed={value === o.value}
+            onClick={() => onChange(o.value)}
+            className={cn('press flex min-h-14 items-center justify-center gap-2 rounded-[14px] border-2 px-3 text-center text-[16px] font-bold leading-tight', value === o.value ? 'border-brand bg-brand-soft text-brand-strong' : 'border-line bg-surface text-ink hover:border-line-strong')}
+          >
+            {value === o.value && <Check className="size-4 shrink-0" aria-hidden />}
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
+}

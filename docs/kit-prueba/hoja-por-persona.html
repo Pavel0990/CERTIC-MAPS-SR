@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hoja por persona — prueba con vecinos</title>
+<!-- Hoja imprimible de la prueba con vecinos (docs/prueba-con-vecinos.md). Una por persona: abrir en el navegador → Imprimir. -->
+<style>
+  :root { --ink: #111418; --muted: #5b616b; --line: #c9cdd3; --brand: #1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f3f4f6; color: var(--ink); font: 14px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .page { max-width: 800px; margin: 16px auto; background: #fff; padding: 28px 32px; border-radius: 12px; }
+  h1 { font-size: 20px; margin: 0 0 2px; }
+  .sub { color: var(--muted); margin: 0 0 16px; }
+  .fields { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px 16px; margin-bottom: 14px; }
+  .field { border-bottom: 1px solid var(--line); padding: 14px 0 2px; color: var(--muted); font-size: 12px; }
+  .uses { margin: 0 0 14px; font-size: 13px; }
+  .box { display: inline-block; width: 13px; height: 13px; border: 1.5px solid var(--ink); border-radius: 3px; vertical-align: -2px; margin: 0 4px 0 10px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #eef2ff; font-size: 12px; }
+  td.n { width: 28px; text-align: center; font-weight: 700; }
+  td.task { width: 42%; }
+  td.res { width: 120px; font-size: 12px; white-space: nowrap; }
+  td.time { width: 60px; }
+  .task small { color: var(--muted); display: block; }
+  h2 { font-size: 15px; margin: 18px 0 6px; }
+  .q { border-bottom: 1px solid var(--line); padding: 16px 0 2px; }
+  .consent { margin-top: 18px; padding: 12px 14px; border: 1.5px solid var(--ink); border-radius: 8px; font-size: 13px; }
+  .sign { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-top: 18px; }
+  .sign div { border-top: 1px solid var(--ink); padding-top: 3px; font-size: 12px; color: var(--muted); }
+  .print { position: fixed; right: 16px; bottom: 16px; background: var(--brand); color: #fff; border: 0; border-radius: 999px; padding: 12px 20px; font: 600 15px system-ui; cursor: pointer; }
+  @media print {
+    body { background: #fff; }
+    .page { margin: 0; padding: 0; max-width: none; border-radius: 0; }
+    .print { display: none; }
+    @page { size: letter; margin: 14mm; }
+  }
+  @media (max-width: 640px) { .page { padding: 18px 16px; } .fields { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<button class="print" onclick="window.print()">Imprimir</button>
+<main class="page">
+  <h1>Prueba con vecinos — SR Conecta</h1>
+  <p class="sub">Una hoja por persona. No ayudes: si pregunta, responde «¿Qué harías tú?». Anota dónde se traba y las palabras que no entiende.</p>
+
+  <div class="fields">
+    <div class="field">Ronda</div>
+    <div class="field">Persona (solo iniciales)</div>
+    <div class="field">Edad aprox.</div>
+    <div class="field">Municipio</div>
+  </div>
+  <p class="uses"><strong>Teléfono:</strong><span class="box"></span>Android<span class="box"></span>iPhone
+    &nbsp;&nbsp;<strong>Usa internet para:</strong><span class="box"></span>WhatsApp<span class="box"></span>Facebook<span class="box"></span>YouTube<span class="box"></span>Banco<span class="box"></span>Casi nada</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Lo que le pides</th><th>¿Lo logró?</th><th>Tiempo</th><th>Dónde se trabó / palabras que no entendió</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td class="task">«Abre esta dirección y dime qué crees que es.»<small>Entiende que es un mapa o guía de la provincia · 1 min</small></td><td class="res"><span class="box"></span>Sí<br><span class="box"></span>Con ayuda<br><span class="box"></span>No</td><td class="time"></td><td></td></tr>
+      <tr><td class="n">2</td><td class="task">«Busca una farmacia en Monción y llámala.»<small>Encuentra una farmacia y toca Llamar (cuelga antes) · 2 min</small></td><td class="res"><span class="box"></span>Sí<br><span class="box"></span>Con ayuda<br><span class="box"></span>No</td><td class="time"></td><td></td></tr>
+      <tr><td class="n">3</td><td class="task">«Hay un bache frente a tu casa. Avísale al ayuntamiento.»<small>Completa Reportar: tipo, ubicación, foto opcional · 3 min</small></td><td class="res"><span class="box"></span>Sí<br><span class="box"></span>Con ayuda<br><span class="box"></span>No</td><td class="time"></td><td></td></tr>
+      <tr><td class="n">4</td><td class="task">«Para eso te pide entrar. Hazlo.»<small>Encuentra el código en su correo y entra · 3 min</small></td><td class="res"><span class="box"></span>Sí<br><span class="box"></span>Con ayuda<br><span class="box"></span>No</td><td class="time"></td><td></td></tr>
+      <tr><td class="n">5</td><td class="task">«¿Qué pasó con tu reporte?»<small>Encuentra Actividad y entiende el estado · 1 min</small></td><td class="res"><span class="box"></span>Sí<br><span class="box"></span>Con ayuda<br><span class="box"></span>No</td><td class="time"></td><td></td></tr>
+      <tr><td class="n">6</td><td class="task">«Busca un lugar para pasear el domingo y cómo llegar.»<small>Abre un lugar o ruta y toca Cómo llegar · 2 min</small></td><td class="res"><span class="box"></span>Sí<br><span class="box"></span>Con ayuda<br><span class="box"></span>No</td><td class="time"></td><td></td></tr>
+      <tr><td class="n">7</td><td class="task">«Quieres que te avisen si hay un accidente cerca. ¿Cómo?»<small>Encuentra Perfil → Avisos · 2 min</small></td><td class="res"><span class="box"></span>Sí<br><span class="box"></span>Con ayuda<br><span class="box"></span>No</td><td class="time"></td><td></td></tr>
+      <tr><td class="n">8</td><td class="task">«Imagina que no tienes los lentes. Haz que el teléfono te lea un lugar.»<small>En una ficha toca Escuchar · 1 min</small></td><td class="res"><span class="box"></span>Sí<br><span class="box"></span>Con ayuda<br><span class="box"></span>No</td><td class="time"></td><td></td></tr>
+    </tbody>
+  </table>
+
+  <h2>Al final</h2>
+  <p>Del 1 al 5, ¿qué tan fácil fue? &nbsp; 1 &nbsp;·&nbsp; 2 &nbsp;·&nbsp; 3 &nbsp;·&nbsp; 4 &nbsp;·&nbsp; 5</p>
+  <div class="q">¿Qué fue lo más difícil?</div>
+  <div class="q">¿La usarías? ¿Para qué?</div>
+  <div class="q">¿Qué le cambiarías?</div>
+
+  <div class="consent">
+    <strong>Permiso.</strong> Acepto que el equipo de SR Conecta cuente lo que dije en la presentación ante el jurado, sin mi nombre completo ni mi teléfono.
+    <span class="box"></span>Sí &nbsp; <span class="box"></span>No
+    &nbsp;&nbsp; ¿Y una foto de mis manos con el teléfono, sin mi cara? <span class="box"></span>Sí &nbsp; <span class="box"></span>No
+    <div class="sign"><div>Firma o iniciales</div><div>Fecha</div></div>
+  </div>
+</main>
+</body>
+</html>

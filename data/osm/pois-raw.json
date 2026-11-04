@@ -1,0 +1,1563 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-10-06T02:40:32Z",
+    "timestamp_areas_base": "2026-10-04T21:27:58Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "node",
+  "id": 2037619928,
+  "lat": 19.4756564,
+  "lon": -71.3412190,
+  "tags": {
+    "amenity": "place_of_worship",
+    "name": "Iglesia De Las Mercedes",
+    "religion": "christian"
+  }
+},
+{
+  "type": "node",
+  "id": 3715353552,
+  "lat": 19.3864782,
+  "lon": -71.2636985,
+  "tags": {
+    "addr:city": "Santiago Rodriguez",
+    "addr:street": "Palmarejo",
+    "amenity": "bar",
+    "name": "Club Centro Progresista Palmarejo"
+  }
+},
+{
+  "type": "node",
+  "id": 3715356481,
+  "lat": 19.3863381,
+  "lon": -71.2640817,
+  "tags": {
+    "addr:city": "Santiago Rodriguez",
+    "addr:street": "Palmarejo",
+    "amenity": "place_of_worship",
+    "denomination": "roman_catholic",
+    "name": "Capilla San Pedro",
+    "religion": "christian"
+  }
+},
+{
+  "type": "node",
+  "id": 3832563027,
+  "lat": 19.3871570,
+  "lon": -71.2649258,
+  "tags": {
+    "addr:city": "Santiago Rodriguez",
+    "addr:street": "Palmarejo",
+    "name": "Bodega Rodrigue ¨Tulo¨",
+    "opening_hours": "06:30-21:00",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 3832572437,
+  "lat": 19.3868904,
+  "lon": -71.2651769,
+  "tags": {
+    "addr:city": "Santiago Rodriguez",
+    "addr:street": "Palmarejo",
+    "name": "Repuesto Estevez",
+    "operator": "Josi",
+    "shop": "car_repair"
+  }
+},
+{
+  "type": "node",
+  "id": 4166685557,
+  "lat": 19.4757960,
+  "lon": -71.3423904,
+  "tags": {
+    "amenity": "restaurant",
+    "name": "Ñey Pica Pollo"
+  }
+},
+{
+  "type": "node",
+  "id": 4166685558,
+  "lat": 19.4756477,
+  "lon": -71.3423324,
+  "tags": {
+    "amenity": "cafe",
+    "cuisine": "ice_cream",
+    "name": "Heladeria Bon"
+  }
+},
+{
+  "type": "node",
+  "id": 4166685560,
+  "lat": 19.4776229,
+  "lon": -71.3394203,
+  "tags": {
+    "amenity": "fuel",
+    "name": "Esso"
+  }
+},
+{
+  "type": "node",
+  "id": 4377990193,
+  "lat": 19.4767476,
+  "lon": -71.3422724,
+  "tags": {
+    "addr:street": "Calle San Ignacio",
+    "amenity": "restaurant",
+    "cuisine": "local",
+    "name": "El Patio Restaurant",
+    "name:es": "El Patio Restaurant",
+    "phone": "8093820294"
+  }
+},
+{
+  "type": "node",
+  "id": 4600188797,
+  "lat": 19.4046855,
+  "lon": -71.1497796,
+  "tags": {
+    "name": "La Loma",
+    "name:es": "La Loma",
+    "tourism": "information"
+  }
+},
+{
+  "type": "node",
+  "id": 4600226891,
+  "lat": 19.4106076,
+  "lon": -71.1503783,
+  "tags": {
+    "amenity": "bar",
+    "name": "El Cerón"
+  }
+},
+{
+  "type": "node",
+  "id": 4600226892,
+  "lat": 19.4113222,
+  "lon": -71.1505491,
+  "tags": {
+    "addr:city": "Monción",
+    "addr:street": "Calle San Antonio",
+    "amenity": "bar",
+    "brewery": "various",
+    "min_age": "18",
+    "name": "El Mediterraneo",
+    "name:es": "El Mediterraneo"
+  }
+},
+{
+  "type": "node",
+  "id": 4600226893,
+  "lat": 19.4221869,
+  "lon": -71.0804391,
+  "tags": {
+    "name": "Entrada Central Moncion",
+    "name:es": "Entrada Central Moncion",
+    "tourism": "information"
+  }
+},
+{
+  "type": "node",
+  "id": 4600227190,
+  "lat": 19.4107816,
+  "lon": -71.1508573,
+  "tags": {
+    "amenity": "bank",
+    "name": "Banreservas",
+    "name:es": "Banreservas"
+  }
+},
+{
+  "type": "node",
+  "id": 4600227290,
+  "lat": 19.4072137,
+  "lon": -71.1496809,
+  "tags": {
+    "name": "La Alameda",
+    "name:es": "La Alameda",
+    "tourism": "information"
+  }
+},
+{
+  "type": "node",
+  "id": 4665691495,
+  "lat": 19.4113377,
+  "lon": -71.1609884,
+  "tags": {
+    "name": "Colmado El Mello",
+    "name:es": "Colmado El Mello",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 4665755594,
+  "lat": 19.4150598,
+  "lon": -71.1650870,
+  "tags": {
+    "historic": "monument",
+    "name": "Rotonda de Cepillo",
+    "name:es": "Rotonda de Cepillo"
+  }
+},
+{
+  "type": "node",
+  "id": 4710577694,
+  "lat": 19.4801476,
+  "lon": -71.3207957,
+  "tags": {
+    "addr:street": "Mao - Sabaneta",
+    "amenity": "fuel",
+    "name": "Estación Isla",
+    "name:es": "Estación Isla"
+  }
+},
+{
+  "type": "node",
+  "id": 4710625494,
+  "lat": 19.4108471,
+  "lon": -71.4380026,
+  "tags": {
+    "addr:street": "Sabaneta - Villa Los Almácigos",
+    "amenity": "pharmacy",
+    "name": "Farmacia Ananías",
+    "name:es": "Farmacia Ananías",
+    "phone": "8095790387"
+  }
+},
+{
+  "type": "node",
+  "id": 4710625598,
+  "lat": 19.4755101,
+  "lon": -71.3455717,
+  "tags": {
+    "addr:street": "Calle Dr. Dario Gomez",
+    "amenity": "bank",
+    "name": "Banco Ademi",
+    "name:es": "Banco Ademi"
+  }
+},
+{
+  "type": "node",
+  "id": 4710625599,
+  "lat": 19.4765120,
+  "lon": -71.3396391,
+  "tags": {
+    "addr:street": "Avenida Duarte",
+    "amenity": "fuel",
+    "name": "Texaco",
+    "name:es": "Texaco"
+  }
+},
+{
+  "type": "node",
+  "id": 4710663589,
+  "lat": 19.4107258,
+  "lon": -71.4378245,
+  "tags": {
+    "addr:street": "Sabaneta - Villa Los Almácigos",
+    "amenity": "fuel",
+    "name": "Texaco",
+    "name:es": "Texaco"
+  }
+},
+{
+  "type": "node",
+  "id": 4728288490,
+  "lat": 19.4082310,
+  "lon": -71.4426662,
+  "tags": {
+    "addr:street": "El Pino - Villa Los Almácigos",
+    "name": "Variedades Malgó",
+    "name:es": "Variedades Malgó",
+    "shop": "gift"
+  }
+},
+{
+  "type": "node",
+  "id": 4728288491,
+  "lat": 19.4079428,
+  "lon": -71.4413868,
+  "tags": {
+    "addr:street": "El Pino - Villa Los Almácigos",
+    "amenity": "bank",
+    "name": "Banreservas",
+    "name:es": "Banreservas"
+  }
+},
+{
+  "type": "node",
+  "id": 4728288492,
+  "lat": 19.4722202,
+  "lon": -71.3507671,
+  "tags": {
+    "addr:street": "Sabaneta - Villa Los Almácigos",
+    "amenity": "fuel",
+    "name": "Petronan",
+    "name:es": "Petronan"
+  }
+},
+{
+  "type": "node",
+  "id": 4728383089,
+  "lat": 19.4094719,
+  "lon": -71.4443961,
+  "tags": {
+    "addr:street": "El Pino - Villa Los Almácigos",
+    "amenity": "fuel",
+    "name": "Estación Esso La Novia de Villa",
+    "name:es": "Estación Esso La Novia de Villa"
+  }
+},
+{
+  "type": "node",
+  "id": 4728383090,
+  "lat": 19.4090874,
+  "lon": -71.4441110,
+  "tags": {
+    "addr:street": "El Pino - Villa Los Almácigos",
+    "name": "Ferretería L&N",
+    "name:es": "Ferretería L&N",
+    "phone": "8095790197",
+    "shop": "hardware"
+  }
+},
+{
+  "type": "node",
+  "id": 4728383189,
+  "lat": 19.4100888,
+  "lon": -71.4445903,
+  "tags": {
+    "addr:street": "El Pino - Villa Los Almácigos",
+    "name": "Nelson Racing",
+    "name:es": "Nelson Racing",
+    "shop": "car_repair"
+  }
+},
+{
+  "type": "node",
+  "id": 4728383190,
+  "lat": 19.4601531,
+  "lon": -71.3615560,
+  "tags": {
+    "addr:street": "Sabaneta - Villa Los Almácigos",
+    "amenity": "fuel",
+    "name": "EcoPetróleo",
+    "name:es": "EcoPetróleo"
+  }
+},
+{
+  "type": "node",
+  "id": 4728383191,
+  "lat": 19.4620761,
+  "lon": -71.3601317,
+  "tags": {
+    "addr:street": "Sabaneta - Villa Los Almácigos",
+    "amenity": "bank",
+    "name": "Coopsano Club",
+    "name:es": "Coopsano Club"
+  }
+},
+{
+  "type": "node",
+  "id": 4728383989,
+  "lat": 19.4079221,
+  "lon": -71.4411142,
+  "tags": {
+    "addr:street": "El Pino - Villa Los Almácigos",
+    "name": "Supermercado Báez",
+    "name:es": "Supermercado Báez",
+    "phone": "8095790125",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 4728384189,
+  "lat": 19.4078125,
+  "lon": -71.4411832,
+  "tags": {
+    "addr:street": "El Pino - Villa Los Almácigos",
+    "name": "Pinturas Reservas",
+    "name:es": "Pinturas Reservas",
+    "shop": "hardware"
+  }
+},
+{
+  "type": "node",
+  "id": 4728384389,
+  "lat": 19.4083685,
+  "lon": -71.4406148,
+  "tags": {
+    "addr:street": "El Pino - Villa Los Almácigos",
+    "amenity": "bank",
+    "name": "CoopBueno",
+    "name:es": "Coop Bueno"
+  }
+},
+{
+  "type": "node",
+  "id": 4728384589,
+  "lat": 19.4611728,
+  "lon": -71.3606088,
+  "tags": {
+    "addr:street": "Sabaneta - Villa Los Almácigos",
+    "name": "Cabañas Turísticas Dominicantica Spanish",
+    "name:es": "Cabañas Turísticas Dominicantica Spanish",
+    "tourism": "motel"
+  }
+},
+{
+  "type": "node",
+  "id": 4728384889,
+  "lat": 19.4625857,
+  "lon": -71.3591765,
+  "tags": {
+    "addr:street": "Sabaneta - Villa Los Almácigos",
+    "amenity": "fuel",
+    "name": "Aferme Gas",
+    "name:es": "Aferme Gas"
+  }
+},
+{
+  "type": "node",
+  "id": 4740497215,
+  "lat": 19.4775797,
+  "lon": -71.3412896,
+  "tags": {
+    "addr:street": "Av. Próceres de la Restauración",
+    "name": "Ferretería Genere",
+    "name:es": "Ferretería Genere",
+    "shop": "hardware"
+  }
+},
+{
+  "type": "node",
+  "id": 4740497219,
+  "lat": 19.4777218,
+  "lon": -71.3403324,
+  "tags": {
+    "name": "Caribe Express",
+    "shop": "travel_agency"
+  }
+},
+{
+  "type": "node",
+  "id": 4740503062,
+  "lat": 19.4775456,
+  "lon": -71.3407128,
+  "tags": {
+    "addr:street": "Av. Próceres de la Restauración",
+    "amenity": "clinic",
+    "name": "Laboratorio Clínico Rodríguez Taveras",
+    "name:es": "Laboratorio Clínico Rodríguez Taveras"
+  }
+},
+{
+  "type": "node",
+  "id": 4740503065,
+  "lat": 19.4775659,
+  "lon": -71.3406335,
+  "tags": {
+    "addr:street": "Av. Próceres de la Restauración",
+    "name": "Electrónica J&E",
+    "name:es": "Electrónica J&E",
+    "shop": "electronics"
+  }
+},
+{
+  "type": "node",
+  "id": 4740503067,
+  "lat": 19.4775707,
+  "lon": -71.3405658,
+  "tags": {
+    "addr:street": "Av. Próceres de la Restauración",
+    "amenity": "cafe",
+    "name": "D'Laura",
+    "name:es": "D'Laura"
+  }
+},
+{
+  "type": "node",
+  "id": 4740503070,
+  "lat": 19.4775777,
+  "lon": -71.3405105,
+  "tags": {
+    "addr:street": "Av. Próceres de la Restauración",
+    "name": "R&M Computer",
+    "name:es": "R&M Computer",
+    "shop": "computer"
+  }
+},
+{
+  "type": "node",
+  "id": 4740503072,
+  "lat": 19.4775936,
+  "lon": -71.3404348,
+  "tags": {
+    "addr:street": "Av. Próceres de la Restauración",
+    "name": "Salón Bucles",
+    "name:es": "Salón Bucles",
+    "shop": "beauty"
+  }
+},
+{
+  "type": "node",
+  "id": 4740504244,
+  "lat": 19.4805597,
+  "lon": -71.3284808,
+  "tags": {
+    "addr:street": "Mao - Sabaneta",
+    "name": "Supermercado Leduc",
+    "name:es": "Supermercado Leduc",
+    "phone": "8095809224",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 4834488422,
+  "lat": 19.4107881,
+  "lon": -71.1509583,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Heladeia Cafeteria Uvis",
+    "name:es": "Heladeia Cafeteria Uvis"
+  }
+},
+{
+  "type": "node",
+  "id": 4888134321,
+  "lat": 19.4107687,
+  "lon": -71.1507969,
+  "tags": {
+    "addr:street": "Calle Duarte",
+    "name": "Tienda 20 & 10",
+    "name:es": "Tienda 20 & 10",
+    "phone": "8099772010",
+    "shop": "gift"
+  }
+},
+{
+  "type": "node",
+  "id": 4943248421,
+  "lat": 19.4069637,
+  "lon": -71.1626778,
+  "tags": {
+    "addr:street": "camino a duran",
+    "name": "Seminario Nuestra Señora Las Mercedes",
+    "tourism": "hostel"
+  }
+},
+{
+  "type": "node",
+  "id": 5047214658,
+  "lat": 19.4756214,
+  "lon": -71.3445847,
+  "tags": {
+    "addr:street": "Calle Dr. Dario Gomez",
+    "internet_access": "yes",
+    "internet_access:fee": "no",
+    "name": "HOTEL METROPOLITANO",
+    "tourism": "hotel"
+  }
+},
+{
+  "type": "node",
+  "id": 5047227321,
+  "lat": 19.4748400,
+  "lon": -71.3453189,
+  "tags": {
+    "addr:street": "Calle Pedro Thomas",
+    "name": "SANTA CLARA",
+    "shop": "funeral_directors"
+  }
+},
+{
+  "type": "node",
+  "id": 5047231120,
+  "lat": 19.4767403,
+  "lon": -71.3420931,
+  "tags": {
+    "addr:street": "Calle San Ignacio",
+    "amenity": "clinic",
+    "name": "CENTRO MEDICO GRAN PODER DE DIOS"
+  }
+},
+{
+  "type": "node",
+  "id": 5047233728,
+  "lat": 19.4758495,
+  "lon": -71.3440547,
+  "tags": {
+    "addr:street": "Calle Dr. Dario Gomez",
+    "amenity": "bank",
+    "atm": "no",
+    "name": "Banco ADOPEM",
+    "opening_hours": "Mo-Sa 08:00-18:00"
+  }
+},
+{
+  "type": "node",
+  "id": 5047234529,
+  "lat": 19.4772703,
+  "lon": -71.3439298,
+  "tags": {
+    "addr:street": "Av. Próceres de la Restauración",
+    "amenity": "bank",
+    "atm": "yes",
+    "name": "ASOCIACION LA NACIONAL"
+  }
+},
+{
+  "type": "node",
+  "id": 5047235080,
+  "lat": 19.4778461,
+  "lon": -71.3397385,
+  "tags": {
+    "addr:street": "Av. Próceres de la Restauración",
+    "name": "Hotel Marién",
+    "tourism": "hotel"
+  }
+},
+{
+  "type": "node",
+  "id": 5047235081,
+  "lat": 19.4777027,
+  "lon": -71.3391566,
+  "tags": {
+    "addr:street": "Av. Próceres de la Restauración",
+    "name": "HOTEL DON CHUCHO",
+    "tourism": "hotel"
+  }
+},
+{
+  "type": "node",
+  "id": 5047237705,
+  "lat": 19.4779599,
+  "lon": -71.3387462,
+  "tags": {
+    "addr:street": "Av. Próceres de la Restauración",
+    "amenity": "bank",
+    "name": "Banco AGRICOLA"
+  }
+},
+{
+  "type": "node",
+  "id": 5047239036,
+  "lat": 19.4782968,
+  "lon": -71.3384187,
+  "tags": {
+    "addr:street": "Av. Próceres de la Restauración",
+    "amenity": "bank",
+    "name": "COOPSANO"
+  }
+},
+{
+  "type": "node",
+  "id": 5047243323,
+  "lat": 19.4802544,
+  "lon": -71.3321760,
+  "tags": {
+    "addr:street": "Av. Próceres de la Restauración",
+    "name": "HOTEL LA PLAZA",
+    "tourism": "hotel"
+  }
+},
+{
+  "type": "node",
+  "id": 5108011934,
+  "lat": 19.4695320,
+  "lon": -71.3283110,
+  "tags": {
+    "addr:street": "Carretera Santiago Rodriguez Maguana",
+    "amenity": "restaurant",
+    "cuisine": "local",
+    "name": "La Hacienda Bar & Restaurante",
+    "phone": "8093820294"
+  }
+},
+{
+  "type": "node",
+  "id": 5229212724,
+  "lat": 19.4762417,
+  "lon": -71.3439250,
+  "tags": {
+    "amenity": "bank",
+    "name": "Banreservas"
+  }
+},
+{
+  "type": "node",
+  "id": 5406065922,
+  "lat": 19.4113951,
+  "lon": -71.1518810,
+  "tags": {
+    "amenity": "fast_food",
+    "name": "Comedor peralta"
+  }
+},
+{
+  "type": "node",
+  "id": 6573843588,
+  "lat": 19.4782191,
+  "lon": -71.3416197,
+  "tags": {
+    "amenity": "hospital",
+    "name": "Hospital Regional"
+  }
+},
+{
+  "type": "node",
+  "id": 6573843591,
+  "lat": 19.4331761,
+  "lon": -71.3948041,
+  "tags": {
+    "name": "Said",
+    "shop": "bookmaker"
+  }
+},
+{
+  "type": "node",
+  "id": 6573858888,
+  "lat": 19.4746861,
+  "lon": -71.3464083,
+  "tags": {
+    "name": "Supermercado",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 6573858889,
+  "lat": 19.4773564,
+  "lon": -71.3422560,
+  "tags": {
+    "name": "Doble AA",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 6573858890,
+  "lat": 19.4769469,
+  "lon": -71.3393651,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Cafetería"
+  }
+},
+{
+  "type": "node",
+  "id": 6573858891,
+  "lat": 19.4759147,
+  "lon": -71.3439128,
+  "tags": {
+    "amenity": "cafe",
+    "name": "chao"
+  }
+},
+{
+  "type": "node",
+  "id": 6573858892,
+  "lat": 19.4766450,
+  "lon": -71.3409857,
+  "tags": {
+    "amenity": "pharmacy",
+    "name": "Gran Poder de Dios"
+  }
+},
+{
+  "type": "node",
+  "id": 6573858893,
+  "lat": 19.4332282,
+  "lon": -71.3947546,
+  "tags": {
+    "name": "El Mosquito",
+    "shop": "car_repair"
+  }
+},
+{
+  "type": "node",
+  "id": 6573859585,
+  "lat": 19.4750718,
+  "lon": -71.3373539,
+  "tags": {
+    "amenity": "fast_food",
+    "name": "El Gordo"
+  }
+},
+{
+  "type": "node",
+  "id": 6573859685,
+  "lat": 19.4776944,
+  "lon": -71.3397094,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Cafetería"
+  }
+},
+{
+  "type": "node",
+  "id": 6573859785,
+  "lat": 19.4768618,
+  "lon": -71.3401185,
+  "tags": {
+    "amenity": "pharmacy",
+    "name": "Farmacia"
+  }
+},
+{
+  "type": "node",
+  "id": 6907159728,
+  "lat": 19.4772633,
+  "lon": -71.3426040,
+  "tags": {
+    "contact:facebook": "https://www.facebook.com/zonadigitalsr/",
+    "name": "Zona Digital",
+    "shop": "mobile_phone"
+  }
+},
+{
+  "type": "node",
+  "id": 9191782917,
+  "lat": 19.4842798,
+  "lon": -71.3415746,
+  "tags": {
+    "contact:instagram": "https://www.instagram.com/altagamavapeshop/",
+    "name": "Alta Gama Vapeshop",
+    "shop": "e-cigarette"
+  }
+},
+{
+  "type": "node",
+  "id": 10262424309,
+  "lat": 19.4830449,
+  "lon": -71.3086971,
+  "tags": {
+    "addr:housenumber": "6",
+    "addr:postcode": "64000",
+    "addr:street": "Los Puentes de Tomines/ Entrada Blanco uceta",
+    "name": "Villa Paula",
+    "tourism": "guest_house"
+  }
+},
+{
+  "type": "node",
+  "id": 11618613790,
+  "lat": 19.4780565,
+  "lon": -71.3383622,
+  "tags": {
+    "addr:housenumber": "61",
+    "addr:street": "Av. Próceres de la Restauración",
+    "amenity": "clinic",
+    "email": "cvillafanajimenez@gmail.con",
+    "internet_access": "wlan",
+    "level": "2",
+    "name": "Clínica Villafaña Jiménez",
+    "opening_hours": "24/7",
+    "phone": "8095802480"
+  }
+},
+{
+  "type": "node",
+  "id": 13568200952,
+  "lat": 19.4112448,
+  "lon": -71.1504890,
+  "tags": {
+    "addr:city": "Monción",
+    "addr:street": "Calle San Antonio",
+    "amenity": "ice_cream",
+    "name": "Helados Bon"
+  }
+},
+{
+  "type": "node",
+  "id": 13568200961,
+  "lat": 19.4111260,
+  "lon": -71.1507391,
+  "tags": {
+    "addr:street": "Calle Colón",
+    "amenity": "ice_cream",
+    "name": "Helados Splash"
+  }
+},
+{
+  "type": "node",
+  "id": 13568229710,
+  "lat": 19.4244933,
+  "lon": -71.1646280,
+  "tags": {
+    "artwork_type": "mural",
+    "name": "Monumento Moncion",
+    "tourism": "artwork"
+  }
+},
+{
+  "type": "node",
+  "id": 13568229711,
+  "lat": 19.4248809,
+  "lon": -71.1646349,
+  "tags": {
+    "artwork_type": "statue",
+    "name": "Monumento a Cristo",
+    "tourism": "artwork"
+  }
+},
+{
+  "type": "node",
+  "id": 14100122920,
+  "lat": 19.4537490,
+  "lon": -71.3111387,
+  "tags": {
+    "artwork_type": "sculpture",
+    "name": "Parador Fotográfico Mata del Jobo",
+    "tourism": "artwork"
+  }
+},
+{
+  "type": "node",
+  "id": 14100139568,
+  "lat": 19.4957868,
+  "lon": -71.2823441,
+  "tags": {
+    "artwork_type": "sculpture",
+    "name": "Parador Fotográfico Caimito",
+    "tourism": "artwork"
+  }
+},
+{
+  "type": "way",
+  "id": 379907704,
+  "center": {
+    "lat": 19.3864700,
+    "lon": -71.2636529
+  },
+  "tags": {
+    "addr:city": "Santiago Rodriguez",
+    "addr:street": "Palmarejo",
+    "amenity": "bar",
+    "name": "Clud centro progresista palmarejo"
+  }
+},
+{
+  "type": "way",
+  "id": 415676032,
+  "center": {
+    "lat": 19.4756636,
+    "lon": -71.3417970
+  },
+  "tags": {
+    "leisure": "park",
+    "name": "Parque Central"
+  }
+},
+{
+  "type": "way",
+  "id": 493307705,
+  "center": {
+    "lat": 19.4108604,
+    "lon": -71.1501753
+  },
+  "tags": {
+    "addr:city": "Monción",
+    "addr:street": "Calle Juan Pablo Duarte",
+    "leisure": "park",
+    "name": "Parque Central de Monción"
+  }
+},
+{
+  "type": "way",
+  "id": 493307800,
+  "center": {
+    "lat": 19.4108083,
+    "lon": -71.1498975
+  },
+  "tags": {
+    "addr:city": "Monción",
+    "addr:street": "Calle Juan Pablo Duarte",
+    "amenity": "place_of_worship",
+    "building": "yes",
+    "name": "Iglesia Católica de Monción",
+    "religion": "christian"
+  }
+},
+{
+  "type": "way",
+  "id": 688997805,
+  "center": {
+    "lat": 19.4105901,
+    "lon": -71.4437535
+  },
+  "tags": {
+    "amenity": "hospital",
+    "healthcare": "hospital",
+    "name": "Hospital Regional Villa Los Almácigos"
+  }
+},
+{
+  "type": "way",
+  "id": 689224699,
+  "center": {
+    "lat": 19.4787053,
+    "lon": -71.3418717
+  },
+  "tags": {
+    "amenity": "hospital",
+    "healthcare": "hospital",
+    "name": "Hospital General Santiago Rodríguez"
+  }
+},
+{
+  "type": "way",
+  "id": 728271897,
+  "center": {
+    "lat": 19.3221547,
+    "lon": -71.2415846
+  },
+  "tags": {
+    "boundary": "protected_area",
+    "leisure": "nature_reserve",
+    "name": "Reserva Forestal Alto Mao"
+  }
+},
+{
+  "type": "way",
+  "id": 728271899,
+  "center": {
+    "lat": 19.2397286,
+    "lon": -71.4747693
+  },
+  "tags": {
+    "boundary": "protected_area",
+    "leisure": "nature_reserve",
+    "name": "Parque Nacional Nalga de Maco",
+    "protect_class": "2"
+  }
+},
+{
+  "type": "way",
+  "id": 728275584,
+  "center": {
+    "lat": 19.5719708,
+    "lon": -71.2418241
+  },
+  "tags": {
+    "boundary": "protected_area",
+    "leisure": "nature_reserve",
+    "name": "Reserva Forestal Río Cana"
+  }
+},
+{
+  "type": "way",
+  "id": 740592842,
+  "center": {
+    "lat": 19.4360497,
+    "lon": -71.0218452
+  },
+  "tags": {
+    "boundary": "protected_area",
+    "leisure": "nature_reserve",
+    "name": "Parque Nacional Piky Lora",
+    "protect_class": "2"
+  }
+},
+{
+  "type": "way",
+  "id": 1177064537,
+  "center": {
+    "lat": 19.4109928,
+    "lon": -71.1629972
+  },
+  "tags": {
+    "addr:city": "Monción",
+    "addr:street": "Calle Los Héroes",
+    "leisure": "park",
+    "name": "Parque Barrio Nuevo"
+  }
+},
+{
+  "type": "way",
+  "id": 1177064538,
+  "center": {
+    "lat": 19.4101896,
+    "lon": -71.1619108
+  },
+  "tags": {
+    "addr:city": "Monción",
+    "addr:street": "Calle Octavio Henderson",
+    "amenity": "hospital",
+    "healthcare": "hospital",
+    "name": "Hospital Municipal de Monción"
+  }
+},
+{
+  "type": "way",
+  "id": 1177064540,
+  "center": {
+    "lat": 19.4135697,
+    "lon": -71.1635629
+  },
+  "tags": {
+    "addr:city": "Monción",
+    "addr:postcode": "62902",
+    "addr:street": "Carretera Monción - Los Quemados",
+    "amenity": "fuel",
+    "brand": "EcoPetróleo",
+    "building": "roof",
+    "layer": "1",
+    "name": "EcoPetróleo",
+    "operator": "EcoPetróleo"
+  }
+},
+{
+  "type": "way",
+  "id": 1177064541,
+  "center": {
+    "lat": 19.4136606,
+    "lon": -71.1634346
+  },
+  "tags": {
+    "addr:city": "Monción",
+    "addr:street": "Carretera Monción - Los Quemados",
+    "building": "yes",
+    "shop": "convenience"
+  }
+},
+{
+  "type": "way",
+  "id": 1177064543,
+  "center": {
+    "lat": 19.4119056,
+    "lon": -71.1569740
+  },
+  "tags": {
+    "addr:city": "Monción",
+    "addr:street": "Calle Juan Pablo Duarte",
+    "brand": "Texaco",
+    "brand:wikidata": "Q775060",
+    "building": "yes",
+    "name": "Texaco",
+    "shop": "convenience"
+  }
+},
+{
+  "type": "way",
+  "id": 1177064566,
+  "center": {
+    "lat": 19.4092894,
+    "lon": -71.1497069
+  },
+  "tags": {
+    "addr:city": "Monción",
+    "addr:street": "Calle Tomás Genao",
+    "leisure": "park",
+    "name": "Parque Las Flores"
+  }
+},
+{
+  "type": "way",
+  "id": 1359382093,
+  "center": {
+    "lat": 19.4112653,
+    "lon": -71.1550734
+  },
+  "tags": {
+    "amenity": "clinic",
+    "building": "yes",
+    "healthcare": "clinic",
+    "name": "Clínica Dr. Morel"
+  }
+},
+{
+  "type": "way",
+  "id": 1359382135,
+  "center": {
+    "lat": 19.4105535,
+    "lon": -71.1509356
+  },
+  "tags": {
+    "amenity": "bank",
+    "building": "yes",
+    "name": "Cooperativa Mamoncito"
+  }
+},
+{
+  "type": "way",
+  "id": 1359382137,
+  "center": {
+    "lat": 19.4103392,
+    "lon": -71.1506696
+  },
+  "tags": {
+    "amenity": "pharmacy",
+    "building": "yes",
+    "dispensing": "yes",
+    "drive_through": "no",
+    "healthcare": "pharmacy",
+    "name": "Farmacia Monción"
+  }
+},
+{
+  "type": "way",
+  "id": 1359382138,
+  "center": {
+    "lat": 19.4105558,
+    "lon": -71.1505072
+  },
+  "tags": {
+    "amenity": "bar",
+    "building": "yes",
+    "name": "El Patio"
+  }
+},
+{
+  "type": "way",
+  "id": 1359507522,
+  "center": {
+    "lat": 19.4109687,
+    "lon": -71.1517791
+  },
+  "tags": {
+    "building": "yes",
+    "name": "Supermercado Espinal",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "way",
+  "id": 1359507526,
+  "center": {
+    "lat": 19.4144656,
+    "lon": -71.1492004
+  },
+  "tags": {
+    "building": "yes",
+    "name": "Colmado Radame",
+    "shop": "convenience"
+  }
+},
+{
+  "type": "way",
+  "id": 1359716266,
+  "center": {
+    "lat": 19.4119813,
+    "lon": -71.1569391
+  },
+  "tags": {
+    "amenity": "fuel",
+    "brand": "Texaco",
+    "brand:wikidata": "Q775060",
+    "name": "Texaco"
+  }
+},
+{
+  "type": "way",
+  "id": 1359716267,
+  "center": {
+    "lat": 19.4182767,
+    "lon": -71.1634424
+  },
+  "tags": {
+    "building": "yes",
+    "shop": "gas"
+  }
+},
+{
+  "type": "way",
+  "id": 1359716292,
+  "center": {
+    "lat": 19.4188628,
+    "lon": -71.1633948
+  },
+  "tags": {
+    "amenity": "fast_food",
+    "building": "restaurant",
+    "fast_food": "cafeteria",
+    "name": "Comedor Magalis"
+  }
+},
+{
+  "type": "way",
+  "id": 1359716293,
+  "center": {
+    "lat": 19.4169235,
+    "lon": -71.1642468
+  },
+  "tags": {
+    "building": "yes",
+    "shop": "motorcycle_repair"
+  }
+},
+{
+  "type": "way",
+  "id": 1359717645,
+  "center": {
+    "lat": 19.4106050,
+    "lon": -71.1624657
+  },
+  "tags": {
+    "building": "yes",
+    "name": "Farmacia Moncion",
+    "shop": "chemist"
+  }
+},
+{
+  "type": "way",
+  "id": 1360245106,
+  "center": {
+    "lat": 19.4107550,
+    "lon": -71.1522245
+  },
+  "tags": {
+    "building": "yes",
+    "name": "Colmado El Manguito",
+    "shop": "convenience"
+  }
+},
+{
+  "type": "way",
+  "id": 1360245107,
+  "center": {
+    "lat": 19.4108134,
+    "lon": -71.1524237
+  },
+  "tags": {
+    "building": "yes",
+    "name": "Tienda Madera",
+    "shop": "clothes"
+  }
+},
+{
+  "type": "way",
+  "id": 1360245111,
+  "center": {
+    "lat": 19.4113568,
+    "lon": -71.1529631
+  },
+  "tags": {
+    "amenity": "restaurant",
+    "building": "yes",
+    "name": "D'Amigos Café"
+  }
+},
+{
+  "type": "way",
+  "id": 1360245113,
+  "center": {
+    "lat": 19.4110858,
+    "lon": -71.1541352
+  },
+  "tags": {
+    "building": "yes",
+    "shop": "convenience"
+  }
+},
+{
+  "type": "way",
+  "id": 1360245154,
+  "center": {
+    "lat": 19.4105784,
+    "lon": -71.1505978
+  },
+  "tags": {
+    "amenity": "fast_food",
+    "building": "yes",
+    "name": "Danilo Food Truck"
+  }
+},
+{
+  "type": "way",
+  "id": 1360245155,
+  "center": {
+    "lat": 19.4116686,
+    "lon": -71.1506945
+  },
+  "tags": {
+    "amenity": "fast_food",
+    "building": "yes",
+    "cuisine": "burger;fries;sandwich;salad",
+    "diet:local": "yes",
+    "name": "El Pollo Comida Rapida",
+    "name:en": "The Chicken Fast Food"
+  }
+},
+{
+  "type": "way",
+  "id": 1360245156,
+  "center": {
+    "lat": 19.4116439,
+    "lon": -71.1518627
+  },
+  "tags": {
+    "building": "yes",
+    "contact:email": "ferreteriareyes@gmail.com",
+    "name": "Almacén Ferretería Reyes",
+    "opening_hours": "Mo-Fr 08:00-12:00, 14:00-18:00",
+    "operator": "Nelson Reyes",
+    "payment:cash": "yes",
+    "payment:credit_cards": "yes",
+    "payment:debit_cards": "yes",
+    "payment:mastercard": "yes",
+    "payment:visa": "yes",
+    "phone": "8095790682",
+    "shop": "hardware"
+  }
+},
+{
+  "type": "way",
+  "id": 1360480004,
+  "center": {
+    "lat": 19.4150559,
+    "lon": -71.1651116
+  },
+  "tags": {
+    "historic": "monument"
+  }
+},
+{
+  "type": "way",
+  "id": 1361565200,
+  "center": {
+    "lat": 19.4101032,
+    "lon": -71.1554962
+  },
+  "tags": {
+    "building": "yes",
+    "name": "Farmacia Monción",
+    "shop": "chemist"
+  }
+},
+{
+  "type": "way",
+  "id": 1372208532,
+  "center": {
+    "lat": 19.4090035,
+    "lon": -71.1630803
+  },
+  "tags": {
+    "building": "yes",
+    "name": "Ferreteria Las Heneas",
+    "operator": "Ferreteria Las Heneas",
+    "shop": "hardware"
+  }
+},
+{
+  "type": "way",
+  "id": 1478954495,
+  "center": {
+    "lat": 19.4118569,
+    "lon": -71.1568343
+  },
+  "tags": {
+    "amenity": "cafe",
+    "building": "yes"
+  }
+},
+{
+  "type": "way",
+  "id": 1479036739,
+  "center": {
+    "lat": 19.4102941,
+    "lon": -71.1484923
+  },
+  "tags": {
+    "amenity": "fast_food",
+    "building": "yes",
+    "fast_food": "cafeteria"
+  }
+},
+{
+  "type": "way",
+  "id": 1479036744,
+  "center": {
+    "lat": 19.4114575,
+    "lon": -71.1500061
+  },
+  "tags": {
+    "building": "yes",
+    "name": "Repuestos Ivan",
+    "operator": "Ivan Racing",
+    "shop": "motorcycle_repair"
+  }
+},
+{
+  "type": "way",
+  "id": 1479036765,
+  "center": {
+    "lat": 19.4209611,
+    "lon": -71.1644599
+  },
+  "tags": {
+    "amenity": "fast_food",
+    "building": "yes",
+    "fast_food": "cafeteria"
+  }
+},
+{
+  "type": "way",
+  "id": 1484189397,
+  "center": {
+    "lat": 19.4221260,
+    "lon": -71.1646526
+  },
+  "tags": {
+    "building": "yes",
+    "shop": "convenience"
+  }
+},
+{
+  "type": "way",
+  "id": 1484189398,
+  "center": {
+    "lat": 19.4215291,
+    "lon": -71.1645984
+  },
+  "tags": {
+    "building": "yes",
+    "shop": "convenience"
+  }
+},
+{
+  "type": "way",
+  "id": 1484189405,
+  "center": {
+    "lat": 19.4107084,
+    "lon": -71.1515921
+  },
+  "tags": {
+    "building": "yes",
+    "shop": "clothes"
+  }
+},
+{
+  "type": "relation",
+  "id": 10078631,
+  "center": {
+    "lat": 19.1539203,
+    "lon": -71.1204413
+  },
+  "tags": {
+    "boundary": "protected_area",
+    "int_name": "Armando Bermúdez",
+    "leisure": "nature_reserve",
+    "name": "Parque Nacional José Armando Bermúdez",
+    "name:en": "José Armando Bermúdez National Park",
+    "name:es": "Parque Nacional José Armando Bermúdez",
+    "protect_class": "2",
+    "start_date": "2004",
+    "type": "multipolygon",
+    "wikidata": "Q6062999",
+    "wikipedia": "es:Parque nacional José Armando Bermúdez"
+  }
+}
+
+  ]
+}

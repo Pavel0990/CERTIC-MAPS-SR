@@ -1,0 +1,183 @@
+// Dashboard de indicadores del panel (ARCHITECTURE.md §9.7). Lógica pura, sin base ni React:
+// periodos, series para el gráfico, comparación con el periodo anterior, tiempos legibles,
+// aspectos destacados y CSV. Segura para el cliente y probada con vitest.
+import { APP_TIMEZONE } from '@/utils/locale';
+import { shortMunicipality } from '@/utils/format';
+
+export const PERIODS = [7, 30, 90] as const;
+export type PeriodDays = (typeof PERIODS)[number];
+
+/** "?periodo=30" → 30. Cualquier otra cosa → 7 (el periodo por defecto). */
+export function parsePeriod(raw: string | undefined | null): PeriodDays {
+  const n = Number(raw);
+  return (PERIODS as readonly number[]).includes(n) ? (n as PeriodDays) : 7;
+}
+
+const ymd = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: APP_TIMEZONE }).format(d);
+const DAY = 86_400_000;
+/** Mediodía UTC de una fecha local: sumar o restar días nunca cambia de fecha por el horario. */
+const noon = (iso: string) => new Date(`${iso}T12:00:00Z`);
+const addDays = (iso: string, n: number) => ymd(new Date(noon(iso).getTime() + n * DAY));
+
+export interface PeriodRange { days: PeriodDays; from: string; to: string; prevFrom: string; prevTo: string }
+
+/** Periodo actual (incluye hoy) y el anterior del mismo largo, en fechas de República Dominicana. */
+export function periodRange(days: PeriodDays, now: Date = new Date()): PeriodRange {
+  const to = ymd(now);
+  const from = addDays(to, -(days - 1));
+  return { days, from, to, prevTo: addDays(from, -1), prevFrom: addDays(from, -days) };
+}
+
+export interface SeriesPoint { label: string; from: string; to: string; received: number; resolved: number }
+
+/** Tramos del gráfico: un punto por día en 7 días; por semana en 30 y 90 (5 y 13 puntos). */
+export function buckets(range: Pick<PeriodRange, 'from' | 'to' | 'days'>): { from: string; to: string; label: string }[] {
+  const step = range.days === 7 ? 1 : 7;
+  const out: { from: string; to: string; label: string }[] = [];
+  // Se arma hacia atrás desde hoy: el último tramo siempre termina hoy
+  for (let end = range.to; end >= range.from; end = addDays(end, -step)) {
+    const start = step === 1 ? end : [addDays(end, -(step - 1)), range.from].sort().at(-1)!;
+    out.unshift({ from: start, to: end, label: step === 1 ? weekdayLabel(end) : shortDate(start) });
+  }
+  return out;
+}
+
+const weekday = new Intl.DateTimeFormat('es-DO', { timeZone: 'UTC', weekday: 'short' });
+const shortFmt = new Intl.DateTimeFormat('es-DO', { timeZone: 'UTC', day: 'numeric', month: 'short' });
+const weekdayLabel = (iso: string) => weekday.format(noon(iso)).replace('.', '').toUpperCase();
+const shortDate = (iso: string) => shortFmt.format(noon(iso)).replace('.', '');
+
+/** Cuenta cada fecha (timestamptz) en su tramo, según el día local de Santo Domingo. */
+export function buildSeries(range: Pick<PeriodRange, 'from' | 'to' | 'days'>, received: string[], resolved: string[]): SeriesPoint[] {
+  const bs = buckets(range).map((b) => ({ ...b, received: 0, resolved: 0 }));
+  const place = (ts: string, key: 'received' | 'resolved') => {
+    const day = ymd(new Date(ts));
+    const b = bs.find((x) => day >= x.from && day <= x.to);
+    if (b) b[key]++;
+  };
+  received.forEach((t) => place(t, 'received'));
+  resolved.forEach((t) => place(t, 'resolved'));
+  return bs;
+}
+
+export type Direction = 'up' | 'down' | 'same';
+export interface Delta { pct: number | null; direction: Direction; good: boolean | null; text: string }
+
+/**
+ * Cambio frente al periodo anterior. `higherIsBetter`: más resueltos es bueno; más abiertos es malo.
+ * Sin base (anterior = 0) no hay porcentaje: "nuevo" si hay algo, "igual" si sigue en cero.
+ */
+export function delta(current: number, previous: number, higherIsBetter: boolean): Delta {
+  if (current === previous) return { pct: 0, direction: 'same', good: null, text: 'igual que antes' };
+  const direction: Direction = current > previous ? 'up' : 'down';
+  const good = direction === 'up' ? higherIsBetter : !higherIsBetter;
+  if (previous === 0) return { pct: null, direction, good, text: 'nuevo en este periodo' };
+  const pct = Math.round(((current - previous) / previous) * 100);
+  return { pct, direction, good, text: `${direction === 'up' ? 'subió' : 'bajó'} ${Math.abs(pct)} %` };
+}
+
+export interface Change { arrow: Direction; short: string; tone: 'good' | 'bad' | 'neutral'; spoken: string }
+
+/**
+ * Comparación para leer de un vistazo. Con poca base el porcentaje engaña (de 1 a 263 visitas es "26 200 %"),
+ * así que por debajo de 10 en el periodo anterior se muestra la diferencia en unidades: "+3".
+ */
+export function change(current: number, previous: number, higherIsBetter: boolean, unit = ''): Change {
+  const d = delta(current, previous, higherIsBetter);
+  const tone = d.good === null ? 'neutral' : d.good ? 'good' : 'bad';
+  if (d.direction === 'same') return { arrow: 'same', short: 'igual', tone, spoken: 'igual que el periodo anterior' };
+  const diff = current - previous;
+  const sign = diff > 0 ? '+' : '−';
+  const short = previous < 10 || d.pct === null ? `${sign}${formatInt(Math.abs(diff))}${unit}` : `${sign}${Math.abs(d.pct)} %`;
+  const verdict = tone === 'good' ? ', mejora' : tone === 'bad' ? ', empeora' : '';
+  return { arrow: d.direction, short, tone, spoken: `${diff > 0 ? 'subió' : 'bajó'} ${short.slice(1)} frente al periodo anterior${verdict}` };
+}
+
+const intFmt = new Intl.NumberFormat('es-DO', { maximumFractionDigits: 0 });
+const compactFmt = new Intl.NumberFormat('es-DO', { notation: 'compact', maximumFractionDigits: 1 });
+const formatInt = (n: number) => intFmt.format(n);
+
+/** Números de los indicadores: con separador de miles hasta 9 999 y abreviados desde 10 000 ("12 mil", "3,5 M"). */
+export function kpiNumber(n: number) {
+  return Math.abs(n) >= 10_000 ? compactFmt.format(n) : intFmt.format(n);
+}
+
+/** Horas → "45 min", "3 h 20 min", "2 d 5 h". */
+export function formatHours(hours: number | null | undefined) {
+  if (hours == null || !Number.isFinite(hours)) return '—';
+  const min = Math.round(hours * 60);
+  if (min < 60) return `${Math.max(1, min)} min`;
+  if (min < 48 * 60) {
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return m ? `${h} h ${m} min` : `${h} h`;
+  }
+  const d = Math.floor(min / 1440);
+  const h = Math.round((min % 1440) / 60);
+  return h ? `${d} d ${h} h` : `${d} d`;
+}
+
+/** Tiempo de espera desde una fecha: "3 d 4 h". */
+export const waitingSince = (iso: string, now: Date = new Date()) => formatHours((now.getTime() - new Date(iso).getTime()) / 3_600_000);
+
+export interface InsightInput {
+  days: number;
+  /** Cómo nombrar el periodo en las frases. Por defecto "en los últimos N días" (el panel, relativo a hoy). */
+  period?: string;
+  received: number;
+  /** null cuando no hay periodo anterior con qué comparar (el PDF semanal solo guarda su semana). */
+  receivedPrev: number | null;
+  resolved: number;
+  /** null cuando la cifra no es de hoy (el PDF): entonces no se afirma que no haya nada sin resolver. */
+  openNow: number | null;
+  oldestPendingHours: number | null;
+  topTrafficType: { label: string; count: number } | null;
+  topMunicipality: { name: string; share: number } | null;
+  topViewed: { name: string; views: number } | null;
+}
+
+/** Aspectos destacados en frases cortas, generados de los datos del periodo (como en la UASD). */
+export function insights(i: InsightInput): string[] {
+  const out: string[] = [];
+  const period = i.period ?? `en los últimos ${i.days} días`;
+  const n = `${i.received} ${i.received === 1 ? 'reporte' : 'reportes'}`;
+  const arrived = i.received === 1 ? 'Llegó' : 'Llegaron';
+  // La comparación solo existe si hay periodo anterior; así `prev` y `d` siempre van juntos
+  const cmp = i.receivedPrev == null ? null : { prev: i.receivedPrev, d: delta(i.received, i.receivedPrev, false) };
+  if (i.received === 0) out.push(`No llegaron reportes ${period}.`);
+  else if (cmp && cmp.d.direction !== 'same' && cmp.d.pct !== null && cmp.prev >= 10) out.push(`${arrived} ${n}: ${Math.abs(cmp.d.pct)} % ${cmp.d.direction === 'up' ? 'más' : 'menos'} que en los ${i.days} días anteriores.`);
+  // Con poca base el porcentaje exagera (de 1 a 4 es "300 %"): se dice la diferencia, igual que en las tarjetas
+  else if (cmp && cmp.d.direction !== 'same') out.push(`${arrived} ${n}: ${Math.abs(i.received - cmp.prev)} ${cmp.d.direction === 'up' ? 'más' : 'menos'} que en los ${i.days} días anteriores.`);
+  else out.push(`${arrived} ${n} ${period}.`);
+  if (i.resolved > 0) out.push(`El municipio resolvió ${i.resolved} ${i.resolved === 1 ? 'reporte' : 'reportes'} en este periodo.`);
+  if (i.oldestPendingHours != null && i.oldestPendingHours >= 72) out.push(`Hay un reporte esperando respuesta desde hace ${formatHours(i.oldestPendingHours)}.`);
+  else if (i.openNow === 0) out.push('No hay reportes al municipio sin resolver.');
+  if (i.topTrafficType && i.topTrafficType.count > 0) out.push(`La alerta vial más común fue «${i.topTrafficType.label}» (${i.topTrafficType.count}).`);
+  if (i.topMunicipality && i.topMunicipality.share >= 0.5) out.push(`${i.topMunicipality.name} concentra el ${Math.round(i.topMunicipality.share * 100)} % de los reportes.`);
+  if (i.topViewed && i.topViewed.views > 0) out.push(`La ficha más vista fue ${i.topViewed.name}, con ${i.topViewed.views} ${i.topViewed.views === 1 ? 'visita' : 'visitas'}.`);
+  return out;
+}
+
+/** El tipo de alerta más reportado, con su nombre para personas. Lo usan el panel y el PDF. */
+export function topTrafficType(byType: Record<string, number>, labels: Record<string, string>) {
+  const [code, count] = Object.entries(byType).sort((a, b) => b[1] - a[1])[0] ?? [];
+  return code && count ? { label: labels[code] ?? code, count } : null;
+}
+
+/** El municipio que más reportes recibió y su parte del total, con nombre corto. Lo usan el panel y el PDF. */
+export function topMunicipality(rows: { name: string; received: number }[]) {
+  const total = rows.reduce((t, m) => t + m.received, 0);
+  const top = [...rows].sort((a, b) => b.received - a.received)[0];
+  return top && total ? { name: shortMunicipality(top.name), share: top.received / total } : null;
+}
+
+/** CSV con separador ";" y BOM: Excel en español lo abre bien, con tildes. */
+export function toCsv(rows: (string | number | null)[][]) {
+  const cell = (v: string | number | null) => {
+    let s = v == null ? '' : String(v);
+    // Un nombre escrito por alguien que empiece por = + - @ sería una fórmula en Excel: se neutraliza
+    if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+    return /[";\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return '﻿' + rows.map((r) => r.map(cell).join(';')).join('\r\n');
+}

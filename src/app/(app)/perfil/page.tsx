@@ -1,0 +1,92 @@
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { Bell, ChevronRight, LayoutDashboard, MapPinPlus, Route, Store } from 'lucide-react';
+import { countUnread, getPreferences, TOPICS } from '@/modules/notifications/server';
+import { PageShell } from '@/components/shared/page';
+import { Card, Eyebrow } from '@/components/ui/primitives';
+import { requireViewer } from '@/lib/auth';
+import { getCatalogs } from '@/lib/catalogs';
+import { createClient } from '@/lib/supabase/server';
+import { publicEnv } from '@/config/env';
+import { avatarUrl } from '@/modules/media';
+import { AvatarEditor } from './avatar-editor';
+import { PreferencesForm, ProfileForm } from './forms';
+import { PushToggle } from './push-toggle';
+import { SignOutButton } from './sign-out-button';
+import { ThemePicker } from '@/components/shared/theme-picker';
+import { cookies } from 'next/headers';
+
+export const metadata: Metadata = { title: 'Perfil' };
+
+export default async function ProfilePage() {
+  const viewer = await requireViewer('/perfil');
+  const supabase = await createClient();
+  const [catalogs, prefs, unread] = await Promise.all([
+    getCatalogs(),
+    getPreferences(supabase, viewer.id),
+    countUnread(supabase),
+  ]);
+  const tema = (await cookies()).get('tema')?.value;
+  const theme = tema === 'dark' || tema === 'light' ? tema : 'auto';
+  const roleLabel = viewer.isProvincialAdmin ? 'Administración provincial' : viewer.isAdmin ? 'Administración municipal' : viewer.isStaff ? 'Moderación' : viewer.isEntrepreneur ? 'Emprendedor' : 'Ciudadano';
+
+  return (
+    <PageShell title={viewer.displayName} eyebrow={roleLabel} description={viewer.email}>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="flex flex-col gap-4">
+          <AvatarEditor userId={viewer.id} name={viewer.displayName} src={avatarUrl(viewer.id, viewer.avatarVersion)} />
+          <Card className="p-5">
+            <h2 className="mb-4 text-lg font-bold">Tus datos</h2>
+            <ProfileForm name={viewer.displayName} municipalityId={viewer.homeMunicipalityId} municipalities={catalogs.municipalities} />
+          </Card>
+          <Card className="p-5">
+            <h2 className="mb-1 text-lg font-bold">Avisos</h2>
+            <p className="mb-4 text-[15px] text-muted">
+              Siempre los verás en la campana de la aplicación. Además, puedes recibirlos como notificación en este dispositivo.
+            </p>
+            <div className="mb-5">
+              <PushToggle vapidKey={publicEnv.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
+            </div>
+            <PreferencesForm
+              topics={TOPICS}
+              selectedTopics={prefs.topics}
+              municipalities={catalogs.municipalities}
+              selectedMunicipalities={prefs.municipalities}
+            />
+          </Card>
+        </div>
+        <div className="flex flex-col gap-4">
+          <Card className="overflow-hidden">
+            <MenuLink href="/notificaciones" icon={<Bell className="size-5" />} label="Notificaciones" badge={unread} />
+            {viewer.isStaff && <MenuLink href="/admin" icon={<LayoutDashboard className="size-5" />} label="Panel municipal" />}
+            {viewer.isEntrepreneur && <MenuLink href="/negocio" icon={<Store className="size-5" />} label="Mi negocio" />}
+            <MenuLink href="/negocios/registrar" icon={<Store className="size-5" />} label="Registrar un negocio" />
+            <MenuLink href="/proponer" icon={<MapPinPlus className="size-5" />} label="Proponer un lugar" />
+            <MenuLink href="/proponer?que=ruta" icon={<Route className="size-5" />} label="Proponer una ruta" />
+          </Card>
+          <Card className="p-5">
+            <ThemePicker initial={theme} />
+          </Card>
+          <Card className="p-5">
+            <Eyebrow>Tu privacidad</Eyebrow>
+            <p className="mt-2 text-[15px] text-muted">
+              Tu nombre nunca sale en el mapa público. Solo usamos tu ubicación cuando tú la pides para un reporte, y quitamos los datos ocultos de tus fotos.
+            </p>
+          </Card>
+          <SignOutButton />
+        </div>
+      </div>
+    </PageShell>
+  );
+}
+
+function MenuLink({ href, icon, label, badge = 0 }: { href: string; icon: React.ReactNode; label: string; badge?: number }) {
+  return (
+    <Link prefetch={false} href={href} className="flex items-center gap-3 border-b border-line px-5 py-4 font-semibold last:border-0 hover:bg-canvas">
+      <span className="text-muted" aria-hidden>{icon}</span>
+      <span className="flex-1">{label}</span>
+      {badge > 0 && <span className="whitespace-nowrap rounded-full bg-danger px-2 py-0.5 text-[14px] font-bold text-white">{badge} sin leer</span>}
+      <ChevronRight className="size-4 text-subtle" aria-hidden />
+    </Link>
+  );
+}

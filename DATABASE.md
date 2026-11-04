@@ -1,10 +1,22 @@
 # SR Conecta — Backend y base de datos
 
-> **Versión 1.1 · 24 de septiembre de 2026.** Complementa [ARCHITECTURE.md](ARCHITECTURE.md) (v2.0).
+> **Versión 1.4 · 7 de octubre de 2026.** Complementa [ARCHITECTURE.md](ARCHITECTURE.md) (v3.0) y las decisiones de [`docs/decisions/`](docs/decisions).
 >
 > **La fuente de verdad es el SQL** de [`supabase/migrations/`](supabase/migrations). Este documento explica sus decisiones; si discrepan, manda el SQL.
 >
-> **Estado verificado:** las 16 migraciones se aplican desde cero en PostgreSQL 18.3 + PostGIS 3.6.2, y pasan las **107 pruebas** ([`supabase/tests/`](supabase/tests)). Cubren seguridad, integridad, concurrencia, PostGIS, fotos, alertas, KPIs y mantenimiento. Lo que no se puede verificar fuera de Supabase está en §14.
+
+## Estado verificado
+
+**Este es el único lugar del repositorio con estas cifras.** Los demás documentos enlazan aquí para no desincronizarse. Se actualiza en el mismo commit que añade una migración o una prueba.
+
+| Qué | Cifra | Cómo se comprueba |
+|---|---|---|
+| Migraciones | **30**, todas aplicadas en el Supabase de staging (las tres últimas el 21/10) | `ls supabase/migrations` · `npx supabase migration list` |
+| Funciones en `public` | **51** (§6) | `grep -ohE "function public\.[a-z_]+" supabase/migrations/*.sql \| sort -u \| wc -l` |
+| Pruebas de la base | **195**, en 26 secciones (A–W, AV, SR y AC), todas pasan en cada push (CI) | `npm run test:db` |
+| Motor de las pruebas | PostgreSQL 18.3 + PostGIS 3.6.2 en PGlite. Staging: PostgreSQL 17 + PostGIS 3.3 | — |
+
+Las pruebas cubren seguridad (con ataques directos), integridad, concurrencia, PostGIS, fotos, alertas, KPIs, descarga auditada del PDF, entrega del worker, push, catálogos y mantenimiento. Lo que no se puede verificar fuera de Supabase está en §14 y en [ARCHITECTURE.md §20](ARCHITECTURE.md#20-verificaciones-en-el-servicio-real).
 
 ---
 
@@ -13,8 +25,8 @@
 | | |
 |---|---|
 | Motor | PostgreSQL (Supabase; probado en 18.3, compatible con 15+) + PostGIS, `pg_trgm`, `unaccent`, `pgcrypto`, `pg_cron`, `pg_net`, Vault |
-| Esquemas | `public` (expuesto por la Data API): 27 tablas y 34 funciones · `private` (no expuesto): 6 tablas y 33 funciones · `extensions` |
-| Seguridad | RLS en las 27 tablas de `public` (31 políticas + 3 de Storage) · grants por columna · `EXECUTE` explícito por función · 53 funciones `SECURITY DEFINER`, todas con `search_path` fijo |
+| Esquemas | `public` (expuesto por la Data API): 27 tablas y las funciones de [Estado verificado](#estado-verificado) · `private` (no expuesto): tablas y ayudantes internos · `extensions` |
+| Seguridad | RLS en las 27 tablas de `public` (31 políticas + 3 de Storage) · grants por columna · `EXECUTE` explícito por función · 56 funciones `SECURITY DEFINER`, todas con `search_path` fijo |
 | Integridad | FK compuestas territoriales, `CHECK` en cada columna con dominio acotado, `UNIQUE NULLS NOT DISTINCT` donde `NULL` tiene significado, arco exclusivo en adjuntos |
 | Rendimiento | 109 índices: GiST geométricos y geográficos, GIN de texto y trigramas, parciales para bandejas y colas, soporte de todas las FK hacia `profiles` |
 | Asincronía | Cola `private.jobs` (outbox) + worker con `FOR UPDATE SKIP LOCKED` + `pg_cron` |
@@ -114,7 +126,7 @@ Tablas con RLS + grants por columna + CHECK/FK       ← CAPA 4: integridad (úl
 |---|---|
 | `anon` | Visitante sin sesión: lectura pública + `map_features`, `map_aggregates`, `search_all`, `track_engagement` |
 | `authenticated` | Usuario con sesión: RPC de negocio, lectura por RLS. Su rol de negocio real sale de `user_roles` |
-| `service_role` | Solo el worker y el cron (servidor). Ejecuta los `worker_*`, `weekly_report_*` y `kpi_summary` |
+| `service_role` | Solo el worker y el cron (servidor). Ejecuta los `worker_*`, `weekly_report_*`, `kpi_summary` y `e2e_reset_rate_limits` (solo para preparar las E2E) |
 
 ## 5. Modelo de datos
 
@@ -229,7 +241,7 @@ Decisión deliberada: la regla "`in_progress` exige responsable" está en la RPC
 - **`notification_preferences`:** temas (por defecto incluye `traffic_nearby`), municipios de interés, push y email.
 - **`private.notify()`** inserta la notificación y encola un job `push` si el usuario lo activó.
 - **`private.jobs`:**
-  - tipos `push`, `email`, `image_process`, `publish_media`, `pdf_weekly`, `fanout_alert`, `notify_moderators` y `delete_storage_object` (`email` y `pdf_weekly` están reservados, sin productor todavía);
+  - tipos `push`, `email`, `image_process`, `publish_media`, `pdf_weekly`, `fanout_alert`, `notify_moderators` y `delete_storage_object` (`email` está reservado, sin productor todavía; `pdf_weekly` lo produce `request_weekly_report`, el botón «Generar ahora» del panel);
   - deduplicación con `UNIQUE` parcial en `dedupe_key` mientras el job está activo;
   - backoff exponencial y estado `dead` tras N intentos.
 - **`private.hit_rate_limit()`:** ventana fija con upsert atómico sobre `private.rate_limit_hits`, según `private.rate_limit_rules`.
@@ -255,7 +267,7 @@ Decisión deliberada: la regla "`in_progress` exige responsable" está en la RPC
 | `map_aggregates` | Conteos públicos por municipio para el zoom de provincia |
 | `worker_queue_health` | Pendientes, el más antiguo, fallidos y `dead` |
 | Trigger `profiles_before_delete` | Bloquea la baja del único dueño de un negocio vigente; encola el borrado de evidencias privadas; audita `account.delete` |
-| `track_engagement` | Suma métricas diarias de entidades públicas. La pueden llamar `anon` y usuarios, sin límite por usuario: las cifras son orientativas |
+| `track_engagement` | Suma métricas diarias de entidades públicas. La pueden llamar `anon` y usuarios, sin límite por usuario pero con un techo de 2000 por ficha, métrica y día (§5.19): las cifras son orientativas |
 
 ### 5.10 Índices de soporte de FK — `…220_fk_indexes.sql`
 
@@ -263,9 +275,149 @@ Toda FK hacia `profiles` tiene índice, parcial (`WHERE … IS NOT NULL`). Sin e
 
 Las FK hacia catálogos y territorio (`ON DELETE RESTRICT`, casi nunca se borran) no se indexan a propósito.
 
+### 5.11 Descarga auditada del informe — `20260925120000_report_download_audit.sql`
+
+| Pieza | Qué hace |
+|---|---|
+| `authorize_report_download(run_id)` | Valida que quien llama sea `municipal_admin` (de municipio o provincial) y que el informe esté `succeeded`; registra `report.download` en `audit_logs` (también los intentos `denied`) y devuelve la ruta en `reports-pdf` |
+| `private.report_download_granted(path)` | Verdadero si el mismo usuario registró la descarga de ese PDF en los últimos 5 minutos |
+| Política `reports_pdf_read_after_audit` | Lectura en Storage del bucket `reports-pdf` solo si `report_download_granted()`. Sin rastro en la auditoría no hay lectura, aunque se llame a Storage directamente |
+
+La URL firmada se crea con el JWT del administrador, nunca con `service_role` (ADR-021). Pruebas N1–N6.
+
+### 5.12 Privilegios por defecto de Supabase — `20260926120000_harden_default_privileges.sql`
+
+Supabase concede por defecto `EXECUTE` a `anon` y `authenticated` sobre toda función nueva de `public`, y uso de toda secuencia. Esta migración revoca esos privilegios por defecto: **cada función nace cerrada** y recibe su `GRANT` explícito en su propia migración. La suite emula ese comportamiento de Supabase (`supabase/tests/supabase-stubs.sql`) para que una función olvidada falle en las pruebas y no en producción.
+
+### 5.13 Responsables y directorio del personal — `20260927120000_staff_directory.sql`
+
+| Pieza | Qué hace |
+|---|---|
+| `request_assignees(ids[])` | Quién atiende cada consulta. Solo devuelve las del alcance de quien llama (`assigned_to` está oculto por grant de columna incluso para el personal) |
+| `staff_directory(municipio)` | Moderadores y administradores con alcance sobre un municipio: a quién se puede asignar una consulta |
+
+Pruebas O1–O4.
+
+### 5.14 Entrega del worker — `20261002120000_worker_delivery.sql`
+
+El worker nunca lee tablas directamente: todo lo que necesita sale de estas funciones (`service_role` únicamente).
+
+| Pieza | Qué hace |
+|---|---|
+| `worker_notify_moderators(entidad, id)` | Job `notify_moderators`. Avisa a los moderadores del municipio y a los provinciales; si el municipio no tiene moderadores, a la administración con alcance. **Nunca avisa al autor** y no avisa de lo que ya se revisó. El aviso enlaza a la bandeja o a validaciones |
+| `worker_push_payload(notificación)` | Título, texto, enlace y dispositivos de una notificación con push pendiente; `NULL` si ya se envió |
+| `worker_push_result(notificación, enviado, ok[], muertos[])` | Marca `sent`/`failed`, sella `last_success_at` de los dispositivos que respondieron y borra los que el servicio dio por muertos (404/410) |
+| `worker_attachment_info(id)` | Bucket, ruta y estado de una foto, y si puede publicarse (negocios, lugares y rutas; nunca evidencia) |
+
+Pruebas P1–P10.
+
+### 5.15 Informe a pedido — `20261002130000_weekly_report_queue.sql`
+
+| Pieza | Qué hace |
+|---|---|
+| `request_weekly_report(lunes)` | "Generar ahora" del panel. Solo administración provincial, solo semanas cerradas (hora de RD), 5 por hora. Crea la versión nueva con `weekly_report_begin(…, manual)` y encola `pdf_weekly`: el request del usuario nunca usa `service_role` |
+| `worker_report_run(run_id)` | Lo que necesita el PDF: periodo, versión, provincia, snapshots con nombres de municipio y nombres de los tipos de tránsito. Solo ejecuciones en curso |
+
+Pruebas Q1–Q6.
+
+### 5.16 Dispositivos de push — `20261002140000_push_devices.sql`
+
+| Pieza | Qué hace |
+|---|---|
+| `register_push_device(endpoint, p256dh, auth, ua)` | Alta del dispositivo y `push_enabled = true`. Si el navegador estaba suscrito con otra cuenta (teléfono compartido), el dispositivo **pasa a la cuenta actual**: los avisos privados de la anterior dejan de llegar ahí. Con RLS sola no se puede, porque nadie ve filas ajenas |
+| `unregister_push_device(endpoint)` | Baja del dispositivo propio; si era el último, apaga el push de la cuenta |
+
+Pruebas R1–R6.
+
+### 5.17 Fecha local en las promociones — `20261002150000_promotions_local_date.sql`
+
+`current_date` usa la zona de la sesión, que en Supabase es UTC. Entre las 8 p. m. y la medianoche de RD ya es "mañana" en UTC: se rechazaban las promociones que empiezan hoy, y la política de lectura escondía antes de tiempo las que terminan hoy. `private.local_today()` devuelve la fecha de Santo Domingo y la usan `create_promotion` y la política `promotions_read`. **Regla:** ninguna función ni política compara con `current_date`; las fechas civiles se calculan siempre en `America/Santo_Domingo`. Pruebas S1–S3.
+
+### 5.18 Catálogos editables desde el panel — `20261005120000_catalog_admin.sql`
+
+| Pieza | Qué hace |
+|---|---|
+| `catalog_admin_list()` | Los tres catálogos completos, también lo desactivado, con cuántos reportes o negocios usan cada opción. Solo administración provincial |
+| `save_catalog_item(catálogo, código, cambios)` | Alta (código nulo) o edición. Campos en lista blanca por catálogo. El código se deriva del nombre al crear y no cambia nunca, porque lo guardan los reportes y los negocios. El tipo de una categoría de reporte tampoco cambia. Nunca deja un catálogo, o un tipo de reporte, sin ninguna opción activa. Audita `catalog.create` y `catalog.update` |
+
+No se borra nada: desactivar quita la opción de los formularios y del mapa (la política de lectura solo muestra lo activo) y conserva el historial. El campo `icon` se resuelve en la app con `src/components/shared/catalog-icon.tsx`. Pruebas T1–T8.
+
+### 5.19 Endurecimiento tras la auditoría — `20261017120000_security_hardening.sql`
+
+Resultado de la [auditoría de seguridad del 17/10/2026](SECURITY.md#auditoría-del-17102026), hecha contra la base en línea.
+
+| Cambio | Por qué |
+|---|---|
+| Se elimina la política `public_media_read` de `storage.objects` | Permitía **listar** el bucket público entero con la clave pública, incluidas fotos que ya no están en ninguna ficha. Las fotos se sirven por URL pública, que no pasa por RLS: siguen funcionando igual |
+| `track_engagement` deja de sumar al llegar a **2000** por ficha, métrica y día | La función es anónima a propósito, así que no hay usuario al que limitar. El techo acota cuánto puede inflar alguien las cifras del comercio y del informe semanal |
+
+Pruebas U1–U3.
+
+### 5.20 Foto de perfil — `20261020120000_profile_avatars.sql`
+
+Una foto por persona, pensada para gastar lo mínimo de Supabase.
+
+| Pieza | Diseño |
+|---|---|
+| Bucket `avatars` | Público, **64 KB** como máximo, solo WebP o JPEG. Ruta fija `{uid}.webp`: cambiar la foto sobrescribe el archivo (nunca quedan huérfanas). Sin política de listado |
+| Políticas de Storage | Cada persona escribe, lee y borra **solo** su archivo; reemplazarlo, como máximo cada 10 segundos |
+| `profiles.avatar_version` | `smallint`, `NULL` = sin foto. Va en la URL (`?v=`): la CDN cachea un año y cada foto nueva es otra URL. Solo la cambia la RPC |
+| `set_avatar(p_present)` | `true` tras subir (comprueba que el archivo exista; 10 cambios por hora); `false` para quitarla (sin límite) |
+| Baja de cuenta | `before_profile_delete` encola el borrado del archivo |
+
+El teléfono recorta la foto a 256×256 y la codifica antes de subirla: no hay procesamiento en el servidor. Pruebas AV1–AV10.
+
+### 5.21 Correcciones de la revisión de seguridad — `20261021120000_security_review_fixes.sql`
+
+Resultado de la [revisión del 21/10/2026](SECURITY.md#revisión-del-21102026). Ningún hallazgo crítico ni alto.
+
+| Cambio | Por qué |
+|---|---|
+| `private.upload_grants` + `request_upload(p_ext)` (20 por hora); la política `evidence_upload_own_folder` exige el permiso | Firmar una URL de subida no crea ningún objeto, así que el tope de 20 subidas por hora se podía saltar pidiendo cientos de URLs. Ahora cada ruta es un permiso de un solo uso con límite |
+| `attachments_read` y `evidence_read_own_or_staff` usan `private.attachment_municipality()` / `private.can_read_evidence()` | La evidencia privada la ve el personal **del municipio** del reporte (y la provincia), no cualquier moderador |
+| `update_business`: si el dueño cambia el **nombre** o la **web** de un negocio aprobado, vuelve a `under_review`; toda edición del dueño avisa al personal; sin `sqlerrm` en la respuesta | Evita suplantaciones y enlaces de estafa publicados sin revisión |
+| `push_subscriptions`: `CHECK` de servicios de push reales (`not valid`) y sin `INSERT` directo | El worker solo envía a FCM, Mozilla, Windows y Apple; el alta pasa por `register_push_device` (con límite) |
+| Bucket `avatars` acepta JPEG; `set_avatar(false)` sin límite; la baja de cuenta siempre borra la foto | iPhone (Safari no codifica WebP) y nunca una imagen rota |
+
+Pruebas SR1–SR5, K1–K1d y AV10.
+
+### 5.22 E2E repetibles — `20261021130000_e2e_rate_limit_reset.sql`
+
+| Pieza | Qué hace |
+|---|---|
+| `e2e_reset_rate_limits(correos[])` | Borra los contadores de `private.rate_limit_hits` de las cuentas indicadas **solo si su correo es `@example.com`** (dominio reservado: las cuentas de `scripts/staging-test-users.mjs`). Solo `service_role`; la llama `tests/e2e/global-setup.ts` antes de cada corrida de Playwright para que las E2E se puedan repetir sin llegar al límite de 5 alertas por hora. `security_audit.sql` marca cualquier `e2e_*` ejecutable por clientes |
+
+Pruebas V1–V3.
+
+### 5.23 Aviso de reporte parecido cercano — `20261022130000_similar_reports.sql`
+
+Antes de enviar una alerta de tránsito o un reporte al municipio, `/reportar` pregunta "Ya hay un reporte parecido aquí. ¿Quieres apoyarlo en lugar de crear otro?". Menos duplicados en la bandeja y más apoyos en el reporte que ya existe.
+
+| Pieza | Qué hace |
+|---|---|
+| `find_similar_reports(p_kind, p_type, p_lat, p_lng)` | `p_kind`: `traffic` (tipo de alerta) o `incident` (categoría de incidencia; las consultas no se comparan). Hasta **3** reportes abiertos del mismo tipo a **menos de 150 m** (`ST_DWithin` sobre `geography`: metros reales), del más cercano al más lejano, solo en el municipio donde caería el reporte nuevo (`private.locate`: cada ayuntamiento tiene su bandeja). Fuera de la provincia, lista vacía. Solo `authenticated`, **60 por hora** (`similar_report_check`) |
+| Qué devuelve | Por resultado: `id`, `kind`, `type`, `distance_m` (redondeada) y, en los reportes al municipio, `support_count`. Más tres datos sobre quien llama: `mine`, `can_support` (las mismas reglas de `toggle_request_vote`) y `supported` (ya lo apoyó; el voto es un interruptor y "Apoyarlo" lo quitaría). **Nunca** autor, título, descripción, fotos ni coordenadas |
+| Qué se compara | **Tránsito:** `active` o `verified` y vigentes (`expires_at > now()`), o las `pending` propias. La vigencia ya es la vida útil de cada tipo (3 h un accidente, 7 días un bache, como máximo 30 días). **Municipio:** públicas `approved` o `in_progress`, o las propias abiertas (`pending` a `in_progress`), creadas en los **últimos 90 días**: un bache o una luz apagada pueden tardar semanas en arreglarse, y uno abierto hace más de 3 meses casi siempre está olvidado; un reporte nuevo vuelve a llamar la atención |
+| Privacidad | Solo aparece lo que la persona ya puede ver por RLS como ciudadana: la existencia de un reporte privado o pendiente de otra persona no se revela |
+| Rendimiento | Prefiltro `geom && ST_Expand(punto, 0.002)` (~220 m) con el GiST de geometría que ya tienen las dos tablas, y después `ST_DWithin` en metros. No hace falta un índice nuevo |
+
+**En la app:** `POST /api/v1/reports/similar` (Route Handler y no Server Action, porque el asistente la corta a los 1,5 s y una acción no se puede cancelar) → `modules/citizen-reports` (`findSimilarReports`). **Nunca bloquea:** si la función todavía no existe en la base, si falla, si se agotó el límite o si tarda más de 1,5 s, el asistente sigue sin aviso y sin mensaje de error. "Apoyarlo" usa `toggle_request_vote` por la ruta de votos de siempre.
+
+Pruebas W1–W14 (cerca, lejos, otro tipo, cerrados y viejos, privados de otra persona, propios, otro municipio, máximo 3 por distancia, sin datos personales, apoyo ya dado, entradas inválidas, anon sin permiso, `EXECUTE` explícito y límite de uso).
+
+### 5.24 Crédito de las fotos con licencia libre — `20261022120000_attachment_credit.sql`
+
+Las fotos de Wikimedia Commons que carga [`scripts/load-places-content.mjs`](scripts/load-places-content.mjs) son CC BY o CC BY-SA: hay que mostrar autor y licencia. El crédito se ve al final de la descripción de la ficha y, desde el 21/10, también se puede guardar junto a la foto:
+
+| Pieza | Diseño |
+|---|---|
+| `attachments.credit` | `text`, 1–300 caracteres; `NULL` = foto propia. Lectura pública como las demás columnas del adjunto; nadie la escribe desde la API (solo la carga con la clave de servicio) |
+
+Compatible con el código actual. Al aplicarla falta: mostrar el crédito en la galería (`listPhotos` y `PhotoGallery`), que el script lo llene y quitar la línea de la descripción. Pruebas AC1–AC5.
+
 ## 6. Catálogo de RPC
 
-34 funciones en `public`. Todas son `SECURITY DEFINER` salvo las marcadas como **invoker**.
+Todas las funciones de `public` (cifra en [Estado verificado](#estado-verificado)) son `SECURITY DEFINER`, salvo las marcadas como **invoker**.
 
 | RPC | Quién | Rate limit | Idempotencia / concurrencia |
 |---|---|---|---|
@@ -277,6 +429,7 @@ Las FK hacia catálogos y territorio (`ON DELETE RESTRICT`, casi nunca se borran
 | `assign_request` | personal | 300/h | — |
 | `set_request_public` | personal | — | — |
 | `toggle_request_vote` | ciudadano (no autor) | 30/h | PK + captura de doble clic |
+| `find_similar_reports` | ciudadano | 60/h | solo lectura (más el contador); ≤ 3 resultados a < 150 m |
 | `submit_business` | ciudadano | 3/día | `idempotency_key` |
 | `update_business` | miembro / personal | 30/h | lista blanca de campos (incl. `google_place_id`) + `version` |
 | `set_business_hours` | miembro / personal | 30/h (compartido con `update_business`) | reemplazo completo |
@@ -289,15 +442,22 @@ Las FK hacia catálogos y territorio (`ON DELETE RESTRICT`, casi nunca se borran
 | `map_features` | anon, ciudadano | — | **invoker**; bbox ≤ 2°, ≤ 500 features, `truncated` |
 | `map_aggregates` | anon, ciudadano | — | **invoker** |
 | `search_all` | anon, ciudadano | — | **invoker**; 2–80 caracteres, ≤ 50 resultados |
-| `track_engagement` | anon, ciudadano | — | upsert diario |
+| `track_engagement` | anon, ciudadano | techo 2000/día por ficha y métrica | upsert diario |
 | `my_activity` | ciudadano | — | solo lo propio |
 | `kpi_summary` | admin (su alcance), service | — | **única fuente de KPIs** |
 | `weekly_report_begin` | service (cron) / admin provincial (manual) | — | toma atómica; versión nueva si es manual |
 | `weekly_report_finish` | service | — | — |
+| `authorize_report_download` | admin municipal o provincial | 300/h | registra la descarga; condición de lectura en Storage |
 | `worker_claim_jobs`, `worker_finish_job` | service | — | `SKIP LOCKED`, recupera locks vencidos |
 | `worker_attachment_processed`, `worker_attachment_published` | service | — | — |
 | `worker_run_fanout_alert` | service | — | una alerta por reporte (`dedupe_key`) |
 | `worker_queue_health` | service | — | — |
+| `request_assignees`, `staff_directory` | personal del municipio | — | — |
+| `request_weekly_report` | admin provincial | 5/h | crea versión nueva + job `pdf_weekly` |
+| `catalog_admin_list`, `save_catalog_item` | admin provincial | 300/h (`staff_action`) | lista blanca; código estable; nunca sin una opción activa |
+| `register_push_device`, `unregister_push_device` | ciudadano | 20/h (alta) | `ON CONFLICT (endpoint)`; el dispositivo pasa a la cuenta actual |
+| `worker_notify_moderators`, `worker_push_payload`, `worker_push_result`, `worker_attachment_info`, `worker_report_run` | service | — | idempotentes: ignoran estados ya avanzados |
+| `e2e_reset_rate_limits` | service (solo cuentas `@example.com`) | — | idempotente |
 
 Qué endpoint o Server Action consume cada RPC: ARCHITECTURE.md §12.
 
@@ -328,6 +488,8 @@ Qué endpoint o Server Action consume cada RPC: ARCHITECTURE.md §12.
 **Storage:**
 - `report-evidence` solo acepta subidas en `incoming/{auth.uid()}/…`, con un máximo de 20 por hora (`private.upload_quota_ok()`).
 - `public-media` y `reports-pdf` solo los escribe `service_role`.
+- `public-media` no tiene política de lectura: sus fotos se sirven por URL pública y nadie puede listar el bucket (§5.19).
+- `reports-pdf` solo se lee con una descarga registrada en `audit_logs` en los últimos 5 minutos (`reports_pdf_read_after_audit`, §5.11).
 
 ## 8. Errores de diseño detectados al ejecutar (y cómo se evitan)
 
@@ -349,7 +511,7 @@ Estos fallos solo aparecieron al correr el SQL contra un PostgreSQL real. Quedan
 |---|---|---|---|
 | `report-evidence` | No | 5 MB, JPEG/PNG/WebP | El ciudadano en `incoming/{uid}/` (20 por hora); el worker guarda `processed/{attachment_id}.webp` |
 | `public-media` | Sí | 5 MB | Solo el worker, tras la moderación (solo fotos de negocios, lugares y rutas) |
-| `reports-pdf` | No | 20 MB, PDF | Solo el servidor; descarga con URL firmada de 5 min |
+| `reports-pdf` | No | 20 MB, PDF | Solo el servidor. Descarga con URL firmada de 5 min, creada con el JWT del administrador tras `authorize_report_download` |
 
 Limpieza diaria (`apply_retention`):
 - los adjuntos `pending` con más de 24 h se marcan `rejected` y se encola el borrado del archivo;
@@ -363,7 +525,7 @@ Limpieza diaria (`apply_retention`):
 | Expirar reportes de tránsito | cada 15 min | `private.expire_traffic_reports()` (el mapa ya filtra por `expires_at`; esto es para los KPIs y el broadcast) |
 | Archivar consultas resueltas | diaria, 04:15 UTC | `private.archive_resolved_requests()` (30 días después de resolver) |
 | Retención | diaria, 04:30 UTC | `private.apply_retention()` (plazos en ARCHITECTURE.md §10.10) |
-| Informe semanal | diaria, 10:00 UTC (Vercel Cron) | `weekly_report_begin()` → PDF → `weekly_report_finish()` |
+| Informe semanal | diaria, 10:00 UTC (Vercel Cron) | `weekly_report_begin()` → PDF → `weekly_report_finish()`. "Generar ahora": `request_weekly_report()` → job `pdf_weekly` → el worker hace lo mismo |
 
 **Tiempo real:**
 - El trigger `traffic_reports_broadcast` emite con `realtime.send` en el canal `traffic:{province_id}`, solo con datos públicos (id, tipo, gravedad, coordenadas, estado), cuando el reporte pasa a `active`, `verified`, `resolved`, `expired` o `rejected`.
@@ -401,6 +563,20 @@ El panel la llama en vivo. El informe semanal guarda su resultado en `weekly_kpi
 | `…200_rls_grants` | RLS, grants por columna, `EXECUTE` |
 | `…210_storage_realtime_cron` | Buckets, políticas de Storage, broadcast, `pg_cron` |
 | `…220_fk_indexes` | Índices de soporte de FK |
+| `20260925120000_report_download_audit` | Descarga auditada del informe semanal |
+| `20260926120000_harden_default_privileges` | Privilegios por defecto de Supabase revocados (§5.12) |
+| `20260927120000_staff_directory` | Responsables y directorio del personal (§5.13) |
+| `20261002120000_worker_delivery` | Entrega del worker: push, avisos al personal (§5.14) |
+| `20261002130000_weekly_report_queue` | Informe semanal a pedido por la cola (§5.15) |
+| `20261002140000_push_devices` | Dispositivos de push por usuario (§5.16) |
+| `20261002150000_promotions_local_date` | Vigencia de promociones en fecha de RD (§5.17) |
+| `20261005120000_catalog_admin` | Catálogos editables desde el panel (§5.18) |
+| `20261017120000_security_hardening` | Auditoría del 17/10 (§5.19) |
+| `20261020120000_profile_avatars` | Foto de perfil (§5.20) |
+| `20261021120000_security_review_fixes` | Revisión de seguridad del 21/10 (§5.21) |
+| `20261021130000_e2e_rate_limit_reset` | E2E repetibles: reinicio de límites de las cuentas de prueba (§5.22) |
+| `20261022120000_attachment_credit` | Crédito de las fotos con licencia libre (§5.24). **Propuesta: no aplicada** |
+| `20261022130000_similar_reports` | Aviso de reporte parecido cercano (§5.23) |
 
 **Reglas:**
 - Solo hacia adelante.
@@ -438,11 +614,12 @@ cd supabase/tests && npm install && npm test     # PostgreSQL 18 + PostGIS en We
 
 ## 14. No verificado fuera de Supabase
 
-Las pruebas usan stubs mínimos de lo que aporta Supabase ([`supabase/tests/supabase-stubs.sql`](supabase/tests/supabase-stubs.sql)). Antes de producción hay que comprobar en un proyecto Supabase real:
+Las pruebas usan stubs mínimos de lo que aporta Supabase ([`supabase/tests/supabase-stubs.sql`](supabase/tests/supabase-stubs.sql)). Todo lo de esta lista **ya se comprobó en el Supabase de staging** (ARCHITECTURE.md §20) y se debe volver a comprobar al crear el proyecto de producción:
 
 - que `pg_cron`, `pg_net` y Vault se habiliten y que `cron.schedule` registre las 4 tareas (en las pruebas se omiten);
 - la firma de `realtime.send(payload, event, topic, private)` y la configuración de canales Broadcast públicos;
 - las claves de `storage.objects.metadata` (`mimetype`, `size`) que usa `register_attachment`;
+- que `createSignedUrl` con el JWT del usuario respete la política `reports_pdf_read_after_audit`;
 - que la Data API exponga solo `public`, y los `GRANT` que Supabase aplica por defecto a tablas nuevas (la migración 200 los revoca y concede explícitamente, así que no dependemos de ellos);
 - `storage.foldername()` y los límites de los buckets en el servicio de Storage real;
 - el rendimiento con los polígonos oficiales de los municipios (los de desarrollo son rectángulos).
