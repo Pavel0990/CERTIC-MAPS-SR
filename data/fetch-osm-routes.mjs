@@ -12,17 +12,17 @@ const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 export const ROUTES = [
   {
     slug: 'moncion-presa', name: 'De Monción a la Presa', kind: 'ecologica',
-    description: 'Caminata desde el Parque Central de Monción hasta la Presa de Monción, sobre el río Mao. El trazado sigue calles y caminos que existen en OpenStreetMap; conviene validarlo con el municipio antes de recomendarlo.',
+    description: 'Caminata desde el Parque Central de Monción hasta la Presa de Monción, sobre el río Mao. El trazado sigue calles y caminos que existen en OpenStreetMap. Antes de salir, pregunta en el pueblo cómo está el camino.',
     via: [[-71.1502, 19.4109], [-71.1191, 19.4057]],
   },
   {
     slug: 'sabaneta-mata-del-jobo', name: 'Sabaneta al Parador de Mata del Jobo', kind: 'cultural',
-    description: 'Recorrido desde el Parque Central de San Ignacio de Sabaneta hasta el Parador Fotográfico de Mata del Jobo. El trazado sigue calles y caminos que existen en OpenStreetMap; conviene validarlo con el municipio antes de recomendarlo.',
+    description: 'Recorrido desde el Parque Central de San Ignacio de Sabaneta hasta el Parador Fotográfico de Mata del Jobo. El trazado sigue calles y caminos que existen en OpenStreetMap. Antes de salir, pregunta en el pueblo cómo está el camino.',
     via: [[-71.3418, 19.4757], [-71.3111, 19.4537]],
   },
   {
     slug: 'sabaneta-caimito', name: 'Sabaneta al Parador de Caimito', kind: 'aventura',
-    description: 'Ruta larga desde el Parque Central de Sabaneta hasta el Parador Fotográfico de Caimito. El trazado sigue calles y caminos que existen en OpenStreetMap; conviene validarlo con el municipio antes de recomendarlo.',
+    description: 'Ruta larga desde el Parque Central de Sabaneta hasta el Parador Fotográfico de Caimito. El trazado sigue calles y caminos que existen en OpenStreetMap. Antes de salir, pregunta en el pueblo cómo está el camino.',
     via: [[-71.3418, 19.4757], [-71.2823, 19.4958]],
   },
 ];

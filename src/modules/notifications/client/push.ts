@@ -1,17 +1,9 @@
 'use client';
-import { registerServiceWorker } from '@/lib/pwa';
+import { isIos, isStandalone, registerServiceWorker } from '@/lib/pwa';
 // Web Push en el navegador (ADR-013): permiso, suscripción de ESTE dispositivo y baja.
 // El servidor guarda la suscripción con register_push_device; aquí solo se habla con el navegador.
 
 export type PushSupport = 'ok' | 'unsupported' | 'ios_needs_install' | 'denied';
-
-function isIos() {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
-
-function isStandalone() {
-  return window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
-}
 
 /** ¿Se puede activar push aquí? En iPhone solo con la app instalada en la pantalla de inicio (iOS 16.4+). */
 export function pushSupport(): PushSupport {

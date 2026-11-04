@@ -6,9 +6,21 @@ const HOT = { type: 'FeatureCollection', features: [
   { type: 'Feature', geometry: { type: 'Point', coordinates: [-71.2475, 19.3825] }, properties: { count: 2 } },
 ] };
 
+// En el teléfono las capas viven plegadas detrás del botón «Capas del mapa»; en PC están siempre a la vista
+async function openMap(page: import('@playwright/test').Page) {
+  await page.goto('/mapa');
+  const layers = page.getByRole('button', { name: 'Capas del mapa' });
+  if (!(await layers.isVisible())) return;
+  // Se reintenta: un toque antes de que la página cargue del todo no hace nada
+  await expect(async () => {
+    if (!(await page.getByRole('button', { name: 'Turismo' }).isVisible())) await layers.click();
+    await expect(page.getByRole('button', { name: 'Turismo' })).toBeVisible({ timeout: 1000 });
+  }).toPass();
+}
+
 test('se enciende y se apaga, y explica qué significa el color', async ({ page }) => {
   await page.route('**/api/v1/map/hotspots', (r) => r.fulfill({ json: HOT }));
-  await page.goto('/mapa');
+  await openMap(page);
   const chip = page.getByRole('button', { name: 'Zonas con más reportes' });
   await expect(chip).toHaveAttribute('aria-pressed', 'false');
   await chip.click();
@@ -20,14 +32,14 @@ test('se enciende y se apaga, y explica qué significa el color', async ({ page 
 
 test('sin zonas todavía, lo dice en vez de mostrar un mapa vacío', async ({ page }) => {
   await page.route('**/api/v1/map/hotspots', (r) => r.fulfill({ json: { type: 'FeatureCollection', features: [] } }));
-  await page.goto('/mapa');
+  await openMap(page);
   await page.getByRole('button', { name: 'Zonas con más reportes' }).click();
   await expect(page.getByText('Todavía no hay zonas con varios reportes en los últimos 90 días.')).toBeVisible();
 });
 
 test('si la capa no está disponible, el botón no aparece', async ({ page }) => {
   await page.route('**/api/v1/map/hotspots', (r) => r.fulfill({ status: 404, json: { error: 'not_available' } }));
-  await page.goto('/mapa');
+  await openMap(page);
   await expect(page.getByRole('button', { name: 'Turismo' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Zonas con más reportes' })).toHaveCount(0);
 });

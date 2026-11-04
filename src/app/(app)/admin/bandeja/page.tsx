@@ -75,6 +75,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
           <Card><EmptyState icon={<Inbox className="size-7" />} title="Nada pendiente">No hay alertas de tránsito con este filtro.</EmptyState></Card>
         ) : (
           <div className="grid gap-3 lg:grid-cols-2">
+            {traffic.length >= 100 && <ListCap />}
             {traffic.map((t) => (
               <TrafficCard key={t.id} t={t} typeName={labels.trafficTypes[t.type] ?? t.type} municipality={t.municipality_id ? muniName.get(t.municipality_id) ?? '' : 'Fuera de la provincia'} incidentCategories={incidentCategories} />
             ))}
@@ -84,6 +85,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         <Card><EmptyState icon={<Inbox className="size-7" />} title="Nada pendiente">No hay reportes al municipio con este filtro.</EmptyState></Card>
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
+          {requests.length >= 100 && <ListCap />}
           {requests.map((r) => (
             <RequestCard
               key={r.id}
@@ -119,4 +121,9 @@ function Chip({ href, active, children }: { href: string; active: boolean; child
       {children}
     </Link>
   );
+}
+
+/** La bandeja trae como mucho 100 por consulta: se dice, para que nadie crea que no hay más. */
+function ListCap() {
+  return <p className="rounded-[14px] bg-warn-soft p-3 text-[15px] text-warn lg:col-span-2">Se muestran los 100 primeros. Usa los filtros de municipio o de estado para ver el resto.</p>;
 }

@@ -33,7 +33,8 @@ export function ActionButton({ label, done, run, variant = 'secondary', icon, as
 
   function execute(value?: string) {
     start(async () => {
-      const r = await run(value);
+      // Sin red, la Server Action lanza: se avisa en palabras y la pantalla sigue en pie
+      const r = await run(value).catch(() => ({ status: 'rejected' as const, reason: 'unavailable' }));
       if (r.status === 'ok') {
         toast.show(done);
         setOpen(false);
@@ -98,7 +99,7 @@ export function ActionButton({ label, done, run, variant = 'secondary', icon, as
         }
       >
         <Field label={ask.label} hint={ask.hint} optional={!ask.required}>
-          {(a) => <Textarea {...a} value={text} onChange={(e) => setText(e.target.value)} maxLength={1000} autoFocus />}
+          {(a) => <Textarea {...a} value={text} onChange={(e) => setText(e.target.value)} maxLength={500} autoFocus />}
         </Field>
       </Sheet>
     </>

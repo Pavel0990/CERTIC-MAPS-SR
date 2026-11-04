@@ -10,6 +10,24 @@ import type { BBox, HotspotCollection, LatLng, MapFeature, MapFeatureCollection,
 // que sustituye a ADR-004). El resto de la app no conoce esta librería.
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 // El worker se sirve desde public/vendor (scripts/copy-vendor.mjs), con la versión instalada.
+const MAP_LOCALE = {
+  'Map.Title': 'Mapa',
+  'AttributionControl.ToggleAttribution': 'Mostrar u ocultar los créditos del mapa',
+  'AttributionControl.MapFeedback': 'Sugerir una corrección del mapa',
+  'NavigationControl.ZoomIn': 'Acercar',
+  'NavigationControl.ZoomOut': 'Alejar',
+  'NavigationControl.ResetBearing': 'Volver a orientar al norte',
+  'GeolocateControl.FindMyLocation': 'Ir a mi ubicación',
+  'GeolocateControl.LocationNotAvailable': 'Tu ubicación no está disponible',
+  'FullscreenControl.Enter': 'Pantalla completa',
+  'FullscreenControl.Exit': 'Salir de pantalla completa',
+  'ScaleControl.Meters': 'm',
+  'ScaleControl.Kilometers': 'km',
+  'CooperativeGesturesHandler.WindowsHelpText': 'Usa Ctrl y la rueda del ratón para acercar el mapa',
+  'CooperativeGesturesHandler.MacHelpText': 'Usa ⌘ y la rueda del ratón para acercar el mapa',
+  'CooperativeGesturesHandler.MobileHelpText': 'Usa dos dedos para mover el mapa',
+};
+
 setWorkerUrl(`/vendor/maplibre/${maplibrePkg.version}/maplibre-gl-worker.mjs`);
 
 export interface MapCanvasProps {
@@ -47,7 +65,8 @@ function fitPadding(el: HTMLElement, small: boolean, overlays: boolean) {
   const h = el.clientHeight;
   const w = el.clientWidth;
   if (!overlays) return 24;
-  if (small) return { top: Math.round(h * 0.2), bottom: Math.round(h * 0.42), left: 16, right: 16 };
+  // En el teléfono arriba solo queda el buscador y la hoja de abajo empieza plegada
+  if (small) return { top: 84, bottom: Math.round(h * 0.18), left: 16, right: 16 };
   return { top: 60, bottom: 60, left: Math.min(440, Math.round(w * 0.35)), right: 60 };
 }
 
@@ -102,6 +121,8 @@ export default function MaplibreCanvas({
       maxZoom: 18,
       interactive,
       attributionControl: { compact: true },
+      // Los controles del mapa en español (MapLibre los trae en inglés): los lee el lector de pantalla
+      locale: MAP_LOCALE,
       fadeDuration: reduceMotion ? 0 : 300,
     });
     mapRef.current = map;

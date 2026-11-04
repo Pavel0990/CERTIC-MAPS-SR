@@ -27,7 +27,7 @@ async function run(fn: (s: Awaited<ReturnType<typeof createClient>>) => Promise<
 
 export async function moderateTraffic(id: string, expected: string, to: string, note?: string) {
   if (!uuid.safeParse(id).success) return rejected('not_found');
-  return run((s) => moderateTrafficReport(s, id, expected, to, text(500).parse(note)), ['/admin/bandeja', '/admin']);
+  return run((s) => moderateTrafficReport(s, id, expected, to, text(1000).parse(note)), ['/admin/bandeja', '/admin']);
 }
 
 export async function escalateTraffic(id: string, category: string) {

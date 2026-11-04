@@ -33,7 +33,7 @@ export function GrantForm({ people, municipalities, canGrantAdmin }: { people: {
         disabled={!person || !muni}
         onClick={() =>
           start(async () => {
-            const r = await grantRole(person, role, muni);
+            const r = await grantRole(person, role, muni).catch(() => ({ status: 'rejected' as const, reason: 'unavailable' }));
             toast.show(r.status === 'ok' ? 'Rol asignado.' : reasonMessage(r.reason), r.status === 'ok' ? 'ok' : 'error');
             router.refresh();
           })

@@ -11,9 +11,9 @@
 
 | Qué | Cifra | Cómo se comprueba |
 |---|---|---|
-| Migraciones | **32**, todas aplicadas en el Supabase de staging (las dos últimas el 03/11) | `ls supabase/migrations` · `npx supabase migration list --remote` |
-| Funciones en `public` | **51** (§6) | `grep -ohE "function public\.[a-z_]+" supabase/migrations/*.sql \| sort -u \| wc -l` |
-| Pruebas de la base | **195**, en 26 secciones (A–W, AV, SR y AC), todas pasan en cada push (CI) | `npm run test:db` |
+| Migraciones | **33**, todas aplicadas en el Supabase de staging (la última el 04/11, §5.25) | `ls supabase/migrations` · `npx supabase migration list --remote` |
+| Funciones en `public` | **52** (§6) | `grep -ohE "function public\.[a-z_]+" supabase/migrations/*.sql \| sort -u \| wc -l` |
+| Pruebas de la base | **207**, en 27 secciones (A–W, AV, SR, AC y RV), todas pasan en cada push (CI) | `npm run test:db` |
 | Motor de las pruebas | PostgreSQL 18.3 + PostGIS 3.6.2 en PGlite. Staging: PostgreSQL 17 + PostGIS 3.3 | — |
 
 Las pruebas cubren seguridad (con ataques directos), integridad, concurrencia, PostGIS, fotos, alertas, KPIs, descarga auditada del PDF, entrega del worker, push, catálogos y mantenimiento. Lo que no se puede verificar fuera de Supabase está en §14 y en [ARCHITECTURE.md §20](ARCHITECTURE.md#20-verificaciones-en-el-servicio-real).
@@ -416,6 +416,16 @@ Las fotos de Wikimedia Commons que carga [`scripts/load-places-content.mjs`](scr
 | `attachments.credit` | `text`, 1–300 caracteres; `NULL` = foto propia. Lectura pública como las demás columnas del adjunto; nadie la escribe desde la API (solo la carga con la clave de servicio) |
 
 Compatible con el código actual. Al aplicarla falta: mostrar el crédito en la galería (`listPhotos` y `PhotoGallery`), que el script lo llene y quitar la línea de la descripción. Pruebas AC1–AC5.
+
+### 5.25 Revisión integral del 04/11 — `20261104120000_audit_review_fixes.sql`
+
+Tres hallazgos de la auditoría (`docs/audit/05-database-audit.md` y `06-security-audit.md`), con pruebas RV1–RV6:
+
+| Hallazgo | Qué pasaba | Qué cambia |
+|---|---|---|
+| S-01 | Un moderador al que le quitaban el rol seguía pudiendo pasar a «en proceso» o «resuelto» las consultas que tenía asignadas, y su nota le llegaba al vecino como respuesta oficial | `change_request_status` exige que el asignado conserve el rol en el municipio; `revoke_role` libera sus consultas abiertas; la migración limpia las asignaciones colgadas |
+| DB-02 | Las alertas que vencían sin revisar pasaban a `expired` y se contaban como publicadas en el mapa de calor y en los indicadores | Columna `traffic_reports.published_at`, sellada por un trigger al pasar a `active` o `verified` (rellenada con la auditoría y la moderación); `report_hotspots` y `kpi_summary` cuentan `published_at is not null` |
+| DB-04 | La administración municipal leía todas las columnas de `audit_logs`, incluidas la IP y el navegador de los vecinos | Grant por columna: el panel sigue leyendo lo que usa; `ip_observed`, `ip_declared`, `user_agent`, `before` y `after` quedan solo para el servicio |
 
 ## 6. Catálogo de RPC
 

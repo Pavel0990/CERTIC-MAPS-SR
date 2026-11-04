@@ -98,7 +98,6 @@ Hazlo en un proyecto **separado** de `staging`, para que la demo y los datos rea
    | `CRON_SECRET`, `JOBS_SECRET` | Genera cada uno con el comando de abajo. `JOBS_SECRET` es el mismo que pusiste en Vault | **Sí** |
    | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | `npx web-push generate-vapid-keys` (una sola vez; si cambian, cada persona debe reactivar las notificaciones) | La privada, **sí** |
    | `VAPID_SUBJECT` | `mailto:equipo@<tu-dominio>` | No |
-   | `NEXT_PUBLIC_GOOGLE_MAPS_KEY`, `NEXT_PUBLIC_GOOGLE_MAP_ID` | Opcional (§7) | No, pero restringida |
    | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Opcional: captcha de `/entrar`. Cloudflare → *Turnstile* → el widget → *Site Key*. La *Secret Key* **no** va en Vercel: va en Supabase → *Authentication → Attack Protection* (pasos abajo) | No |
 
    ```bash
@@ -170,15 +169,7 @@ Si `/api/v1/health` responde `degraded`, hay trabajos esperando más de 10 minut
 
 ## 7. Mapa base (no requiere cuentas)
 
-El mapa usa **MapLibre + OpenFreeMap**: gratis, sin cuenta ni claves ([ADR-022](docs/decisions/ADR-022-maplibre-openfreemap.md)). Google Maps quedó descartado; los pasos de abajo solo sirven si algún día se decide volver a él (ADR-004, sustituida):
-
-1. En Google Cloud, crea un proyecto con facturación.
-2. Activa *Maps JavaScript API* y *Places API (New)*.
-3. Crea un **Map ID** de tipo JavaScript, vectorial.
-4. Crea una clave **restringida**:
-   - por sitio: `https://<tu-dominio>/*`;
-   - por API: solo las dos anteriores.
-5. Ponla en Vercel como `NEXT_PUBLIC_GOOGLE_MAPS_KEY` y `NEXT_PUBLIC_GOOGLE_MAP_ID` y vuelve a desplegar.
+El mapa usa **MapLibre + OpenFreeMap**: gratis, sin cuenta ni claves ([ADR-022](docs/decisions/ADR-022-maplibre-openfreemap.md)). Google Maps quedó descartado (ADR-004, sustituida) y el código ya no tiene adaptador para él: no hay variables de entorno del mapa.
 
 ## 8. Operación diaria
 

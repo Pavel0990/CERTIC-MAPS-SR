@@ -125,7 +125,7 @@ export function HelpTip({ label, text, className }: { label: string; text: strin
       {/* Área táctil de 44 px; el círculo visible es de 28 px para no competir con la cifra */}
       <button ref={button} type="button" onClick={toggle} aria-expanded={open} aria-controls={`${id}-t`} aria-label={`Qué mide «${label}»`}
         className="group/q grid size-11 place-items-center rounded-full outline-none">
-        <span aria-hidden className={cn('grid size-7 place-items-center rounded-full border text-[13px] font-bold transition-colors duration-200 group-focus-visible/q:ring-4 group-focus-visible/q:ring-brand/30',
+        <span aria-hidden className={cn('grid size-7 place-items-center rounded-full border text-[13px] font-bold transition-colors duration-200 group-focus-visible/q:ring-[3px] group-focus-visible/q:ring-brand',
           open ? 'border-ink bg-ink text-on-ink' : 'border-line text-muted group-hover/q:border-line-strong group-hover/q:text-ink')}>?</span>
       </button>
       {open && (
