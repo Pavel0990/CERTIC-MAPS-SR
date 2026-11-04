@@ -11,7 +11,8 @@ import { createClient } from '@/lib/supabase/server';
 import { formatDate, formatNumber } from '@/utils/format';
 import { HeaderActions, RejectedNotice, SecondaryLink, StatusLine, UUID } from '../../_content/detail';
 import { PhotoGallery } from '../../_content/photo-gallery';
-import { AddPhotos, BusinessForm, HoursEditor, PromotionForm } from './owner-forms';
+import { AddPhotos } from '../../_content/add-photos';
+import { BusinessForm, HoursEditor, PromotionForm } from './owner-forms';
 
 export const metadata: Metadata = { title: 'Mi negocio' };
 
@@ -68,7 +69,7 @@ export default async function OwnerBusinessPage({ params }: { params: Promise<{ 
             <h2 className="mb-4 text-lg font-bold">Fotos</h2>
             <div className="flex flex-col gap-4">
               <PhotoGallery photos={photos} name={b.name} />
-              <AddPhotos businessId={b.id} room={10 - photos.length} />
+              <AddPhotos entity="business" id={b.id} room={10 - photos.length} hint="La fachada, el interior y tus productos." />
             </div>
           </Card>
         </div>

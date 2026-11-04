@@ -55,8 +55,9 @@ export function PhotoPicker({ state, hint, capture }: { state: ReturnType<typeof
           <div key={p.url} className="relative size-24 overflow-hidden rounded-[14px] bg-canvas">
             {/* eslint-disable-next-line @next/next/no-img-element -- vista previa local (blob:) */}
             <img src={p.url} alt={`Foto ${i + 1}`} className="size-full object-cover" />
-            <button type="button" onClick={() => state.remove(p)} aria-label={`Quitar foto ${i + 1}`} className="absolute right-1 top-1 flex size-8 items-center justify-center rounded-full bg-black/65 text-white">
-              <X className="size-4" />
+            {/* Área táctil de 44 px en la esquina; el círculo visible sigue siendo de 32 px */}
+            <button type="button" onClick={() => state.remove(p)} aria-label={`Quitar foto ${i + 1}`} className="absolute right-0 top-0 grid size-11 place-items-center">
+              <span className="grid size-8 place-items-center rounded-full bg-black/65 text-white" aria-hidden><X className="size-4" /></span>
             </button>
           </div>
         ))}

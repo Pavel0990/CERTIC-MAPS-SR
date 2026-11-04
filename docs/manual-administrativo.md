@@ -50,8 +50,8 @@ Los datos de OpenStreetMap traen el nombre y la ubicación, pero casi nunca foto
 
 | Qué | Dónde | Qué se puede cambiar |
 |---|---|---|
-| **Lugar turístico** | Abre el lugar (Turismo → el lugar) → **Editar** | Descripción, tipo, horario, accesibilidad, servicios y fotos. Si la ficha está vacía, la tarjeta *Agregar descripción y fotos* lleva directo a editarla |
-| **Ruta** | Abre la ruta → **Editar** | Descripción, dificultad, duración, servicios, fotos y el trazado (solo el personal cambia el trazado; la distancia se recalcula sola) |
+| **Lugar turístico** | Abre el lugar (Turismo → el lugar) → **Editar** | Descripción, tipo, horario, accesibilidad y servicios. **Fotos:** en la misma pantalla, debajo del formulario, sección *Fotos* → **Agregar** (hasta 10 por ficha). Si la ficha está vacía, la tarjeta *Agregar descripción y fotos* lleva directo a editarla |
+| **Ruta** | Abre la ruta → **Editar** | Descripción, dificultad, duración y servicios; **fotos** en la sección *Fotos*, debajo del formulario; y el trazado (solo el personal cambia el trazado; la distancia se recalcula sola) |
 | **Negocio** | El dueño, desde **Perfil → Mi negocio**; el personal, desde la ficha | Datos, horario, fotos y promociones. Si el dueño cambia el **nombre** o la **página web**, el negocio vuelve a **Validaciones** antes de salir así en el mapa |
 
 Las fotos nuevas pasan por **Validaciones** antes de publicarse. Si dos personas editan a la vez, la segunda ve un aviso y recarga los datos: nunca se pisa el trabajo de otra persona.
