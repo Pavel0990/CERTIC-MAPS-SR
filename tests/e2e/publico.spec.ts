@@ -3,6 +3,13 @@ import { expect, test } from '@playwright/test';
 // Lo que ve cualquier persona, sin cuenta: listados, filtros y fichas con "Cómo llegar".
 test('un visitante encuentra un negocio en la lista, filtra y abre su ficha', async ({ page }) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
+  // En el teléfono la hoja «Descubre» empieza plegada (se ve el mapa): se abre tocando su título, como una persona
+  // (las E2E corren con tamaño de teléfono; ver playwright.config.ts)
+  const sheet = page.getByRole('button', { name: /Descubre la provincia/ });
+  await expect(async () => {
+    if ((await sheet.getAttribute('aria-expanded')) === 'false') await sheet.click();
+    await expect(sheet).toHaveAttribute('aria-expanded', 'true', { timeout: 1000 });
+  }).toPass();
   await page.getByRole('navigation', { name: 'Ver en lista' }).getByRole('link', { name: 'Negocios' }).click();
   await expect(page.getByRole('heading', { name: 'Negocios', level: 1 })).toBeVisible();
   await expect(page.getByText(/^\d+ negocios/)).toBeVisible();

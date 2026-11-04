@@ -86,7 +86,7 @@ export function SearchBox({ onPick }: { onPick: (hit: SearchHit) => void }) {
 
   return (
     <div ref={rootRef} className="pointer-events-auto relative">
-      <label className="flex h-14 items-center gap-2 rounded-[18px] bg-surface pl-4 pr-2 shadow-[var(--shadow-float)]">
+      <label className="flex h-14 items-center gap-2 rounded-[18px] bg-surface pl-4 pr-2 shadow-[var(--shadow-float)] focus-within:ring-[3px] focus-within:ring-brand">
         <Search className="size-5 shrink-0 text-muted" aria-hidden />
         <span className="sr-only">Buscar lugares, negocios o rutas</span>
         <input

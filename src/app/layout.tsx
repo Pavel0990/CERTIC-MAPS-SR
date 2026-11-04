@@ -9,8 +9,10 @@ import './globals.css';
 // Texto: Lexend, diseñada para leer con más fluidez (letras abiertas y bien espaciadas) y con un 0 sin barra,
 // que no confunde en teléfonos, fechas ni precios: lectura fácil (§6.2).
 // Títulos: Nunito, de trazos redondeados, para un tono cercano y amable.
-const body = Lexend({ subsets: ['latin', 'latin-ext'], variable: '--font-lexend', display: 'swap' });
-const display = Nunito({ subsets: ['latin', 'latin-ext'], variable: '--font-nunito', display: 'swap' });
+// Solo `latin`: cubre tildes, ñ, ¿ y ¡; latin-ext duplicaba la descarga. Nunito (títulos) no se precarga: así el texto
+// sale antes en 4G lento y el título aparece con la fuente del sistema un instante (display: swap)
+const body = Lexend({ subsets: ['latin'], variable: '--font-lexend', display: 'swap' });
+const display = Nunito({ subsets: ['latin'], variable: '--font-nunito', display: 'swap', preload: false });
 
 export const metadata: Metadata = {
   title: { default: 'SR Conecta', template: '%s · SR Conecta' },

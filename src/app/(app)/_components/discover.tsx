@@ -53,7 +53,7 @@ export function Discover({ items, alerts }: { items: DiscoverItem[]; alerts: num
         })}
       </nav>
       <ul className="-mx-4 mt-3 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
-        {items.map((it) => {
+        {items.map((it, i) => {
           const L = LAYER_BY_ID[it.layer];
           return (
             <li key={it.id} className="w-[200px] shrink-0 snap-start">
@@ -61,7 +61,7 @@ export function Discover({ items, alerts }: { items: DiscoverItem[]; alerts: num
                 <div className="relative h-[112px] overflow-hidden rounded-[16px]" style={{ background: `linear-gradient(135deg, ${L.color}, ${L.color}bb 60%, #0f172a)` }}>
                   {it.image ? (
                     // Foto decorativa: el nombre del lugar va debajo, como texto
-                    <Image src={it.image} alt="" fill sizes="200px" className="object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+                    <Image src={it.image} alt="" fill sizes="200px" priority={i === 0} className="object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
                   ) : (
                     <svg viewBox="0 0 24 24" className="absolute -bottom-3 -right-3 size-24 text-white/25" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                       <path d={L.icon} />
