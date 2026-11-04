@@ -46,6 +46,11 @@ export function Explorer({
     () => ({ type: 'FeatureCollection', features: data.features.filter((f) => layers.includes(f.properties.layer)) }),
     [data, layers],
   );
+  // Apagar la capa "Rutas" también oculta los trazados, no solo los marcadores de inicio
+  const shownStatic = useMemo(
+    () => (staticLayers && !layers.includes('route') ? { ...staticLayers, routes: { type: 'FeatureCollection' as const, features: [] } } : staticLayers),
+    [staticLayers, layers],
+  );
   const listItems = useMemo(() => byDistance(visible.features, userLocation), [visible, userLocation]);
   const mode = !online ? 'offline' : degraded ? 'degraded' : 'online';
 
@@ -88,7 +93,7 @@ export function Explorer({
       <MapCanvas
         className="absolute inset-0"
         features={visible}
-        staticLayers={staticLayers}
+        staticLayers={shownStatic}
         initialView={initialView}
         focus={focus}
         userLocation={userLocation}
