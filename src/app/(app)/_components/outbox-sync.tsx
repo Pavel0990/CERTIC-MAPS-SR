@@ -1,7 +1,6 @@
 'use client';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { uploadPhotos } from '@/modules/media';
 import { useToast } from '@/components/ui/toast';
 import { flushOutbox } from '@/lib/outbox';
 import { reasonMessage } from '@/lib/vocabulary';
@@ -21,7 +20,9 @@ export function OutboxSync() {
       if (flushing || !navigator.onLine) return;
       flushing = true;
       try {
-        const { sent, rejected } = await flushOutbox((entity, id, blobs) => uploadPhotos(entity, id, blobs));
+        // El subidor de fotos (con el cliente de Supabase, ~97 KB) se carga solo si hay fotos que enviar:
+        // este componente va en el layout de todas las pantallas, también las de quien solo mira el mapa
+        const { sent, rejected } = await flushOutbox(async (entity, id, blobs) => (await import('@/modules/media')).uploadPhotos(entity, id, blobs));
         if (sent > 0) {
           toast.show(sent === 1 ? 'Enviamos el reporte que tenías pendiente.' : `Enviamos ${sent} reportes que tenías pendientes.`);
           router.refresh();
