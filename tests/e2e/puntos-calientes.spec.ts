@@ -6,11 +6,17 @@ const HOT = { type: 'FeatureCollection', features: [
   { type: 'Feature', geometry: { type: 'Point', coordinates: [-71.2475, 19.3825] }, properties: { count: 2 } },
 ] };
 
-// En el teléfono las capas viven plegadas detrás del botón «Capas del mapa»; en PC están siempre a la vista
+test.beforeEach(async ({ context }) => {
+  // El aviso de instalar la app se prueba aparte: aquí tapaba los botones de las capas (intermitente en producción)
+  await context.addInitScript(() => localStorage.setItem('sr-instalar-oculto', String(Date.now())));
+});
+
+// En el teléfono las capas viven plegadas detrás del botón «Capas del mapa» (las E2E corren con tamaño de teléfono)
 async function openMap(page: import('@playwright/test').Page) {
   await page.goto('/mapa');
   const layers = page.getByRole('button', { name: 'Capas del mapa' });
-  if (!(await layers.isVisible())) return;
+  // Se espera al botón: preguntar si ya se ve, con la página a medio cargar, saltaba este paso en producción
+  await expect(layers).toBeVisible({ timeout: 20_000 });
   // Se reintenta: un toque antes de que la página cargue del todo no hace nada
   await expect(async () => {
     if (!(await page.getByRole('button', { name: 'Turismo' }).isVisible())) await layers.click();
