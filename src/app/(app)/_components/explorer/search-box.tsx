@@ -119,10 +119,10 @@ export function SearchBox({ onPick }: { onPick: (hit: SearchHit) => void }) {
         )}
         <Link prefetch={false}
           href="/reportar"
-          className="press inline-flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-full bg-danger-soft px-3 text-[15px] font-semibold text-danger-strong hover:bg-danger-soft-strong"
+          className="press hidden h-11 min-w-11 shrink-0 items-center md:inline-flex justify-center gap-1.5 rounded-full bg-danger-soft px-3 text-[15px] font-semibold text-danger-strong hover:bg-danger-soft-strong"
         >
-          {/* En 320 px solo el ícono (la barra de abajo ya tiene «Reportar» con texto) para que se lea el buscador */}
-          <TriangleAlert className="size-4" aria-hidden /> <span className="max-[359px]:sr-only">Reportar</span>
+          {/* Solo en PC: en el teléfono «Reportar» ya está en la barra de abajo y aquí le quitaba sitio al buscador */}
+          <TriangleAlert className="size-4" aria-hidden /> <span>Reportar</span>
         </Link>
       </label>
       {hits && (

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Lexend, Nunito } from 'next/font/google';
 import { cookies, headers } from 'next/headers';
+import { InstallPrompt } from '@/components/shared/install-prompt';
 import { ServiceWorker } from '@/components/shared/service-worker';
 import { ToastProvider } from '@/components/ui/toast';
 import './globals.css';
@@ -47,6 +48,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </a>
         <ToastProvider>{children}</ToastProvider>
         <ServiceWorker />
+        <InstallPrompt />
       </body>
     </html>
   );

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Flame, List, LocateFixed, Map as MapIcon, WifiOff } from 'lucide-react';
+import { Flame, Layers, List, LocateFixed, Map as MapIcon, WifiOff } from 'lucide-react';
 import { ALL_LAYERS, MapCanvas, type LatLng, type MapCanvasProps, type LayerId, type MapFeature, type MapFeatureCollection } from '@/modules/map';
 import { IconButton } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
@@ -35,6 +35,7 @@ export function Explorer({
   const [layers, setLayers] = useState<LayerId[]>(initialLayers);
   const hotspots = useHotspots();
   const [heatOn, setHeatOn] = useState(false);
+  const [layersOpen, setLayersOpen] = useState(false);
   const [selected, setSelected] = useState<MapFeature | null>(null);
   const [view, setView] = useState<'map' | 'list'>('map');
   const [focus, setFocus] = useState<{ center: LatLng; zoom?: number; key: number } | null>(null);
@@ -84,7 +85,7 @@ export function Explorer({
   }
 
   return (
-    <div className="relative h-full min-h-[480px] w-full overflow-hidden short:min-h-0">
+    <div data-explorer className="relative h-full min-h-[480px] w-full overflow-hidden short:min-h-0">
       <MapCanvas
         className="absolute inset-0"
         features={visible}
@@ -102,7 +103,10 @@ export function Explorer({
       {/* Panel superior: búsqueda, capas y aviso de conexión */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col gap-2 p-3 md:left-3 md:right-auto md:top-3 md:w-[400px] md:p-0">
         <SearchBox onPick={pickHit} />
-        <LayerChips layers={layers} onToggle={toggleLayer} heat={hotspots ? { on: heatOn, onToggle: () => setHeatOn((v) => !v) } : undefined} />
+        {/* En el teléfono las capas se pliegan en un botón para dejar ver el mapa; en PC van siempre a la vista */}
+        <div className={cn('md:block', !layersOpen && 'hidden')}>
+          <LayerChips layers={layers} onToggle={toggleLayer} heat={hotspots ? { on: heatOn, onToggle: () => setHeatOn((v) => !v) } : undefined} />
+        </div>
         {heatOn && hotspots && (
           <p role="status" className="pointer-events-auto flex items-center gap-2 self-start rounded-[14px] bg-surface/95 px-3.5 py-2 text-[15px] font-medium shadow-[var(--shadow-card)]">
             <Flame className="size-4 shrink-0 text-[#f97316]" aria-hidden />
@@ -122,7 +126,10 @@ export function Explorer({
       </div>
 
       {/* Controles laterales */}
-      <div className="absolute bottom-[calc(var(--sheet-h,0px)+16px)] right-3 z-20 flex flex-col gap-2 md:bottom-6">
+      <div className="absolute bottom-[calc(var(--sheet-h,0px)+12px)] right-3 z-20 flex flex-col gap-2 transition-[bottom,opacity] duration-300 motion-reduce:transition-none in-data-[sheet=open]:invisible in-data-[sheet=open]:opacity-0 md:bottom-6">
+        <IconButton label={layersOpen ? 'Ocultar capas' : 'Capas del mapa'} aria-expanded={layersOpen} onClick={() => setLayersOpen((o) => !o)} className={cn('md:hidden', layersOpen && 'bg-ink text-on-ink hover:bg-ink-strong')}>
+          <Layers className="size-5" />
+        </IconButton>
         <IconButton label={view === 'map' ? 'Ver como lista' : 'Ver mapa'} onClick={() => setView((v) => (v === 'map' ? 'list' : 'map'))}>
           {view === 'map' ? <List className="size-5" /> : <MapIcon className="size-5" />}
         </IconButton>

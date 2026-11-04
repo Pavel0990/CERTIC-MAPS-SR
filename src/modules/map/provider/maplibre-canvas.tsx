@@ -47,7 +47,8 @@ function fitPadding(el: HTMLElement, small: boolean, overlays: boolean) {
   const h = el.clientHeight;
   const w = el.clientWidth;
   if (!overlays) return 24;
-  if (small) return { top: Math.round(h * 0.2), bottom: Math.round(h * 0.42), left: 16, right: 16 };
+  // En el teléfono arriba solo queda el buscador y la hoja de abajo empieza plegada
+  if (small) return { top: 84, bottom: Math.round(h * 0.18), left: 16, right: 16 };
   return { top: 60, bottom: 60, left: Math.min(440, Math.round(w * 0.35)), right: 60 };
 }
 
