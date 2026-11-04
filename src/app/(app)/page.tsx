@@ -1,5 +1,6 @@
 import { Explorer } from './_components/explorer';
 import { Discover, type DiscoverItem } from './_components/discover';
+import { coverPhotos } from '@/modules/media/server';
 import { listRoutes } from '@/modules/routes/server';
 import { listPlaces } from '@/modules/tourism/server';
 import { countActiveAlerts } from '@/modules/traffic/server';
@@ -20,10 +21,17 @@ export default async function HomePage() {
     listRoutes(supabase),
     countActiveAlerts(supabase),
   ]);
+  // Lo primero que se ve de la provincia son fotos reales: las fichas con foto van delante
+  const [placeCovers, routeCovers] = await Promise.all([
+    coverPhotos(supabase, 'tourism_place_id', places.map((p) => p.id)),
+    coverPhotos(supabase, 'eco_route_id', routes.map((r) => r.id)),
+  ]);
+  const withPhotoFirst = <T extends { id: string }>(covers: Map<string, string>) => (a: T, b: T) => Number(covers.has(b.id)) - Number(covers.has(a.id));
   const items: DiscoverItem[] = [
-    ...[...places].sort((a, b) => kindRank(a.kind) - kindRank(b.kind)).slice(0, 8).map((p) => ({ id: p.id, layer: 'tourism' as const, title: p.name, subtitle: `${labels.categories[p.kind] ?? 'Turismo'} · ${p.municipality}` })),
-    ...routes.slice(0, 6).map((r) => ({
-      id: r.id, layer: 'route' as const, title: r.name,
+    ...[...places].sort((a, b) => withPhotoFirst(placeCovers)(a, b) || kindRank(a.kind) - kindRank(b.kind)).slice(0, 8)
+      .map((p) => ({ id: p.id, layer: 'tourism' as const, title: p.name, subtitle: `${labels.categories[p.kind] ?? 'Turismo'} · ${p.municipality}`, image: placeCovers.get(p.id) })),
+    ...[...routes].sort(withPhotoFirst(routeCovers)).slice(0, 6).map((r) => ({
+      id: r.id, layer: 'route' as const, title: r.name, image: routeCovers.get(r.id),
       subtitle: [r.distance_km ? formatKm(r.distance_km) : null, formatMinutes(r.duration_min), labels.categories[r.difficulty]].filter(Boolean).join(' · '),
     })),
   ];
