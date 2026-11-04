@@ -4,7 +4,7 @@ import { LAYER_BY_ID, type LatLng, type MapFeature } from '@/modules/map';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/primitives';
 import { SEVERITY } from '@/lib/vocabulary';
-import { directionsUrl, distanceKm, formatDistance } from '@/utils/format';
+import { directionsUrl, distanceKm, formatDistance, wazeUrl } from '@/utils/format';
 import { LayerDot, subtitle, type ExplorerCatalogs } from './shared';
 
 /** Ficha breve del punto elegido en el mapa: detalles y "Cómo llegar". */
@@ -50,6 +50,11 @@ export function SelectedCard({ feature, catalogs, userLocation, onClose }: { fea
           <Navigation className="size-4" aria-hidden /> Cómo llegar
         </a>
       </div>
+      <p className="mt-1 text-right text-[15px]">
+        <a href={wazeUrl(lat, lng)} target="_blank" rel="noopener noreferrer" className="press inline-flex min-h-11 items-center px-1 font-semibold text-brand hover:underline">
+          o abrir en Waze
+        </a>
+      </p>
       {p.layer === 'traffic' && (
         <Button variant="ghost" size="sm" className="mt-2 w-full text-muted" onClick={onClose}>
           Entendido

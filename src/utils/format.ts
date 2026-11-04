@@ -55,3 +55,7 @@ export const normalize = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '
 /** Enlace de navegación de Google Maps (sin costo de API, §7.3). */
 export const directionsUrl = (lat: number, lng: number) =>
   `https://www.google.com/maps/dir/?api=1&destination=${lat.toFixed(6)},${lng.toFixed(6)}`;
+
+/** Lo mismo en Waze: abre la app si está instalada y, si no, su versión web. */
+export const wazeUrl = (lat: number, lng: number) =>
+  `https://waze.com/ul?ll=${lat.toFixed(6)},${lng.toFixed(6)}&navigate=yes`;
