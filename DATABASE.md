@@ -11,7 +11,7 @@
 
 | Qué | Cifra | Cómo se comprueba |
 |---|---|---|
-| Migraciones | **33**. Aplicadas en staging: 32; la del 04/11 (`20261104120000_audit_review_fixes`, §5.25) espera su `db push` | `ls supabase/migrations` · `npx supabase migration list --remote` |
+| Migraciones | **33**, todas aplicadas en el Supabase de staging (la última el 04/11, §5.25) | `ls supabase/migrations` · `npx supabase migration list --remote` |
 | Funciones en `public` | **52** (§6) | `grep -ohE "function public\.[a-z_]+" supabase/migrations/*.sql \| sort -u \| wc -l` |
 | Pruebas de la base | **207**, en 27 secciones (A–W, AV, SR, AC y RV), todas pasan en cada push (CI) | `npm run test:db` |
 | Motor de las pruebas | PostgreSQL 18.3 + PostGIS 3.6.2 en PGlite. Staging: PostgreSQL 17 + PostGIS 3.3 | — |

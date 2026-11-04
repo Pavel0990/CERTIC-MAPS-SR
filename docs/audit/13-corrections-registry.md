@@ -1,7 +1,7 @@
 # 13 · Registro de correcciones
 
 > Rama `auto/auditoria-integral`, commits `f13a356` (ronda 1) y `8cc71df` (ronda 2), sobre `bfa7c18`.
-> La migración `20261104120000_audit_review_fixes.sql` **todavía no está aplicada** en el Supabase remoto: espera la autorización del dueño (staging es hoy también la base de producción).
+> La migración `20261104120000_audit_review_fixes.sql` se aplicó en staging el 04/11, con copia previa (`backups/staging-202611041559.json`).
 
 ## Corregido
 
