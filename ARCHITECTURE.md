@@ -1122,7 +1122,7 @@ rama de trabajo → push / Pull Request
 push a main
   CI y E2E
   Vercel: publica en producción (integración Git)
-  Las migraciones se aplican ANTES con `npx supabase db push` (regla del equipo, docs/ESTADO-Y-PENDIENTES.md §7)
+  Las migraciones se aplican ANTES con `npx supabase db push --remote` (regla del equipo, docs/ESTADO-Y-PENDIENTES.md §7)
 
 cuando exista el Supabase de producción (ADR-019):
   deploy.yml: comprobaciones → supabase db push → vercel deploy --prod   (DEPLOY_ENABLED=true)

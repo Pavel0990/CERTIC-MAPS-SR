@@ -19,7 +19,7 @@ Demo en vivo del 28 al 30/11/2026, con datos reales. Este guion reparte el tiemp
 - [ ] Iniciar la sesión en los dos teléfonos y en la computadora. El código del correo puede tardar: no lo dejes para el momento de la demo.
 - [ ] Generar el informe PDF de la semana anterior (**Panel → Informes → Generar ahora**) y comprobar que se descarga.
 - [ ] Ver que la bandeja tenga al menos un reporte real pendiente, para mostrar cómo se atiende.
-- [ ] Comprobar que la migración del aviso de reporte parecido (`20261022130000_similar_reports`) está aplicada en la base de la demo (`npx supabase migration list`). Sin ella la app funciona igual, pero el aviso del minuto 13 no sale.
+- [ ] Comprobar que la migración del aviso de reporte parecido (`20261022130000_similar_reports`) está aplicada en la base de la demo (`npx supabase migration list --remote`). Sin ella la app funciona igual, pero el aviso del minuto 13 no sale.
 - [ ] Llevar el teléfono cargado y un punto de acceso móvil propio. No dependas del wifi del lugar.
 - [ ] Probar el video de respaldo en el proyector.
 
