@@ -435,7 +435,7 @@ Resumen. El detalle (columnas, índices, políticas, matriz de grants) está en 
 | Seguridad | 31 políticas RLS + 3 de Storage; grants por columna; `EXECUTE` explícito por función |
 | Índices | 109 al 07/10, incluidos GiST, GIN y parciales |
 | Triggers | 16 |
-| Pruebas | 195 de base de datos, todas pasan (§14.1) |
+| Pruebas | Las cifras viven en [DATABASE.md](DATABASE.md#estado-verificado) (§14.1) |
 
 ### 8.2 Esquemas y roles de base de datos
 
@@ -1241,7 +1241,7 @@ cd supabase/tests && npm install && npm test
 |---|---|---|---|
 | Unitarias | Vitest (`npm test`) | Mapeo de `reason` a HTTP, redirecciones seguras, rejilla de bbox, horario y "abierto ahora", lector de GPX, esquemas de negocio, procesamiento de fotos (EXIF, formato, tamaño), semanas ISO y periodos del informe, enlaces de notificaciones, secreto del worker, CSP y captcha, aviso de reporte parecido, indicadores del panel, foto de perfil (127 pruebas) | CI |
 | Fronteras | `node:test` (`npm run test:boundaries`) | Que el lint detecte importaciones prohibidas, incluido el alias `@/` | CI |
-| E2E | Playwright (`npm run test:e2e`) | 23 pruebas en 9 archivos: listados y filtros públicos, búsqueda sin tildes, fichas, foto de perfil, panel de indicadores, axe (WCAG 2.1 AA) en claro y oscuro, reacción inmediata de la navegación, aviso de reporte parecido (y que el asistente siga si la consulta falla), captcha (6, solo con su clave de prueba) y el recorrido central: vecino reporta → moderador publica → aparece en el mapa público. Limpia lo que crea y, antes de cada corrida, reinicia los límites por hora y la reputación de las cuentas de prueba (`global-setup.ts`), así se puede repetir | A mano y en `e2e.yml` (si `E2E_ENABLED=true`), contra staging ([ADR-025](docs/decisions/ADR-025-e2e-contra-staging.md)) |
+| E2E | Playwright (`npm run test:e2e`) | listados y filtros públicos, búsqueda sin tildes, fichas, foto de perfil, panel de indicadores, axe (WCAG 2.1 AA) en claro y oscuro, reacción inmediata de la navegación, aviso de reporte parecido (y que el asistente siga si la consulta falla), captcha (6, solo con su clave de prueba) y el recorrido central: vecino reporta → moderador publica → aparece en el mapa público. Limpia lo que crea y, antes de cada corrida, reinicia los límites por hora y la reputación de las cuentas de prueba (`global-setup.ts`), así se puede repetir | A mano y en `e2e.yml` (si `E2E_ENABLED=true`), contra staging ([ADR-025](docs/decisions/ADR-025-e2e-contra-staging.md)) |
 | Manual | Teléfonos reales | GPS, cámara, push, modo sin conexión, iPhone instalado | [Guion de la demo](docs/guion-demo.md#prueba-completa-a-mano-teléfono-real) |
 | Personas | Vecinos | Baja alfabetización digital (20 puntos) | [Guía](docs/prueba-con-vecinos.md) |
 

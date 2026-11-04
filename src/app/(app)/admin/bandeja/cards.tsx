@@ -72,7 +72,7 @@ function EscalateButton({ id, categories }: { id: string; categories: { code: st
         type="button"
         disabled={pending}
         onClick={() => start(async () => {
-          const r = await escalateTraffic(id, category);
+          const r = await escalateTraffic(id, category).catch(() => ({ status: 'rejected' as const, reason: 'unavailable' }));
           toast.show(r.status === 'ok' ? 'Se creó un reporte para el municipio con la misma ubicación.' : reasonMessage(r.reason), r.status === 'ok' ? 'ok' : 'error');
           setOpen(false);
           router.refresh();
@@ -165,7 +165,7 @@ function AssignControl({ requestId, staff, current, viewerId }: { requestId: str
           const v = e.target.value;
           if (!v) return;
           start(async () => {
-            const r = await assign(requestId, v);
+            const r = await assign(requestId, v).catch(() => ({ status: 'rejected' as const, reason: 'unavailable' }));
             toast.show(r.status === 'ok' ? 'Responsable asignado.' : reasonMessage(r.reason), r.status === 'ok' ? 'ok' : 'error');
             router.refresh();
           });

@@ -18,7 +18,7 @@ export function DownloadButton({ runId }: { runId: string }) {
       icon={<Download className="size-4" />}
       onClick={() =>
         start(async () => {
-          const r = await downloadReport(runId);
+          const r = await downloadReport(runId).catch(() => ({ status: 'rejected' as const, reason: 'unavailable' }));
           if (r.status === 'ok' && r.url) window.location.assign(r.url);
           else toast.show(reasonMessage(r.reason), 'error');
         })

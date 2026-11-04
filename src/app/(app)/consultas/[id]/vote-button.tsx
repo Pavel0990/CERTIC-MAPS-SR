@@ -20,9 +20,10 @@ export function VoteButton({ requestId, initialVoted, initialCount, signedIn }: 
     setVoted(!was); // respuesta inmediata; se corrige si el servidor rechaza
     setCount((c) => c + (was ? -1 : 1));
     start(async () => {
-      const r = await fetch(`/api/v1/requests/${requestId}/vote`, { method: 'POST' });
-      const body = await r.json().catch(() => ({}));
-      if (!r.ok || body.status !== 'ok') {
+      // Sin red, fetch lanza: el voto se deshace igual que si el servidor lo rechazara
+      const r = await fetch(`/api/v1/requests/${requestId}/vote`, { method: 'POST' }).catch(() => null);
+      const body = r ? await r.json().catch(() => ({})) : { reason: 'unavailable' };
+      if (!r || !r.ok || body.status !== 'ok') {
         setVoted(was);
         setCount((c) => c + (was ? 1 : -1));
         toast.show(reasonMessage(body.reason), 'error');

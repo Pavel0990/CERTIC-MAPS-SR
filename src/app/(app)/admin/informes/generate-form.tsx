@@ -31,7 +31,7 @@ export function GenerateForm({ weeks }: { weeks: { value: string; label: string 
         icon={<FilePlus2 className="size-4" />}
         onClick={() =>
           start(async () => {
-            const r = await generateReport(week);
+            const r = await generateReport(week).catch(() => ({ status: 'rejected' as const, reason: 'unavailable' }));
             toast.show(r.status === 'ok' ? 'Generando el informe. Aparecerá en la lista en unos segundos.' : reasonMessage(r.reason), r.status === 'ok' ? 'ok' : 'error');
             router.refresh();
           })

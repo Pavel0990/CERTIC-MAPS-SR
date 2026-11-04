@@ -51,7 +51,7 @@ Las diapositivas (6) están en la presentación de claude.ai: ábrela en la comp
 | 17–19 | **Informes → Descargar PDF**. Auditoría | "Cada lunes se genera solo. Cada descarga queda registrada" | MVP (F6), innovación |
 | 19–20 | **Diapositiva 6:** resultados de la prueba con vecinos | "Lo probaron [__] vecinos sin ayuda: de [__]/35 a [__]/35 tareas" | UX |
 | 20–22 | **Catálogos:** agregar un tipo de reporte en vivo y mostrarlo en el teléfono. **Diapositiva 5** (costos y traspaso) | "Si mañana necesitan reportar 'animales en la vía', lo agregan ellos. Hoy cuesta US$0 al mes y las cuentas pasan a la organización" | Sostenibilidad |
-| 22–25 | **Diapositivas 3 y 4** (arquitectura y seguridad), código abierto en GitHub (MIT), documentación y pruebas. Cierre con la diapositiva 6 | "195 pruebas de la base de datos, con ataques directos incluidos. Se lo puede quedar FUNDESER". Cierre: "un vecino que avisa, un ayuntamiento que responde" | Código y documentación, impacto territorial |
+| 22–25 | **Diapositivas 3 y 4** (arquitectura y seguridad), código abierto en GitHub (MIT), documentación y pruebas. Cierre con la diapositiva 6 | "Más de 200 pruebas de la base de datos, con ataques directos incluidos. Se lo puede quedar FUNDESER". Cierre: "un vecino que avisa, un ayuntamiento que responde" | Código y documentación, impacto territorial |
 
 **Si vas tarde:** acorta primero Validaciones (14–17) y el recorrido por las listas (2–6). No recortes la alerta en vivo ni los resultados de los vecinos: son los criterios de más peso que no se ven en ningún otro momento.
 
