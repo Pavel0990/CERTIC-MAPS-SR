@@ -46,16 +46,19 @@ Hazlo en un proyecto **separado** de `staging`, para que la demo y los datos rea
    - Región: `East US (North Virginia)`, la más cercana a República Dominicana.
    - Contraseña de la base: generada, guardada en el gestor de contraseñas del equipo.
 2. **Aplicar las migraciones** desde tu computadora:
+
+   > **Supabase CLI v3:** `db push`, `migration list` y `db query` apuntan a la base **local** si no se les pasa `--remote`. Sin esa opción el comando "funciona" pero no toca el proyecto vinculado. Las consultas remotas piden confirmación; las que solo leen aceptan `--read-only`.
+
    ```bash
    npx supabase login
    npx supabase link --project-ref <ID-DEL-PROYECTO>
-   npx supabase db push --dry-run   # revisa la lista: deben salir todas las de supabase/migrations
-   npx supabase db push
+   npx supabase db push --remote --dry-run   # revisa la lista: deben salir todas las de supabase/migrations
+   npx supabase db push --remote
    ```
    Crean las tablas, los catálogos, los permisos, los buckets de Storage y las tareas de `pg_cron`.
 3. **Crear la provincia y sus municipios con sus límites** (OpenStreetMap; se puede repetir sin duplicar):
    ```bash
-   npx supabase db query --linked -f supabase/ops/load_osm_boundaries.sql
+   npx supabase db query --remote -f supabase/ops/load_osm_boundaries.sql
    ```
 4. **Configurar el acceso.** En Supabase → *Authentication → URL Configuration*:
    - *Site URL*: `https://<tu-dominio>`
@@ -151,7 +154,7 @@ Hazlo en un proyecto **separado** de `staging`, para que la demo y los datos rea
 | Qué | Cómo | Resultado esperado |
 |---|---|---|
 | Salud | Abrir `https://<tu-dominio>/api/v1/health` | `{"status":"ok", …}` |
-| Base, permisos y tareas | `npx supabase db query --linked -f supabase/ops/smoke_remote.sql` (no deja datos) | Termina con el mensaje `SMOKE_RESULT` y cada prueba en `ok` |
+| Base, permisos y tareas | `npx supabase db query --remote -f supabase/ops/smoke_remote.sql` (no deja datos) | Termina con el mensaje `SMOKE_RESULT` y cada prueba en `ok` |
 | Correo | Entrar con un correo nuevo | Llega el código en menos de un minuto, desde tu dominio |
 | Worker | Reportar un problema y abrir el panel como moderador | El aviso llega a la campana del moderador en 1–2 minutos |
 | Fotos | Reportar con una foto | La foto aparece en el detalle y sin datos de ubicación |
@@ -186,7 +189,7 @@ El mapa usa **MapLibre + OpenFreeMap**: gratis, sin cuenta ni claves ([ADR-022](
 | Volver a una versión anterior de la app | Vercel → *Deployments* → *Promote to Production* en la anterior. Las migraciones son compatibles con el código anterior (ADR-017), así que no se revierte la base |
 | Ver errores | Registros de Vercel y, si se configuró, Sentry |
 | Ver la cola | `/api/v1/health`, o `select * from private.jobs where status in ('failed', 'dead')` en el SQL Editor |
-| Datos reales de OpenStreetMap | `npm run data:osm` regenera `supabase/ops/load_osm_content.sql` desde `data/osm/`. Se aplica con `npx supabase db query --linked -f supabase/ops/load_osm_content.sql`; es idempotente |
+| Datos reales de OpenStreetMap | `npm run data:osm` regenera `supabase/ops/load_osm_content.sql` desde `data/osm/`. Se aplica con `npx supabase db query --remote -f supabase/ops/load_osm_content.sql`; es idempotente |
 
 ### 8.0 Monitor de disponibilidad
 

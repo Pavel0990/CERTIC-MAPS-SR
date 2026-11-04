@@ -51,7 +51,8 @@ function sql(text) {
   const tmp = path.join(os.tmpdir(), `sr-load-places-${process.pid}.sql`);
   fs.writeFileSync(tmp, text);
   try {
-    const out = execFileSync('npx', ['supabase', 'db', 'query', '--linked', '-o', 'json', '-f', tmp], {
+    // CLI v3: --linked pasó a --remote. Escribe, así que confirma con --yes: el script ya es la confirmación (se corre a mano y tiene --dry-run)
+    const out = execFileSync('npx', ['supabase', 'db', 'query', '--remote', '--yes', '-o', 'json', '-f', tmp], {
       encoding: 'utf8', maxBuffer: 1 << 28, shell: process.platform === 'win32', stdio: ['ignore', 'pipe', 'pipe'],
     });
     return JSON.parse(out.slice(out.indexOf('{'))).rows;

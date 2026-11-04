@@ -33,7 +33,7 @@ Quedan unas **5 semanas**. Casi todo lo que falta ya no es código: contenido, p
 
 | Criterio (puntos) | Qué lo respalda | Qué falta para el máximo |
 |---|---|---|
-| **Funcionalidad (25)** | F1–F6, panel, PDF, PWA; 200 pruebas de base de datos, 151 unitarias, 35 pruebas E2E en 12 archivos (29 sin la clave de prueba del captcha) y 3 pendientes de las cuentas externas (`plan-produccion.spec.ts`) | Contenido real en turismo y rutas; base de producción separada |
+| **Funcionalidad (25)** | F1–F6, panel, PDF, PWA; 200 pruebas de base de datos, 154 unitarias, 35 pruebas E2E en 12 archivos (29 sin la clave de prueba del captcha) y 3 pendientes de las cuentas externas (`plan-produccion.spec.ts`) | Contenido real en turismo y rutas; base de producción separada |
 | **UX/UI para baja alfabetización digital (20)** | Botón **Escuchar** (lee fichas y pasos con la voz del teléfono, sin internet), lenguaje sencillo, letra Lexend/Nunito, áreas táctiles de 44 px, contraste WCAG AA en claro y oscuro (axe en 16 pantallas), sin conexión | **Pruebas con vecinos** (dos rondas) y sus cifras en la presentación |
 | **Innovación (20)** | Confirmación comunitaria de alertas, reputación, aviso de reporte parecido cercano antes de enviar (`ST_DWithin`, 150 m), **capa de zonas con más reportes** (cuadros de ~550 m, sin ubicar a nadie), **«Lo más importante de la semana»** redactado solo en el PDF, datos abiertos (OSM), costo casi cero | Mostrarlo en la demo |
 | **Impacto territorial (15)** | Los 3 municipios, límites oficiales de OSM, indicadores por municipio, categorías locales (casabe, productos de finca, agropecuaria, animales en la vía, camino vecinal) | Contenido de Monción y Villa Los Almácigos; testimonios de la prueba con vecinos |
@@ -77,7 +77,7 @@ Recorrido de todas las pantallas a 360 y 1280 px, en claro y oscuro (público, v
 
 ### 5.1.2 Migraciones aplicadas el 21/10
 
-Las 30 migraciones están aplicadas en staging (`npx supabase migration list` las muestra alineadas) y `npm run db:audit` no encuentra problemas. Las tres últimas se aplicaron en orden, después de `npm run backup` y de `db push --dry-run`:
+Las 32 migraciones están aplicadas en staging (`npx supabase migration list --remote` las muestra alineadas; las dos del 28/10, en §5.1.4) y `npm run db:audit` no encuentra problemas. Las tres últimas se aplicaron en orden, después de `npm run backup` y de `db push --dry-run`:
 
 | # | Migración | Qué trae |
 |---|---|---|
@@ -85,9 +85,9 @@ Las 30 migraciones están aplicadas en staging (`npx supabase migration list` la
 | 2 | `20261022120000_attachment_credit` | Columna `attachments.credit` para el crédito de las fotos libres ([DATABASE.md §5.24](../DATABASE.md#524-crédito-de-las-fotos-con-licencia-libre--20261022120000_attachment_creditsql)) |
 | 3 | `20261022130000_similar_reports` | `find_similar_reports`, el aviso de reporte parecido ([DATABASE.md §5.23](../DATABASE.md#523-aviso-de-reporte-parecido-cercano--20261022130000_similar_reportssql)) |
 
-### 5.1.4 Migraciones del 28/10 por aplicar
+### 5.1.4 Migraciones del 28/10 (aplicadas el 03/11)
 
-Dos migraciones nuevas, probadas en PGlite (200/200) y con copia previa (`backups/staging-202610281123.json`). **Falta aplicarlas** en staging: `npx supabase db push --dry-run` y después `npx supabase db push`. Mientras no se apliquen, la app funciona igual: las categorías nuevas no aparecen y el mapa no ofrece la capa de calor.
+Dos migraciones nuevas, probadas en PGlite (200/200). **Aplicadas en staging el 03/11**, después de una copia nueva (`backups/staging-202611032344.json`) y de `npx supabase db push --remote --dry-run`, que listó solo estas dos. `npm run db:audit` no encuentra problemas y las 29 E2E pasan en producción.
 
 | # | Migración | Qué hace |
 |---|---|---|
@@ -166,7 +166,7 @@ Solo si sobra tiempo después de §5.1–§5.3:
 - Un *issue* por problema en GitHub, con la etiqueta `contenido`, `ux` o `plataforma`.
 - Antes de cada push: `npm run check`, `npm run test:db` y `npm run test:e2e`.
 - Nadie toca la base a mano ni publica en Vercel desde su computadora: el contenido se edita en el panel y el código entra por `main`.
-- Migraciones: `npm run backup` → `npx supabase db push --dry-run` → `db push` → y después el código a `main`.
+- Migraciones: `npm run backup` → `npx supabase db push --remote --dry-run` → `npx supabase db push --remote` → y después el código a `main` y `feat/app-mvp`. Sin `--remote`, la CLI v3 trabaja sobre la base local.
 - Secretos solo en `.env.local` y en los secretos de GitHub, Vercel y Supabase; nunca en el chat ni en los commits. Nunca `push --force` a `main`.
 
 ## 8. Fuera de alcance

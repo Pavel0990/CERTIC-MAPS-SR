@@ -117,6 +117,8 @@ Verificado tras la actualización: `npm audit` sin vulnerabilidades, `npm run ch
 
 **26/10/2026 — Zod.** La auditoría programada falló por [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5) (alta): Zod < 4.6.6 puede agotar la memoria al validar colecciones muy grandes con límites. Nos afectaba, porque Zod valida la entrada de las Server Actions y de la API. Se corrigió con el PR #18 de Dependabot (Zod 4.6.7 y 11 actualizaciones menores, entre ellas MapLibre 6.15 y React 19.3.1), verificado antes de fusionar: `npm audit` limpio, `check`, 195/195 de la base, build y 18/18 E2E en local y en producción. Al revisarlo se agregó una E2E que falla si el mapa queda en blanco (el worker de MapLibre se sirve desde `public/vendor/maplibre/<versión>`).
 
+**03/11/2026 — minimatch (solo desarrollo).** `npm audit` marca 17 avisos moderados de [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249) (minimatch < 11.0.1, denegación de servicio con patrones de glob). Llega solo a través de las herramientas de lint (`eslint-config-next` → `eslint-plugin-import` y `eslint-plugin-jsx-a11y`, que exigen minimatch 3) y nunca a la app publicada: `npm audit --omit=dev` está limpio, y la CI lo comprueba en cada cambio. No se fuerza la versión 11, porque cambió su API y rompería el lint. Se acepta hasta que esos plugins la actualicen; Dependabot lo seguirá intentando.
+
 ## Pendientes conocidos
 
 | Pendiente | Riesgo | Plan |
