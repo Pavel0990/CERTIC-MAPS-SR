@@ -235,7 +235,7 @@
     {
       "slug": "moncion-presa-osm",
       "name": "De Monción a la Presa",
-      "osm_description": "Caminata desde el Parque Central de Monción hasta la Presa de Monción, sobre el río Mao. El trazado sigue calles y caminos que existen en OpenStreetMap; conviene validarlo con el municipio antes de recomendarlo.",
+      "osm_description": "Caminata desde el Parque Central de Monción hasta la Presa de Monción, sobre el río Mao. El trazado sigue calles y caminos que existen en OpenStreetMap. Antes de salir, pregunta en el pueblo cómo está el camino.",
       "add": "Puntos de referencia: sale del Parque Central de Monción, frente a la Parroquia San Antonio de Padua, y termina en la Presa de Monción, la más alta del país (119 metros).",
       "images": ["presa-moncion-2020"],
       "sources": ["enwiki-moncion-dam", "eswiki-moncion", "osm"]
