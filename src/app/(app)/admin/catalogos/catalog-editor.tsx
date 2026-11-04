@@ -48,7 +48,7 @@ export function CatalogEditor({ catalog, items }: { catalog: CatalogKey; items: 
       const base = { name: draft.name, icon: draft.icon, sort: draft.sort, active: draft.active };
       const changes = isTraffic ? { ...base, default_severity: draft.severity, default_ttl_hours: draft.ttl }
         : isRequest && !draft.code ? { ...base, kind: draft.kind } : base;
-      const r = await saveCatalog(catalog, draft.code, changes);
+      const r = await saveCatalog(catalog, draft.code, changes).catch(() => ({ status: 'rejected' as const, reason: 'unavailable' }));
       if (r.status === 'ok') {
         toast.show(draft.code ? 'Cambios guardados.' : 'Agregado. Ya aparece en los formularios.');
         setDraft(null);

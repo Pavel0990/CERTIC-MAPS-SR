@@ -27,7 +27,7 @@ async function run(fn: (s: Awaited<ReturnType<typeof createClient>>) => Promise<
 
 export async function moderateTraffic(id: string, expected: string, to: string, note?: string) {
   if (!uuid.safeParse(id).success) return rejected('not_found');
-  return run((s) => moderateTrafficReport(s, id, expected, to, text(500).parse(note)), ['/admin/bandeja', '/admin']);
+  return run((s) => moderateTrafficReport(s, id, expected, to, text(1000).parse(note)), ['/admin/bandeja', '/admin']);
 }
 
 export async function escalateTraffic(id: string, category: string) {
@@ -53,7 +53,7 @@ export async function makePublic(id: string, isPublic: boolean) {
 const ENTITIES: ContentEntity[] = ['business', 'place', 'route', 'promotion', 'attachment'];
 export async function review(entity: ContentEntity, id: string, expected: string, to: string, reason?: string) {
   if (!ENTITIES.includes(entity) || !uuid.safeParse(id).success) return rejected('not_found');
-  return run((s) => reviewContent(s, entity, id, expected, to, text(500).parse(reason)), ['/admin/validaciones', '/admin', '/mapa']);
+  return run((s) => reviewContent(s, entity, id, expected, to, text(1000).parse(reason)), ['/admin/validaciones', '/admin', '/mapa']);
 }
 
 export async function grantRole(userId: string, role: StaffRole, municipalityId: string) {

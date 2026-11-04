@@ -87,7 +87,7 @@ Quita el reenvío al terminar: cualquiera con la URL ve la app.
 ```bash
 npm run check     # lint (con la regla de fronteras), tipos, pruebas unitarias y de fronteras
 npm run test:db   # pruebas de la base de datos (PostgreSQL + PostGIS en memoria, sin Docker)
-npm run test:e2e  # 23 pruebas en 9 archivos (axe en claro y oscuro, navegación rápida, reporte parecido…) en un navegador real contra staging, con la app corriendo; las 6 del captcha solo corren con su clave de prueba
+npm run test:e2e  # Playwright (axe en claro y oscuro, navegación rápida, reporte parecido…) en un navegador real contra staging, con la app corriendo; las 6 del captcha solo corren con su clave de prueba
 npm run backup    # copia de los datos de staging en backups/ (antes de cambios grandes)
 npm run backup:check  # simulacro: restaura la última copia en PGlite y compara los conteos (DEPLOYMENT.md §8.1)
 npm run db:audit  # auditoría de seguridad de la base en línea, solo lectura (SECURITY.md)

@@ -29,7 +29,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const muniId = viewer.isProvincialAdmin ? selected?.id ?? null : selected?.id ?? scope[0]?.id ?? null;
   const supabase = await createClient();
 
-  if (!viewer.isAdmin) return <ModeratorHome counts={await getPanelCounts(supabase)} scopeNames={scope.map((m) => m.name).join(' · ')} />;
+  if (!viewer.isAdmin) return <ModeratorHome counts={await getPanelCounts()} scopeNames={scope.map((m) => m.name).join(' · ')} />;
 
   const range = periodRange(parsePeriod(periodo));
   const d = await getDashboard(supabase, range, muniId, scope);

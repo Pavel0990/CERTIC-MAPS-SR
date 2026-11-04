@@ -33,7 +33,8 @@ export function ActionButton({ label, done, run, variant = 'secondary', icon, as
 
   function execute(value?: string) {
     start(async () => {
-      const r = await run(value);
+      // Sin red, la Server Action lanza: se avisa en palabras y la pantalla sigue en pie
+      const r = await run(value).catch(() => ({ status: 'rejected' as const, reason: 'unavailable' }));
       if (r.status === 'ok') {
         toast.show(done);
         setOpen(false);

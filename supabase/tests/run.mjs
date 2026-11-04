@@ -893,6 +893,56 @@ ok('HC4 el periodo se limita a 7–365 días y el público (anon) puede consulta
    && (await one(`select has_function_privilege('anon', 'public.report_hotspots(integer)', 'execute') a`)).a === true);
 
 // ---------------------------------------------------------------------------------------------
+// RV. Revisión integral del 04/11 (migración 20261104120000_audit_review_fixes)
+// ---------------------------------------------------------------------------------------------
+lastStep = 'revisión 04/11';
+// DB-02: una alerta que vence sin que nadie la revise no cuenta como publicada
+const H2 = [19.5712, -71.2312];
+// Vencer ya: la fecha de creación se corre al pasado (expires_at > created_at es una restricción) y corre el job
+const vencer = async (ids) => {
+  await db.query(`update public.traffic_reports set created_at = now() - interval '2 hours', expires_at = now() - interval '1 hour' where id = any($1)`, [ids]);
+  await one(`select private.expire_traffic_reports() n`);
+};
+const pendA = await addTraffic(U.ana, H2, 'bache', 'pending');
+const pendB = await addTraffic(U.beto, [H2[0] + 0.0009, H2[1]], 'bache', 'pending');
+await vencer([pendA, pendB]);
+const pendRows = await q(`select status, published_at from public.traffic_reports where id = any($1)`, [[pendA, pendB]]);
+ok('RV1 dos alertas que vencieron sin revisar: quedan expired, sin published_at y fuera del mapa de calor',
+   pendRows.every((r) => r.status === 'expired' && r.published_at === null) && !cellAt(await hotspots(), H2), JSON.stringify(pendRows));
+const pubA = await addTraffic(U.ana, H2, 'bache', 'active');
+const pubB = await addTraffic(U.beto, [H2[0] + 0.0009, H2[1]], 'bache', 'active');
+await vencer([pubA, pubB]);
+const pubRows = await q(`select status, published_at from public.traffic_reports where id = any($1)`, [[pubA, pubB]]);
+ok('RV2 lo que se publicó y después venció sí cuenta: published_at sellado al publicar y el cuadro aparece con 2',
+   pubRows.every((r) => r.status === 'expired' && r.published_at !== null) && cellAt(await hotspots(), H2)?.properties.count === 2, JSON.stringify(pubRows));
+
+// S-01: la asignación caduca con el rol
+const modTmp = await newUser('mod.tmp@ejemplo.do', 'Moderador temporal');
+await db.query(`insert into public.user_roles (user_id, role, province_id, municipality_id) values ($1, 'moderator', $2, $3)`, [modTmp, provinceId, muni.SAB]);
+const rq1 = await addRequest(U.beto, P.SAB2, 'alumbrado', 'approved', false);
+await rpc(U.modSab, `public.assign_request($1, $2)`, [rq1, modTmp]);
+const st1 = await rpc(modTmp, `public.change_request_status($1, 'approved', 'in_progress')`, [rq1]);
+const rev = await rpc(U.admProv, `public.revoke_role($1, 'moderator', $2)`, [modTmp, muni.SAB]);
+const afterRev = await one(`select assigned_to from public.citizen_requests where id = $1`, [rq1]);
+const st2 = await rpc(modTmp, `public.change_request_status($1, 'in_progress', 'resolved', 'Listo')`, [rq1]);
+ok('RV3 quitar el rol libera sus consultas abiertas y ya no puede resolverlas',
+   st1.status === 'ok' && rev.status === 'ok' && afterRev.assigned_to === null && st2.reason === 'forbidden',
+   JSON.stringify({ st1, rev, afterRev, st2 }));
+// Aunque el rol desaparezca por otra vía (borrado directo), la asignación sola no basta
+await db.query(`insert into public.user_roles (user_id, role, province_id, municipality_id) values ($1, 'moderator', $2, $3)`, [modTmp, provinceId, muni.SAB]);
+const rq2 = await addRequest(U.beto, P.SAB2, 'alumbrado', 'in_progress', false);
+await db.query(`update public.citizen_requests set assigned_to = $1 where id = $2`, [modTmp, rq2]);
+await db.query(`delete from public.user_roles where user_id = $1 and role = 'moderator'`, [modTmp]);
+const st3 = await rpc(modTmp, `public.change_request_status($1, 'in_progress', 'resolved', 'Listo')`, [rq2]);
+ok('RV4 con la asignación colgada pero sin rol, cambiar el estado se rechaza', st3.reason === 'forbidden', JSON.stringify(st3));
+
+// DB-04: el panel lee la auditoría sin IP ni navegador
+const auditCols = await as(db, U.admProv, `select id, action, actor_role, municipality_id from public.audit_logs limit 1`);
+await expectError('RV5 la administración ya no puede leer la IP ni el navegador de la auditoría',
+  () => as(db, U.admProv, `select ip_observed, user_agent from public.audit_logs limit 1`), /permission denied/);
+ok('RV6 las columnas que usa el panel siguen legibles', auditCols.rows.length >= 0);
+
+// ---------------------------------------------------------------------------------------------
 // AC. Crédito de las fotos con licencia libre (migración 20261022120000, propuesta)
 // ---------------------------------------------------------------------------------------------
 lastStep = 'crédito de fotos';

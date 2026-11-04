@@ -1,10 +1,23 @@
 import 'server-only';
 import { cache } from 'react';
-import type { ServerSupabase } from '@/lib/supabase/server';
+import { createClient, type ServerSupabase } from '@/lib/supabase/server';
 import { isStaffRole, STAFF_ROLES } from '@/types/roles';
 import type { KpiSummary } from '@/types/kpi';
 
 // Lecturas del panel municipal (§9.7). Todas usan el JWT del personal: RLS limita a su alcance.
+
+/**
+ * Un fallo de la base se muestra como error (pantalla con «Intentar otra vez»), nunca como «Nada pendiente»:
+ * en el panel, una bandeja vacía por error haría creer que no hay nada que atender.
+ */
+function must<T>(r: { data: T; error: { message: string } | null }, what: string): NonNullable<T> {
+  if (r.error) throw new Error(`panel: ${what}: ${r.error.message}`);
+  return (r.data ?? []) as NonNullable<T>;
+}
+const mustCount = (r: { count: number | null; error: { message: string } | null }, what: string) => {
+  if (r.error) throw new Error(`panel: ${what}: ${r.error.message}`);
+  return r.count ?? 0;
+};
 
 export interface Municipality { id: string; name: string; code: string }
 
@@ -35,8 +48,7 @@ export async function listTrafficInbox(supabase: ServerSupabase, opts: { status?
     .limit(100);
   q = opts.status ? q.eq('status', opts.status) : q.in('status', ['pending', 'active', 'verified', 'out_of_area']);
   if (opts.municipalityId) q = q.eq('municipality_id', opts.municipalityId);
-  const { data } = await q;
-  return (data ?? []).map((t) => ({ ...t, point: point(t.geom) })) as TrafficItem[];
+  return must(await q, 'bandeja de tránsito').map((t) => ({ ...t, point: point(t.geom) })) as TrafficItem[];
 }
 
 export interface RequestItem {
@@ -54,8 +66,7 @@ export async function listRequestInbox(supabase: ServerSupabase, opts: { status?
     .limit(100);
   q = opts.status ? q.eq('status', opts.status) : q.in('status', ['pending', 'under_review', 'approved', 'in_progress']);
   if (opts.municipalityId) q = q.eq('municipality_id', opts.municipalityId);
-  const { data } = await q;
-  const rows = data ?? [];
+  const rows = must(await q, 'bandeja de reportes');
   // Responsable de cada consulta: assigned_to está oculto por columna; solo el personal lo ve por RPC (migración 250)
   const { data: assignees } = rows.length ? await supabase.rpc('request_assignees', { p_ids: rows.map((r) => r.id) }) : { data: [] };
   const byId = new Map((assignees ?? []).map((a) => [a.request_id, { id: a.assignee_id, name: a.assignee_name }]));
@@ -63,8 +74,7 @@ export async function listRequestInbox(supabase: ServerSupabase, opts: { status?
 }
 
 export async function staffDirectory(supabase: ServerSupabase, municipalityId: string) {
-  const { data } = await supabase.rpc('staff_directory', { p_municipality_id: municipalityId });
-  return (data ?? []) as { user_id: string; display_name: string; role: string; provincial: boolean }[];
+  return must(await supabase.rpc('staff_directory', { p_municipality_id: municipalityId }), 'equipo asignable') as unknown as { user_id: string; display_name: string; role: string; provincial: boolean }[];
 }
 
 /** Cola de validación: negocios, lugares, rutas, promociones y fotos pendientes (§9.7). */
@@ -76,15 +86,15 @@ export async function listValidationQueue(supabase: ServerSupabase) {
     supabase.from('promotions').select('id, title, description, valid_from, valid_until, status, created_at, business_id').eq('status', 'pending').order('created_at'),
     supabase.from('attachments').select('id, bucket, path, status, created_at, business_id, tourism_place_id, eco_route_id, traffic_report_id, citizen_request_id').eq('status', 'processed').order('created_at').limit(50),
   ]);
-  const photoRows = photos.data ?? [];
+  const photoRows = must(photos, 'fotos por validar');
   const signed = await Promise.all(
     photoRows.map(async (p) => (await supabase.storage.from(p.bucket).createSignedUrl(p.path, 300)).data?.signedUrl ?? null),
   );
   return {
-    businesses: biz.data ?? [],
-    places: places.data ?? [],
-    routes: routes.data ?? [],
-    promotions: promos.data ?? [],
+    businesses: must(biz, 'negocios por validar'),
+    places: must(places, 'lugares por validar'),
+    routes: must(routes, 'rutas por validar'),
+    promotions: must(promos, 'promociones por validar'),
     photos: photoRows.map((p, i) => ({ ...p, url: signed[i] })),
   };
 }
@@ -98,15 +108,14 @@ export async function getKpis(supabase: ServerSupabase, from: string, to: string
 export type Kpis = KpiSummary;
 
 export async function listReportRuns(supabase: ServerSupabase) {
-  const { data } = await supabase.from('report_runs').select('id, period_start, period_end, version, status, trigger, attempts, storage_path, error, started_at, finished_at').order('period_start', { ascending: false }).order('version', { ascending: false }).limit(30);
-  return data ?? [];
+  const r = await supabase.from('report_runs').select('id, period_start, period_end, version, status, trigger, attempts, storage_path, error, started_at, finished_at').order('period_start', { ascending: false }).order('version', { ascending: false }).limit(30);
+  return must(r, 'informes');
 }
 
 export async function listAudit(supabase: ServerSupabase, opts: { action?: string; limit?: number }) {
   let q = supabase.from('audit_logs').select('created_at, id, actor_role, action, entity_type, entity_id, result, municipality_id, actor_id').order('created_at', { ascending: false }).limit(opts.limit ?? 100);
   if (opts.action) q = q.like('action', `${opts.action}%`);
-  const { data } = await q;
-  const rows = data ?? [];
+  const rows = must(await q, 'auditoría');
   const actorIds = [...new Set(rows.map((r) => r.actor_id).filter(Boolean))] as string[];
   const { data: profiles } = actorIds.length ? await supabase.from('profiles').select('id, display_name').in('id', actorIds) : { data: [] };
   const names = new Map((profiles ?? []).map((p) => [p.id, p.display_name]));
@@ -128,8 +137,7 @@ export async function listTeam(supabase: ServerSupabase) {
 /** Buscar personas registradas por nombre (el personal puede leer perfiles, §10.2). */
 export async function searchPeople(supabase: ServerSupabase, q: string) {
   if (q.trim().length < 2) return [];
-  const { data } = await supabase.from('profiles').select('id, display_name, home_municipality_id').ilike('display_name', `%${q.trim()}%`).limit(10);
-  return data ?? [];
+  return must(await supabase.from('profiles').select('id, display_name, home_municipality_id').ilike('display_name', `%${q.trim()}%`).limit(10), 'buscar personas');
 }
 
 export type CatalogKey = 'traffic_types' | 'request_categories' | 'business_categories';
@@ -163,7 +171,10 @@ export interface PanelCounts {
 }
 
 /** Trabajo pendiente del personal (menú del panel y resumen de moderación). RLS limita a su alcance. */
-export const getPanelCounts = cache(async (supabase: ServerSupabase, municipalityId: string | null = null): Promise<PanelCounts> => {
+// cache() compara los argumentos por identidad: con el cliente como argumento nunca acertaba (layout y página
+// pedían las 7 cuentas dos veces). Ahora la clave es el municipio y el cliente se crea dentro, una vez por request.
+export const getPanelCounts = cache(async (municipalityId: string | null = null): Promise<PanelCounts> => {
+  const supabase = await createClient();
   const head = { count: 'exact', head: true } as const;
   const m = <T extends { eq: (c: string, v: string) => T }>(q: T) => (municipalityId ? q.eq('municipality_id', municipalityId) : q);
   const [traffic, reqPending, reqReview, biz, places, routes, promos] = await Promise.all([
@@ -176,9 +187,9 @@ export const getPanelCounts = cache(async (supabase: ServerSupabase, municipalit
     supabase.from('promotions').select('id', head).eq('status', 'pending'),
   ]);
   return {
-    trafficPending: traffic.count ?? 0,
-    requestsPending: reqPending.count ?? 0,
-    requestsInReview: reqReview.count ?? 0,
-    validations: (biz.count ?? 0) + (places.count ?? 0) + (routes.count ?? 0) + (promos.count ?? 0),
+    trafficPending: mustCount(traffic, 'alertas pendientes'),
+    requestsPending: mustCount(reqPending, 'reportes pendientes'),
+    requestsInReview: mustCount(reqReview, 'reportes en revisión'),
+    validations: mustCount(biz, 'negocios') + mustCount(places, 'lugares') + mustCount(routes, 'rutas') + mustCount(promos, 'promociones'),
   };
 });
