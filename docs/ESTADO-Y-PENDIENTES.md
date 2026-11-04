@@ -33,7 +33,7 @@ Quedan unas **5 semanas**. Casi todo lo que falta ya no es código: contenido, p
 
 | Criterio (puntos) | Qué lo respalda | Qué falta para el máximo |
 |---|---|---|
-| **Funcionalidad (25)** | F1–F6, panel, PDF, PWA; 200 pruebas de base de datos, 154 unitarias, 35 pruebas E2E en 12 archivos (29 sin la clave de prueba del captcha) y 3 pendientes de las cuentas externas (`plan-produccion.spec.ts`) | Contenido real en turismo y rutas; base de producción separada |
+| **Funcionalidad (25)** | F1–F6, panel, PDF, PWA; 200 pruebas de base de datos, 154 unitarias, 37 pruebas E2E en 14 archivos (31 sin la clave de prueba del captcha; incluyen roles y uso sin conexión) y 3 pendientes de las cuentas externas (`plan-produccion.spec.ts`) | Contenido real en turismo y rutas; base de producción separada |
 | **UX/UI para baja alfabetización digital (20)** | Botón **Escuchar** (lee fichas y pasos con la voz del teléfono, sin internet), lenguaje sencillo, letra Lexend/Nunito, áreas táctiles de 44 px, contraste WCAG AA en claro y oscuro (axe en 16 pantallas), sin conexión | **Pruebas con vecinos** (dos rondas) y sus cifras en la presentación |
 | **Innovación (20)** | Confirmación comunitaria de alertas, reputación, aviso de reporte parecido cercano antes de enviar (`ST_DWithin`, 150 m), **capa de zonas con más reportes** (cuadros de ~550 m, sin ubicar a nadie), **«Lo más importante de la semana»** redactado solo en el PDF, datos abiertos (OSM), costo casi cero | Mostrarlo en la demo |
 | **Impacto territorial (15)** | Los 3 municipios, límites oficiales de OSM, indicadores por municipio, categorías locales (casabe, productos de finca, agropecuaria, animales en la vía, camino vecinal) | Contenido de Monción y Villa Los Almácigos; testimonios de la prueba con vecinos |
