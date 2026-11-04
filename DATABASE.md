@@ -273,6 +273,8 @@ Decisión deliberada: la regla "`in_progress` exige responsable" está en la RPC
 
 Toda FK hacia `profiles` tiene índice, parcial (`WHERE … IS NOT NULL`). Sin ellos, borrar una cuenta recorrería completas todas las tablas que referencian al usuario; 14 índices lo evitan.
 
+Las FK hacia el territorio y los catálogos (`provinces`, `municipalities`, `traffic_report_types`, `request_categories`, `business_categories`, `private.rate_limit_rules`) **no** llevan índice propio, a propósito: esas filas nunca se borran ni cambian de clave (los catálogos se desactivan con `active = false`), así que el índice solo serviría para eso y costaría en cada escritura. Además, con 1 provincia y 3 municipios, un índice en esas columnas no ayuda a filtrar: las bandejas y listados que filtran por municipio ya tienen índices compuestos con `municipality_id` (`traffic_reports_inbox_idx`, `citizen_requests_inbox_idx` y `_public_idx`, `businesses_public_idx`, `audit_logs_scope_idx`). `tourism_places` y `eco_routes` no los tienen porque son tablas de decenas de filas; si pasan de unos miles, conviene agregarlos. Revisado el 03/11/2026 contra la base en línea: 17 FK en ese caso, sin índices duplicados, todas las tablas con clave primaria y ninguna tabla con RLS sin políticas.
+
 Las FK hacia catálogos y territorio (`ON DELETE RESTRICT`, casi nunca se borran) no se indexan a propósito.
 
 ### 5.11 Descarga auditada del informe — `20260925120000_report_download_audit.sql`
