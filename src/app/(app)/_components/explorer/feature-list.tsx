@@ -18,7 +18,7 @@ export function FeatureList({ items, catalogs, userLocation, onSelect }: {
   onSelect: (f: MapFeature) => void;
 }) {
   return (
-    <section aria-label="Lugares en esta zona" className="animate-sheet-in absolute inset-x-0 bottom-0 top-[124px] z-10 overflow-y-auto bg-canvas p-3 md:left-3 md:right-auto md:top-[132px] md:w-[400px] md:rounded-t-[18px] md:p-0">
+    <section aria-label="Lugares en esta zona" className="animate-sheet-in absolute inset-x-0 bottom-0 top-[84px] z-10 overflow-y-auto bg-canvas p-3 md:left-3 md:right-auto md:top-[132px] md:w-[400px] md:rounded-t-[18px] md:p-0">
       <p className="mb-2 px-1 text-sm font-semibold text-muted">{items.length} en esta zona{userLocation ? ', los más cercanos primero' : ''}</p>
       <ul className="flex flex-col gap-2">
         {items.map((f) => {
