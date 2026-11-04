@@ -1307,6 +1307,7 @@ export type Database = {
           idempotency_key: string | null
           municipality_id: string | null
           province_id: string
+          published_at: string | null
           reporter_id: string | null
           severity: number
           status: string
@@ -1323,6 +1324,7 @@ export type Database = {
           idempotency_key?: string | null
           municipality_id?: string | null
           province_id: string
+          published_at?: string | null
           reporter_id?: string | null
           severity: number
           status?: string
@@ -1339,6 +1341,7 @@ export type Database = {
           idempotency_key?: string | null
           municipality_id?: string | null
           province_id?: string
+          published_at?: string | null
           reporter_id?: string | null
           severity?: number
           status?: string
