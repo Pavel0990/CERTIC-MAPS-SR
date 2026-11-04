@@ -5,6 +5,7 @@ import { TrackedLink } from '@/components/shared/engagement';
 import { Badge, Card, Eyebrow, Notice } from '@/components/ui/primitives';
 import { CONTENT_STATUS, type ContentStatus } from '@/lib/vocabulary';
 import { directionsUrl } from '@/utils/format';
+import { DirectionsExtras } from './directions-extras';
 
 type Entity = 'business' | 'tourism_place' | 'eco_route';
 
@@ -18,9 +19,12 @@ const secondaryLink =
 /** Botón "Cómo llegar" de las fichas: abre Google Maps y cuenta el clic (§7.3, §9.3). */
 export function DirectionsButton({ entity, id, point, label = 'Cómo llegar' }: { entity: Entity; id: string; point: { lat: number; lng: number }; label?: string }) {
   return (
-    <TrackedLink entity={entity} id={id} metric="directions" href={directionsUrl(point.lat, point.lng)} className={primaryLink}>
-      <Navigation className="size-5" aria-hidden /> {label}
-    </TrackedLink>
+    <div className="flex flex-col gap-1">
+      <TrackedLink entity={entity} id={id} metric="directions" href={directionsUrl(point.lat, point.lng)} className={primaryLink}>
+        <Navigation className="size-5" aria-hidden /> {label}
+      </TrackedLink>
+      <DirectionsExtras entity={entity} id={id} point={point} />
+    </div>
   );
 }
 
