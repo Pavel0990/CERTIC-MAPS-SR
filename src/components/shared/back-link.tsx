@@ -1,7 +1,23 @@
 'use client';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { ChevronLeft } from 'lucide-react';
+
+// ¿Se navegó dentro de la app desde la última carga completa? Vive en la memoria de la página: una recarga
+// o un enlace de fuera lo reinicia. (`document.referrer` no sirve: en una SPA no cambia al navegar dentro.)
+let lastPath: string | null = null;
+let movedInsideApp = false;
+
+/** Anota los cambios de pantalla dentro de la app. Va una sola vez, en el layout. */
+export function NavigationTracker() {
+  const pathname = usePathname();
+  useEffect(() => {
+    if (lastPath !== null && lastPath !== pathname) movedInsideApp = true;
+    lastPath = pathname;
+  }, [pathname]);
+  return null;
+}
 
 /**
  * Enlace "Volver": si la persona llegó desde otra pantalla de la app, vuelve exactamente ahí
@@ -14,8 +30,7 @@ export function BackLink({ href, label }: { href: string; label: string }) {
     <Link prefetch={false}
       href={href}
       onClick={(e) => {
-        const fromApp = typeof document !== 'undefined' && document.referrer.startsWith(window.location.origin);
-        if (fromApp && window.history.length > 1) {
+        if (movedInsideApp && window.history.length > 1) {
           e.preventDefault();
           router.back();
         }

@@ -43,7 +43,7 @@ export function AppNav({ signedIn, isStaff, isEntrepreneur, unread, avatar }: Na
         ))}
         <div className="mt-auto flex flex-col items-center gap-1">
           {isEntrepreneur && (
-            <RailLink href="/negocio" label="Mi negocio" active={pathname.startsWith('/negocio')}>
+            <RailLink href="/negocio" label="Mi negocio" active={pathname === '/negocio' || pathname.startsWith('/negocio/')}>
               <Store className="size-[22px]" aria-hidden />
             </RailLink>
           )}

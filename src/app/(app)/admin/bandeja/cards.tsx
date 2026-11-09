@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { ArrowUpRight, Check, Eye, EyeOff, MapPin, ThumbsUp, UserCheck, X } from 'lucide-react';
@@ -110,7 +111,7 @@ export function RequestCard({ r, categoryName, municipality, staff, viewerId, ca
         {r.support_count > 0 && <span className="ml-auto flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-sm font-bold text-brand-strong"><ThumbsUp className="size-3.5" aria-hidden />{r.support_count}</span>}
       </div>
       <h3 className="mt-2 text-[17px] font-bold">
-        <a href={`/consultas/${r.id}`} className="hover:underline">{r.title}</a>
+        <Link prefetch={false} href={`/consultas/${r.id}`} className="hover:underline">{r.title}</Link>
       </h3>
       <p className="mt-1 line-clamp-2 text-[15px] text-muted">{r.description}</p>
       <p className="mt-2 text-sm">

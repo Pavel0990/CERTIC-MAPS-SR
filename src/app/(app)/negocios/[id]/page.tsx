@@ -21,9 +21,9 @@ import { PhotoGallery } from '../../_content/photo-gallery';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  if (!UUID.test(id)) return { title: 'Negocio' };
+  if (!UUID.test(id)) return { title: 'Página no encontrada' };
   const b = await getBusinessDetail(await createClient(), id);
-  return { title: b?.name ?? 'Negocio', description: b?.description?.slice(0, 160) ?? undefined };
+  return { title: b?.name ?? 'Página no encontrada', description: b?.description?.slice(0, 160) ?? undefined };
 }
 
 /** wa.me exige el número con código de país y sin símbolos. Un número local de 10 dígitos es de República Dominicana. */
@@ -150,7 +150,7 @@ export default async function BusinessPage({ params }: { params: Promise<{ id: s
             </Card>
           )}
           <div className="relative h-[240px] overflow-hidden rounded-[18px] shadow-[var(--shadow-card)]">
-            <MapCanvas className="absolute inset-0" features={pin} selectedId={b.id} initialView={{ center: b.point, zoom: 14 }} ariaLabel={`Mapa con la ubicación de ${b.name}`} />
+            <MapCanvas lazy className="absolute inset-0" features={pin} selectedId={b.id} initialView={{ center: b.point, zoom: 14 }} ariaLabel={`Mapa con la ubicación de ${b.name}`} />
           </div>
         </div>
       </div>

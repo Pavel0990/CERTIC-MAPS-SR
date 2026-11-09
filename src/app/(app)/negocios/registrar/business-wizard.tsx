@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Store } from 'lucide-react';
 import { businessInput } from '@/modules/businesses';
 import type { LatLng } from '@/modules/map';
@@ -11,7 +11,7 @@ import { newIdempotencyKey } from '@/lib/schemas';
 import { cn } from '@/utils/cn';
 import { LocationPicker } from '../../_content/location-picker';
 import { PhotoPicker, usePhotos } from '../../_content/photo-picker';
-import { DoneScreen, MissingHint, StepTitle, WizardHeader, WizardStep } from '../../_content/wizard';
+import { DoneScreen, MissingHint, StepTitle, useFieldErrors, useFocusOnChange, WizardHeader, WizardStep } from '../../_content/wizard';
 import { registerBusiness } from './actions';
 
 export function BusinessWizard({ categories }: { categories: { slug: string; name: string; icon: string }[] }) {
@@ -27,17 +27,24 @@ export function BusinessWizard({ categories }: { categories: { slug: string; nam
   const [key] = useState(newIdempotencyKey); // misma clave en todos los reintentos de este registro
   const heading = useRef<HTMLHeadingElement>(null);
 
-  useEffect(() => heading.current?.focus(), [step, done]);
+  useFocusOnChange(heading, `${step}-${done ? 1 : 0}`);
+  const fieldErrors = useFieldErrors({ name: 1, whatsapp: 3, phone: 3, address: 3, description: 3, email: 3, website: 3 });
+  const fe = fieldErrors.errors;
 
   const nameOk = name.trim().length >= 2;
-  const setField = (k: keyof typeof contact) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setContact((c) => ({ ...c, [k]: e.target.value }));
+  const setField = (k: keyof typeof contact) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setContact((c) => ({ ...c, [k]: e.target.value }));
+    fieldErrors.clear(k);
+  };
 
   async function submit() {
     if (!point) return;
     setError(null);
     const parsed = businessInput.safeParse({ name, categorySlug: category, lat: point.lat, lng: point.lng, idempotencyKey: key, ...contact });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Revisa los datos.');
+      const { step: at, general } = fieldErrors.show(parsed.error.issues);
+      if (general) setError(general);
+      if (at === 1) setStep(1);
       return;
     }
     setBusy(true);
@@ -103,8 +110,8 @@ export function BusinessWizard({ categories }: { categories: { slug: string; nam
               })}
             </div>
           </fieldset>
-          <Field label="Nombre del negocio" hint="Como lo conoce la gente. Por ejemplo: «Colmado Don Pedro».">
-            {(a) => <Input {...a} value={name} maxLength={120} autoComplete="organization" onChange={(e) => setName(e.target.value)} />}
+          <Field label="Nombre del negocio" hint="Como lo conoce la gente. Por ejemplo: «Colmado Don Pedro»." error={fe.name}>
+            {(a) => <Input {...a} value={name} maxLength={120} autoComplete="organization" onChange={(e) => { setName(e.target.value); fieldErrors.clear('name'); }} />}
           </Field>
           <Button size="lg" disabled={!category || !nameOk} onClick={() => { setError(null); setStep(2); }}>Seguir</Button>
           <MissingHint show={!category || !nameOk}>{!category ? 'Para seguir, toca el tipo de negocio.' : 'Para seguir, escribe el nombre del negocio.'}</MissingHint>
@@ -124,23 +131,23 @@ export function BusinessWizard({ categories }: { categories: { slug: string; nam
         <WizardStep>
           <StepTitle headingRef={heading} title="¿Cómo te contactan?" hint="Todo es opcional, pero ayuda a que te encuentren." />
           {error && <ErrorNote>{error}</ErrorNote>}
-          <Field label="WhatsApp" optional hint="Con este número la gente te escribe directo desde el mapa.">
+          <Field label="WhatsApp" optional hint="Con este número la gente te escribe directo desde el mapa." error={fe.whatsapp}>
             {(a) => <Input {...a} type="tel" inputMode="tel" autoComplete="tel" value={contact.whatsapp} maxLength={20} placeholder="809 555 1234" onChange={setField('whatsapp')} />}
           </Field>
-          <Field label="Teléfono" optional>
+          <Field label="Teléfono" optional error={fe.phone}>
             {(a) => <Input {...a} type="tel" inputMode="tel" value={contact.phone} maxLength={20} placeholder="809 555 1234" onChange={setField('phone')} />}
           </Field>
-          <Field label="Dirección" optional hint="Calle, número o una referencia: «frente al parque».">
+          <Field label="Dirección" optional hint="Calle, número o una referencia: «frente al parque»." error={fe.address}>
             {(a) => <Input {...a} value={contact.address} maxLength={200} autoComplete="street-address" onChange={setField('address')} />}
           </Field>
-          <Field label="¿Qué ofreces?" optional hint="Productos, servicios o lo que te hace especial.">
+          <Field label="¿Qué ofreces?" optional hint="Productos, servicios o lo que te hace especial." error={fe.description}>
             {(a) => <Textarea {...a} value={contact.description} maxLength={2000} onChange={setField('description')} />}
           </Field>
           <details className="rounded-[14px] bg-surface p-4 shadow-[var(--shadow-card)]">
             <summary className="cursor-pointer font-semibold">Correo y página web</summary>
             <div className="mt-4 flex flex-col gap-5">
-              <Field label="Correo" optional>{(a) => <Input {...a} type="email" autoComplete="email" value={contact.email} maxLength={254} onChange={setField('email')} />}</Field>
-              <Field label="Página web" optional hint="Debe empezar por https://">{(a) => <Input {...a} type="url" value={contact.website} maxLength={300} placeholder="https://" onChange={setField('website')} />}</Field>
+              <Field label="Correo" optional error={fe.email}>{(a) => <Input {...a} type="email" autoComplete="email" value={contact.email} maxLength={254} onChange={setField('email')} />}</Field>
+              <Field label="Página web" optional hint="Debe empezar por https://" error={fe.website}>{(a) => <Input {...a} type="url" value={contact.website} maxLength={300} placeholder="https://" onChange={setField('website')} />}</Field>
             </div>
           </details>
           <PhotoPicker state={photos} hint="La fachada y tus productos ayudan a que te reconozcan." />

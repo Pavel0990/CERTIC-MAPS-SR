@@ -55,7 +55,7 @@ export default async function ValidationsPage() {
             key={r.id}
             title={r.name}
             status={r.status}
-            meta={[ROUTE_KIND[r.kind] ?? r.kind, DIFFICULTY[r.difficulty]?.label, formatMinutes(r.duration_min), r.distance_km ? formatKm(Number(r.distance_km)) : null, muni.get(r.municipality_id)].filter(Boolean).join(' · ')}
+            meta={[ROUTE_KIND[r.kind] ?? r.kind, DIFFICULTY[r.difficulty]?.phrase, formatMinutes(r.duration_min), r.distance_km ? formatKm(Number(r.distance_km)) : null, muni.get(r.municipality_id)].filter(Boolean).join(' · ')}
             body={r.description}
           >
             <ReviewActions entity="route" id={r.id} status={r.status} />

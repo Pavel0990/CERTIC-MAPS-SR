@@ -1,4 +1,5 @@
 // API de servidor del módulo "notifications": centro in-app, preferencias y canales (§9.5).
+import 'server-only';
 export { listNotifications, markAllRead, getPreferences, countUnread, savePreferences, TOPICS, type NotificationView } from './server/queries';
 export { notificationJobHandlers } from './server/worker';
 export { registerPushDevice, unregisterPushDevice } from './server/devices';

@@ -44,3 +44,29 @@
 | DB-05 moderación lee perfiles de toda la provincia | Restringir la política afecta la búsqueda de personas al dar roles. Es una decisión de diseño que queda para el dueño |
 | DB-06 `find_similar_reports` lento en los picos | Hace falta EXPLAIN con permisos de ejecución; el usuario de solo lectura no puede |
 | F-05 idempotencia de las propuestas, A-02..A-04, errores de los formularios no asociados al campo, P3 | De menor impacto; quedan documentados en sus informes |
+
+> Las filas de los PR #25 y #26 se corrigieron en `b0747ba`, una vez fusionados. A-03, A-04 y los errores por campo, en la ronda del 09/11 (abajo).
+
+## Corregido el 09/11/2026 (rama `Veneno`, solo código, sin migraciones)
+
+| Id | Problema | Solución | Prueba |
+|---|---|---|---|
+| A-03 | Etiquetas de tipo de lugar y de dificultad copiadas en `catalogs.ts`, ya distintas de `vocabulary.ts` | `getLabelMaps` usa `PLACE_KIND` y `DIFFICULTY.phrase`; `phrase` («Dificultad media») sirve donde la palabra va sola | tsc ✅ |
+| A-04 (parte) | `invalid_input` caía al mensaje genérico | Agregado a `REASON_MESSAGE` | tsc ✅ |
+| A-05 / A-06 | Zod lanzaba dentro del `try` (falso «No pudimos conectar») y estados, categoría y rol llegaban sin validar | `safeParse` antes de `run`; códigos con `^[a-z0-9_-]{2,60}$` y `isStaffRole` | tsc, E2E ✅ |
+| A-07 | Ningún `server.ts` llevaba `server-only` | `import 'server-only'` en los 11 | build ✅ |
+| A-08 | Comentario citaba ADR-004 (sustituida) | ADR-022 | — |
+| F-07 | «Mi negocio» se marcaba en `/negocios` | Coincidencia exacta con `/negocio` y `/negocio/…` | tsc ✅ |
+| F-08 | «Ir al mapa» llevaba a Inicio | «Volver al inicio» y «Ver negocios» | — |
+| F-09 | El título de la consulta en la bandeja recargaba la app | `Link` | E2E ✅ |
+| F-10 | «Volver» decidía con `document.referrer`, que en una SPA no cambia | `NavigationTracker` en el layout anota si se navegó dentro de la app desde la última carga | E2E ✅ |
+| F-11 / A11Y-04 | Los asistentes mostraban un solo error al pie del paso | `useFieldErrors`: cada error en su `Field` (aria-invalid y aria-describedby), vuelve al paso del campo, abre el `<details>` si hace falta y enfoca el primero. En registrar negocio, proponer lugar y proponer ruta | tsc ✅ (no se simuló un error a mano) |
+| F-12 | «Archivar» un negocio aprobado no pedía confirmación | `confirm` como en «Quitar rol» | tsc ✅ |
+| A11Y-07 | `main` anidado e `id` duplicado en «no encontrado» y en el error de la app; la pestaña decía «Negocio» | `(app)/not-found.tsx` y `error.tsx` con `<div>`; la raíz conserva su `<main>`; título «Página no encontrada» también en las fichas | Medido: 1 `main` en ambos casos ✅ |
+| A11Y-08 | Al abrir un asistente el foco saltaba al `h1` y el primer Tab se saltaba «Saltar al contenido» | `useFocusOnChange`: el foco va al título solo al cambiar de paso | Medido: el primer Tab cae en «Saltar al contenido» ✅ |
+| A11Y-09 | Bandeja: de `h1` a `h3` | `h2` visualmente oculto con la pestaña activa | — |
+| A11Y-10 | Avisos que se borraban a los 4 s y botón de cerrar de 24 px | Los errores se quedan hasta cerrarlos; los demás duran 7 s y se pausan con el puntero o el foco; botón de 44 px | E2E ✅ |
+| PERF-05 | Cada ficha descargaba el motor de mapas aunque nadie viera el minimapa | `MapCanvas lazy`: carga al acercarse a la pantalla (300 px antes). En fichas cortas el mapa ya está en la primera pantalla y carga igual; el ahorro está en las largas | Medido ✅ |
+| DB-01 (parte) | `staging-test-users.mjs` solo rechazaba `prod` en una variable que nadie definía | Exige `SUPABASE_ENV=staging` (agregado a `.env.example`) | — |
+
+Pruebas de la ronda: `check` (154 unitarias, 8 de fronteras), `build` y E2E 36/36 contra el build de producción (9 omitidas: captcha y producción).

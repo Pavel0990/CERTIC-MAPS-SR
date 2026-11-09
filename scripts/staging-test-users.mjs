@@ -10,7 +10,10 @@ import { createClient } from '@supabase/supabase-js';
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !key) throw new Error('Faltan NEXT_PUBLIC_SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY (usa --env-file=.env.local)');
-if (/prod/i.test(process.env.SUPABASE_ENV ?? '')) throw new Error('Este script es solo para staging');
+// Exige el valor y no solo rechaza "prod": si nadie define la variable, la base de producción quedaría sin protección
+if (process.env.SUPABASE_ENV !== 'staging') {
+  throw new Error('Este script es solo para staging: agrega SUPABASE_ENV=staging a .env.local (nunca en el entorno de producción)');
+}
 const admin = createClient(url, key, { auth: { persistSession: false } });
 
 const otpIndex = process.argv.indexOf('--otp');

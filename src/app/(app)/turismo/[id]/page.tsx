@@ -20,9 +20,9 @@ import { canEditContent } from '../../_content/permissions';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  if (!UUID.test(id)) return { title: 'Lugar turístico' };
+  if (!UUID.test(id)) return { title: 'Página no encontrada' };
   const p = await getPlaceDetail(await createClient(), id);
-  return { title: p?.name ?? 'Lugar turístico', description: p?.description?.slice(0, 160) ?? undefined };
+  return { title: p?.name ?? 'Página no encontrada', description: p?.description?.slice(0, 160) ?? undefined };
 }
 
 export default async function TourismPlacePage({ params }: { params: Promise<{ id: string }> }) {
@@ -79,7 +79,7 @@ export default async function TourismPlacePage({ params }: { params: Promise<{ i
         </div>
         <div className="flex flex-col gap-4">
           <div className="relative h-[240px] overflow-hidden rounded-[18px] shadow-[var(--shadow-card)]">
-            <MapCanvas className="absolute inset-0" features={pin} selectedId={p.id} initialView={{ center: p.point, zoom: 12 }} ariaLabel={`Mapa con la ubicación de ${p.name}`} />
+            <MapCanvas lazy className="absolute inset-0" features={pin} selectedId={p.id} initialView={{ center: p.point, zoom: 12 }} ariaLabel={`Mapa con la ubicación de ${p.name}`} />
           </div>
           {(p.opening_info || p.accessibility) && (
             <Card className="flex flex-col gap-4 p-5">

@@ -70,6 +70,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         </FilterGroup>
       </div>
 
+      {/* Las pestañas no son títulos: este h2 ordena los encabezados (h1 → h2 → h3 de cada tarjeta) para el lector de pantalla */}
+      <h2 className="sr-only">{tab === 'transito' ? 'Alertas de tránsito' : 'Reportes al municipio'}</h2>
       {tab === 'transito' ? (
         traffic.length === 0 ? (
           <Card><EmptyState icon={<Inbox className="size-7" />} title="Nada pendiente">No hay alertas de tránsito con este filtro.</EmptyState></Card>

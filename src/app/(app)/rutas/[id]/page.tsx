@@ -32,9 +32,9 @@ function fitView(b: { minLng: number; minLat: number; maxLng: number; maxLat: nu
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  if (!UUID.test(id)) return { title: 'Ruta' };
+  if (!UUID.test(id)) return { title: 'Página no encontrada' };
   const r = await getRouteDetail(await createClient(), id);
-  return { title: r?.name ?? 'Ruta', description: r?.description?.slice(0, 160) ?? undefined };
+  return { title: r?.name ?? 'Página no encontrada', description: r?.description?.slice(0, 160) ?? undefined };
 }
 
 export default async function RoutePage({ params }: { params: Promise<{ id: string }> }) {
@@ -88,7 +88,7 @@ export default async function RoutePage({ params }: { params: Promise<{ id: stri
         <div className="flex flex-col gap-4">
           {r.status === 'rejected' && <RejectedNotice reason={r.status_reason} />}
           <div className="relative h-[300px] overflow-hidden rounded-[18px] shadow-[var(--shadow-card)] md:h-[380px]">
-            <MapCanvas className="absolute inset-0" staticLayers={line} features={startPin} initialView={view} ariaLabel={`Mapa con el trazado de ${r.name}`} />
+            <MapCanvas lazy className="absolute inset-0" staticLayers={line} features={startPin} initialView={view} ariaLabel={`Mapa con el trazado de ${r.name}`} />
           </div>
           <p className="-mt-2 flex items-center gap-2 text-sm text-muted">
             <MapPin className="size-4" aria-hidden /> El ícono marca el punto de inicio.

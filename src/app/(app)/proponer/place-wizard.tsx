@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { PLACE_KINDS, placeProposalInput } from '@/modules/tourism';
 import type { LatLng } from '@/modules/map';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { ErrorNote } from '@/components/ui/primitives';
 import { PLACE_KIND } from '@/lib/vocabulary';
 import { LocationPicker } from '../_content/location-picker';
 import { PhotoPicker, usePhotos } from '../_content/photo-picker';
-import { ChoiceGrid, DoneScreen, MissingHint, StepTitle, WizardHeader, WizardStep } from '../_content/wizard';
+import { ChoiceGrid, DoneScreen, MissingHint, StepTitle, useFieldErrors, useFocusOnChange, WizardHeader, WizardStep } from '../_content/wizard';
 import { submitPlace } from './actions';
 
 type Kind = (typeof PLACE_KINDS)[number];
@@ -26,14 +26,17 @@ export function PlaceWizard({ staff }: { staff: boolean }) {
   const [done, setDone] = useState<{ id: string; published: boolean; photoError: string | null } | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
 
-  useEffect(() => heading.current?.focus(), [step, done]);
+  useFocusOnChange(heading, `${step}-${done ? 1 : 0}`);
+  const fieldErrors = useFieldErrors({ name: 1, description: 3 });
 
   async function submit() {
     if (!point) return;
     setError(null);
     const parsed = placeProposalInput.safeParse({ name, kind, lat: point.lat, lng: point.lng, description });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Revisa los datos.');
+      const { step: at, general } = fieldErrors.show(parsed.error.issues);
+      if (general) setError(general);
+      if (at === 1) setStep(1);
       return;
     }
     setBusy(true);
@@ -74,8 +77,8 @@ export function PlaceWizard({ staff }: { staff: boolean }) {
             ¿Es un recorrido o sendero? <Link prefetch={false} href="/proponer?que=ruta" className="font-semibold text-brand underline">Proponer una ruta</Link>
           </p>
           <ChoiceGrid legend="¿Qué tipo de lugar es?" options={PLACE_KINDS.map((k) => ({ value: k, label: PLACE_KIND[k] ?? k }))} value={kind} onChange={setKind} />
-          <Field label="Nombre del lugar" hint="Como lo llama la gente. Por ejemplo: «Mirador de La Leonor».">
-            {(a) => <Input {...a} value={name} maxLength={120} onChange={(e) => setName(e.target.value)} />}
+          <Field label="Nombre del lugar" hint="Como lo llama la gente. Por ejemplo: «Mirador de La Leonor»." error={fieldErrors.errors.name}>
+            {(a) => <Input {...a} value={name} maxLength={120} onChange={(e) => { setName(e.target.value); fieldErrors.clear('name'); }} />}
           </Field>
           <Button size="lg" disabled={!kind || name.trim().length < 2} onClick={() => setStep(2)}>Seguir</Button>
           <MissingHint show={!kind || name.trim().length < 2}>{!kind ? 'Para seguir, toca el tipo de lugar.' : 'Para seguir, escribe el nombre del lugar.'}</MissingHint>
@@ -95,8 +98,8 @@ export function PlaceWizard({ staff }: { staff: boolean }) {
         <WizardStep>
           <StepTitle headingRef={heading} title="Cuéntanos del lugar" hint={`${PLACE_KIND[kind] ?? ''} · ${name.trim()}`} />
           {error && <ErrorNote>{error}</ErrorNote>}
-          <Field label="¿Qué hay y por qué vale la pena?" optional hint="Por ejemplo: «se ve todo el valle, hay sombra y un ventorrillo los domingos».">
-            {(a) => <Textarea {...a} value={description} maxLength={3000} onChange={(e) => setDescription(e.target.value)} />}
+          <Field label="¿Qué hay y por qué vale la pena?" optional hint="Por ejemplo: «se ve todo el valle, hay sombra y un ventorrillo los domingos»." error={fieldErrors.errors.description}>
+            {(a) => <Textarea {...a} value={description} maxLength={3000} onChange={(e) => { setDescription(e.target.value); fieldErrors.clear('description'); }} />}
           </Field>
           <PhotoPicker state={photos} hint="Una buena foto ayuda al municipio a aprobarlo." />
           <Button size="lg" onClick={submit} loading={busy}>{staff ? 'Publicar lugar' : 'Enviar propuesta'}</Button>

@@ -62,10 +62,11 @@ export const PLACE_KIND: Record<string, string> = {
 };
 
 export const ROUTE_KIND: Record<string, string> = { ecologica: 'Ecológica', cultural: 'Cultural', aventura: 'Aventura' };
-export const DIFFICULTY: Record<string, { label: string; tone: Tone }> = {
-  baja: { label: 'Fácil', tone: 'ok' },
-  media: { label: 'Media', tone: 'warn' },
-  alta: { label: 'Difícil', tone: 'danger' },
+/** `label` va junto a la palabra "dificultad" (insignia, selector); `phrase` se entiende sola, en una línea de datos. */
+export const DIFFICULTY: Record<string, { label: string; phrase: string; tone: Tone }> = {
+  baja: { label: 'Fácil', phrase: 'Fácil', tone: 'ok' },
+  media: { label: 'Media', phrase: 'Dificultad media', tone: 'warn' },
+  alta: { label: 'Difícil', phrase: 'Difícil', tone: 'danger' },
 };
 
 export const WEEKDAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'] as const;
@@ -112,6 +113,7 @@ const REASON_MESSAGE: Record<string, string> = {
   not_editable: 'Esto ya no se puede editar.',
   invalid_field: 'Algún dato no tiene el formato correcto. Revísalo.',
   unknown_field: 'Algún dato no tiene el formato correcto. Revísalo.',
+  invalid_input: 'Algún dato no tiene el formato correcto. Revísalo.',
   invalid_path: 'La foto no terminó de subir. Inténtalo otra vez.',
   already_registered: 'Esa foto ya estaba guardada.',
   last_active: 'Tiene que quedar al menos una opción activa.',

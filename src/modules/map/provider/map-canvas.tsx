@@ -1,5 +1,6 @@
 'use client';
 import dynamic from 'next/dynamic';
+import { useEffect, useRef, useState } from 'react';
 import { Skeleton } from '@/components/ui/primitives';
 import type { MapCanvasProps } from './maplibre-canvas';
 
@@ -12,6 +13,31 @@ const MaplibreCanvas = dynamic(() => import('./maplibre-canvas'), {
 
 export type { MapCanvasProps };
 
-export function MapCanvas(props: MapCanvasProps) {
+/**
+ * `lazy`: el motor de mapas (unos 300 KB de JS y las teselas) se descarga recién cuando el mapa está por
+ * entrar en pantalla. Para los mapas pequeños de las fichas, que mucha gente no llega a ver (datos prepagados).
+ */
+export function MapCanvas({ lazy = false, ...props }: MapCanvasProps & { lazy?: boolean }) {
+  const [visible, setVisible] = useState(!lazy);
+  const placeholder = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = placeholder.current;
+    if (visible || !el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        setVisible(true);
+        io.disconnect();
+      }
+    }, { rootMargin: '300px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [visible]);
+  if (!visible) {
+    return (
+      <div ref={placeholder} className={props.className ?? 'relative h-full w-full'} role="region" aria-label={props.ariaLabel}>
+        <Skeleton className="absolute inset-0 rounded-none" />
+      </div>
+    );
+  }
   return <MaplibreCanvas {...props} />;
 }

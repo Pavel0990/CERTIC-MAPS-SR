@@ -70,7 +70,7 @@ Abre **http://localhost:3000**.
 | `moderador.prueba@example.com` | Moderador de San Ignacio de Sabaneta |
 | `admin.prueba@example.com` | Administración provincial |
 
-Si las cuentas no existen, se crean con `node --env-file=.env.local scripts/staging-test-users.mjs`. Son solo para `staging`.
+Si las cuentas no existen, se crean con `node --env-file=.env.local scripts/staging-test-users.mjs`. Son solo para `staging`: el script exige `SUPABASE_ENV=staging` en `.env.local`.
 
 ### Verlo desde el teléfono (sin publicar)
 

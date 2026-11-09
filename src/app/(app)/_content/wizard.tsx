@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import type { ReactNode, RefObject } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Check, ChevronLeft, CloudOff, X } from 'lucide-react';
 import { ListenButton } from '@/components/shared/listen-button';
 import { Notice } from '@/components/ui/primitives';
@@ -33,6 +33,60 @@ export function WizardHeader({ step, total, onBack, cancelHref = '/perfil', canc
 /** Contenedor de un paso del asistente (entra con animación). `spaced`: separa sus bloques. */
 export function WizardStep({ spaced = true, children }: { spaced?: boolean; children: ReactNode }) {
   return <section className={cn('animate-step-in flex flex-col px-4 pb-8 pt-5', spaced && 'gap-5')}>{children}</section>;
+}
+
+/**
+ * Lleva el foco a `target` cuando cambia `key` (el paso, la pantalla final…), pero no al abrir el asistente:
+ * así el primer Tab sigue pasando por "Saltar al contenido" y la navegación.
+ */
+export function useFocusOnChange(target: RefObject<HTMLElement | null>, key: string) {
+  const previous = useRef(key);
+  useEffect(() => {
+    if (previous.current === key) return;
+    previous.current = key;
+    target.current?.focus();
+  }, [key, target]);
+}
+
+/**
+ * Errores de validación por campo (§6.3): cada mensaje de zod va a su `Field` (con aria-invalid y
+ * aria-describedby) y el foco salta al primer campo marcado. `fields` dice en qué paso está cada campo.
+ * Se declara después de `useFocusOnChange`, para que el foco del campo gane al del título si cambia el paso.
+ */
+export function useFieldErrors<K extends string>(fields: Record<K, number>) {
+  const [errors, setErrors] = useState<Partial<Record<K, string>>>({});
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    if (attempt === 0) return;
+    const el = document.querySelector<HTMLElement>('[aria-invalid="true"]');
+    el?.closest('details')?.setAttribute('open', '');
+    el?.focus();
+  }, [attempt]);
+  return {
+    errors,
+    /** Reparte los errores. Devuelve el paso del primer campo con error y el mensaje que no tiene campo. */
+    show(issues: readonly { path: readonly PropertyKey[]; message: string }[]) {
+      const next: Partial<Record<K, string>> = {};
+      let step: number | null = null;
+      let general: string | null = null;
+      for (const issue of issues) {
+        const key = String(issue.path[0]) as K;
+        if (key in fields) {
+          next[key] ??= issue.message;
+          step ??= fields[key];
+        } else {
+          general ??= issue.message;
+        }
+      }
+      setErrors(next);
+      setAttempt((a) => a + 1);
+      return { step, general };
+    },
+    /** Quita el error de un campo cuando la persona lo corrige. */
+    clear(key: K) {
+      setErrors((e) => (e[key] ? { ...e, [key]: undefined } : e));
+    },
+  };
 }
 
 /** Título de un paso: recibe el foco al cambiar de paso (lectores de pantalla y teclado). */

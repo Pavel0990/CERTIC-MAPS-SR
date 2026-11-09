@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => console.error(error), [error]);
   return (
-    <main id="contenido" className="mx-auto flex min-h-[60dvh] max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
+    // Un <div> y no un <main>: el layout de la app ya pone el <main id="contenido">
+    <div className="mx-auto flex min-h-[60dvh] max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
       <h1 className="text-[26px] font-extrabold">Algo no salió bien</h1>
       <p className="text-[16px] text-muted">Puede ser la conexión o un problema momentáneo. Lo que ya enviaste está a salvo.</p>
       <div className="flex w-full flex-col gap-2">
@@ -16,6 +17,6 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
         <Link prefetch={false} href="/" className="press inline-flex min-h-12 items-center justify-center rounded-[14px] font-semibold text-ink hover:bg-surface">Volver al inicio</Link>
       </div>
       {error.digest && <p className="font-mono text-xs text-subtle">Código: {error.digest}</p>}
-    </main>
+    </div>
   );
 }

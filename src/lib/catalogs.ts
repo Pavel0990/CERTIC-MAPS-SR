@@ -2,6 +2,7 @@ import 'server-only';
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { createAnonClient } from '@/lib/supabase/anon';
+import { DIFFICULTY, PLACE_KIND } from '@/lib/vocabulary';
 
 export interface Catalogs {
   trafficTypes: { code: string; name: string; icon: string; default_severity: number }[];
@@ -39,13 +40,12 @@ export const getCatalogs = cache(unstable_cache(async (): Promise<Catalogs> => {
 /** Mapas código → nombre para el mapa y las listas. */
 export async function getLabelMaps() {
   const c = await getCatalogs();
-  const PLACE: Record<string, string> = { mirador: 'Mirador', rio_balneario: 'Río o balneario', cultural: 'Sitio cultural', historico: 'Sitio histórico', agroturismo: 'Agroturismo', naturaleza: 'Naturaleza', otro: 'Otro' };
-  const DIFF: Record<string, string> = { baja: 'Fácil', media: 'Dificultad media', alta: 'Difícil' };
+  // Los textos salen de vocabulary.ts (ARCHITECTURE §15), no de una copia aquí
   return {
     trafficTypes: Object.fromEntries(c.trafficTypes.map((x) => [x.code, x.name])),
     categories: {
-      ...PLACE,
-      ...DIFF,
+      ...PLACE_KIND,
+      ...Object.fromEntries(Object.entries(DIFFICULTY).map(([k, d]) => [k, d.phrase])),
       ...Object.fromEntries(c.businessCategories.map((x) => [x.slug, x.name])),
       ...Object.fromEntries(c.requestCategories.map((x) => [x.code, x.name])),
     },

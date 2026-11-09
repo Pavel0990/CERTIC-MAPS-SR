@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { FileUp, MapPinPlus, Undo2, X } from 'lucide-react';
 import { DIFFICULTIES, ROUTE_KINDS, parseGpx, routeProposalInput, thinPoints } from '@/modules/routes';
 import type { LatLng, StaticLayers } from '@/modules/map';
@@ -12,7 +12,7 @@ import { DIFFICULTY, ROUTE_KIND } from '@/lib/vocabulary';
 import { distanceKm, formatDistance } from '@/utils/format';
 import { LocationPicker } from '../_content/location-picker';
 import { PhotoPicker, usePhotos } from '../_content/photo-picker';
-import { ChoiceGrid, DoneScreen, MissingHint, StepTitle, WizardHeader, WizardStep } from '../_content/wizard';
+import { ChoiceGrid, DoneScreen, MissingHint, StepTitle, useFieldErrors, useFocusOnChange, WizardHeader, WizardStep } from '../_content/wizard';
 import { submitRoute } from './actions';
 
 type Kind = (typeof ROUTE_KINDS)[number];
@@ -41,7 +41,8 @@ export function RouteWizard({ staff }: { staff: boolean }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  useEffect(() => heading.current?.focus(), [step, done]);
+  useFocusOnChange(heading, `${step}-${done ? 1 : 0}`);
+  const fieldErrors = useFieldErrors({ name: 1, durationMin: 1, description: 3 });
 
   const minutes = Number(duration);
   const step1Ok = name.trim().length >= 2 && !!kind && !!difficulty && Number.isInteger(minutes) && minutes >= 5 && minutes <= 2880;
@@ -98,7 +99,9 @@ export function RouteWizard({ staff }: { staff: boolean }) {
       name, kind, difficulty, durationMin: minutes, description, geojson: { type: 'LineString', coordinates: points },
     });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Revisa los datos.');
+      const { step: at, general } = fieldErrors.show(parsed.error.issues);
+      if (general) setError(general);
+      if (at === 1) setStep(1);
       return;
     }
     setBusy(true);
@@ -137,13 +140,13 @@ export function RouteWizard({ staff }: { staff: boolean }) {
           <p className="-mt-2 text-[15px]">
             ¿Es un solo sitio? <Link prefetch={false} href="/proponer" className="font-semibold text-brand underline">Proponer un lugar</Link>
           </p>
-          <Field label="Nombre de la ruta" hint="Por ejemplo: «Sendero del río Inaje».">
-            {(a) => <Input {...a} value={name} maxLength={120} onChange={(e) => setName(e.target.value)} />}
+          <Field label="Nombre de la ruta" hint="Por ejemplo: «Sendero del río Inaje»." error={fieldErrors.errors.name}>
+            {(a) => <Input {...a} value={name} maxLength={120} onChange={(e) => { setName(e.target.value); fieldErrors.clear('name'); }} />}
           </Field>
           <ChoiceGrid legend="¿Qué tipo de ruta es?" columns={3} options={ROUTE_KINDS.map((k) => ({ value: k, label: ROUTE_KIND[k] ?? k }))} value={kind} onChange={setKind} />
           <ChoiceGrid legend="¿Qué tan difícil es?" columns={3} options={DIFFICULTIES.map((d) => ({ value: d, label: DIFFICULTY[d]?.label ?? d }))} value={difficulty} onChange={setDifficulty} />
-          <Field label="¿Cuántos minutos dura?" hint="Aproximado, a paso tranquilo. Por ejemplo: 90 para hora y media.">
-            {(a) => <Input {...a} type="number" inputMode="numeric" min={5} max={2880} value={duration} onChange={(e) => setDuration(e.target.value)} />}
+          <Field label="¿Cuántos minutos dura?" hint="Aproximado, a paso tranquilo. Por ejemplo: 90 para hora y media." error={fieldErrors.errors.durationMin}>
+            {(a) => <Input {...a} type="number" inputMode="numeric" min={5} max={2880} value={duration} onChange={(e) => { setDuration(e.target.value); fieldErrors.clear('durationMin'); }} />}
           </Field>
           <Button size="lg" disabled={!step1Ok} onClick={() => setStep(2)}>Seguir</Button>
           <MissingHint show={!step1Ok}>Para seguir, completa el nombre, el tipo, la dificultad y los minutos (de 5 en adelante).</MissingHint>
@@ -186,8 +189,8 @@ export function RouteWizard({ staff }: { staff: boolean }) {
         <WizardStep>
           <StepTitle headingRef={heading} title="Cuéntanos de la ruta" hint={`${name.trim()} · ${formatDistance(km)}`} />
           {error && <ErrorNote>{error}</ErrorNote>}
-          <Field label="¿Qué se ve y qué hay que saber?" optional hint="Dónde empieza, qué llevar, si hay ríos que cruzar o tramos difíciles.">
-            {(a) => <Textarea {...a} value={description} maxLength={3000} onChange={(e) => setDescription(e.target.value)} />}
+          <Field label="¿Qué se ve y qué hay que saber?" optional hint="Dónde empieza, qué llevar, si hay ríos que cruzar o tramos difíciles." error={fieldErrors.errors.description}>
+            {(a) => <Textarea {...a} value={description} maxLength={3000} onChange={(e) => { setDescription(e.target.value); fieldErrors.clear('description'); }} />}
           </Field>
           <PhotoPicker state={photos} hint="Fotos del camino ayudan a otras personas a animarse." />
           <Button size="lg" onClick={submit} loading={busy}>{staff ? 'Publicar ruta' : 'Enviar propuesta'}</Button>

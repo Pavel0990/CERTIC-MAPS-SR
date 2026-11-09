@@ -28,7 +28,13 @@ export function ReviewActions({ entity, id, status, publishable = true }: { enti
       {entity === 'business' && status === 'approved' && (
         <>
           <ActionButton label="Suspender" done="Suspendido. Salió del mapa y sus promociones se pausaron." variant="danger" icon={<Pause className="size-4" />} run={(r) => go('suspended', r)} ask={{ title: 'Suspender negocio', label: 'Motivo', required: true }} />
-          <ActionButton label="Archivar" done="Archivado." icon={<Archive className="size-4" />} run={() => go('archived')} />
+          <ActionButton
+            label="Archivar"
+            done="Archivado."
+            icon={<Archive className="size-4" />}
+            run={() => go('archived')}
+            confirm={{ title: '¿Archivar este negocio?', message: 'Sale del mapa y de las listas. Úsalo si el negocio ya no existe; si solo hay que corregir algo, mejor suspéndelo con un motivo.' }}
+          />
         </>
       )}
       {(entity === 'place' || entity === 'route') && status === 'pending' && (

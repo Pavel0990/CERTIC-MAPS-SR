@@ -16,7 +16,7 @@ import { newIdempotencyKey } from '@/lib/schemas';
 import { SEVERITY, reasonMessage } from '@/lib/vocabulary';
 import { cn } from '@/utils/cn';
 import { PhotoPicker, usePhotos } from '../_content/photo-picker';
-import { DoneScreen, MissingHint, StepTitle, WizardHeader, WizardStep } from '../_content/wizard';
+import { DoneScreen, MissingHint, StepTitle, useFocusOnChange, WizardHeader, WizardStep } from '../_content/wizard';
 import { SimilarNotice } from './similar-notice';
 
 export interface ReportCatalogs {
@@ -68,7 +68,7 @@ export function ReportWizard({ catalogs, initialType }: { catalogs: ReportCatalo
 
   // Llevar el foco al título de cada paso (lectores de pantalla y teclado)
   const showingSimilar = !!similar;
-  useEffect(() => (showingSimilar ? similarHeading : heading).current?.focus(), [step, result, showingSimilar]);
+  useFocusOnChange(showingSimilar ? similarHeading : heading, `${step}-${result ? 1 : 0}-${showingSimilar ? 1 : 0}`);
 
   const traffic = catalogs.trafficTypes;
   const incidents = catalogs.requestCategories.filter((c) => c.kind === 'incident');
