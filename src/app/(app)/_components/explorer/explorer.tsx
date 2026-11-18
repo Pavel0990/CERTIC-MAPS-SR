@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
+import { preconnect } from 'react-dom';
 import { Flame, Layers, List, LocateFixed, Map as MapIcon, WifiOff } from 'lucide-react';
 import { ALL_LAYERS, MapCanvas, type LatLng, type MapCanvasProps, type LayerId, type MapFeature, type MapFeatureCollection } from '@/modules/map';
 import { IconButton } from '@/components/ui/button';
@@ -28,6 +29,8 @@ export function Explorer({
   /** Encuadre al abrir; por defecto, la provincia completa */
   initialView?: MapCanvasProps['initialView'];
 }) {
+  // Abre la conexión con el servidor de teselas mientras baja MapLibre (en 4G lento son cientos de ms)
+  preconnect('https://tiles.openfreemap.org', { crossOrigin: 'anonymous' });
   const toast = useToast();
   const online = useOnlineStatus();
   const { state: geo, locate } = useGeolocation();
@@ -132,9 +135,18 @@ export function Explorer({
 
       {/* Controles laterales */}
       <div className="absolute bottom-[calc(var(--sheet-h,0px)+12px)] right-3 z-20 flex flex-col gap-2 transition-[bottom,opacity] duration-300 motion-reduce:transition-none in-data-[sheet=open]:invisible in-data-[sheet=open]:opacity-0 md:bottom-6">
-        <IconButton label={layersOpen ? 'Ocultar capas' : 'Capas del mapa'} aria-expanded={layersOpen} onClick={() => setLayersOpen((o) => !o)} className={cn('md:hidden', layersOpen && 'bg-ink text-on-ink hover:bg-ink-strong')}>
-          <Layers className="size-5" />
-        </IconButton>
+        {/* Con texto, no solo el ícono: para quien no reconoce el símbolo de capas */}
+        <button
+          type="button"
+          aria-expanded={layersOpen}
+          onClick={() => setLayersOpen((o) => !o)}
+          className={cn(
+            'press inline-flex h-11 items-center gap-1.5 self-end rounded-full px-3.5 text-[15px] font-semibold shadow-[var(--shadow-card)] md:hidden',
+            layersOpen ? 'bg-ink text-on-ink hover:bg-ink-strong' : 'bg-surface text-ink hover:bg-canvas',
+          )}
+        >
+          <Layers className="size-5" aria-hidden /> {layersOpen ? 'Ocultar' : 'Capas'}
+        </button>
         <IconButton label={view === 'map' ? 'Ver como lista' : 'Ver mapa'} onClick={() => setView((v) => (v === 'map' ? 'list' : 'map'))}>
           {view === 'map' ? <List className="size-5" /> : <MapIcon className="size-5" />}
         </IconButton>

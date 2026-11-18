@@ -5,7 +5,8 @@ import { cn } from '@/utils/cn';
 /** Botones para mostrar u ocultar cada capa del mapa. */
 export function LayerChips({ layers, onToggle, heat }: { layers: LayerId[]; onToggle: (id: LayerId) => void; heat?: { on: boolean; onToggle: () => void } }) {
   return (
-    <div className="pointer-events-auto -mx-3 flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0" role="group" aria-label="Capas del mapa">
+    // En varias filas también en el teléfono: deslizando de lado, "Reportes" y "Zonas" quedaban fuera de la pantalla
+    <div className="pointer-events-auto flex flex-wrap gap-2 pb-1" role="group" aria-label="Capas del mapa">
       {LAYERS.map((l) => {
         const on = layers.includes(l.id);
         return (

@@ -87,12 +87,13 @@ async function attempt(
     await outbox.add({ ...item, state: 'needs_login' });
     return { outcome: 'needs_login' };
   }
-  // Errores pasajeros (servidor, demasiadas solicitudes, tiempo agotado): se reintenta más tarde
-  if (res.status >= 500 || res.status === 408 || res.status === 429) {
+  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  // Errores pasajeros (servidor, tiempo agotado, 429 de la plataforma): se reintenta más tarde.
+  // El 429 de la base (límite de reportes por hora) trae su motivo y sí se le dice a la persona: reintentar no sirve.
+  if (res.status >= 500 || res.status === 408 || (res.status === 429 && body.reason !== 'rate_limited')) {
     await outbox.add({ ...item, attempts: item.attempts + 1 });
     return { outcome: 'queued' };
   }
-  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (body.status !== 'ok') {
     await outbox.remove(item.id);
     return { outcome: 'rejected', reason: String(body.reason ?? (body.error as { code?: string } | undefined)?.code ?? 'unknown') };
@@ -110,12 +111,13 @@ async function attempt(
 export async function flushOutbox(uploadPhotos: Parameters<typeof sendOrQueue>[1]) {
   const items = (await outbox.all()).filter((i) => i.state !== 'rejected');
   let sent = 0;
+  let photoErrors = 0; // fotos que no subieron: el reporte llegó, pero hay que decirlo
   const rejected: string[] = []; // motivos, para avisar: un reporte guardado nunca desaparece en silencio
   for (const it of items) {
     const r = await attempt({ ...it, state: 'pending' }, uploadPhotos);
-    if (r.outcome === 'sent') sent++;
+    if (r.outcome === 'sent') { sent++; photoErrors += r.photoErrors.length; }
     if (r.outcome === 'rejected') rejected.push(r.reason);
     if (r.outcome === 'queued') break; // sigue sin red: no insistir con el resto
   }
-  return { sent, rejected, remaining: (await outbox.all()).length };
+  return { sent, rejected, photoErrors, remaining: (await outbox.all()).length };
 }

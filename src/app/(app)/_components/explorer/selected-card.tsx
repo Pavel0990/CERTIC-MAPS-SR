@@ -35,7 +35,8 @@ export function SelectedCard({ feature, catalogs, userLocation, onClose }: { fea
           <span className="text-sm text-muted">Alerta vial · sale sola del mapa cuando vence</span>
         </div>
       )}
-      <div className="mt-4 flex gap-2">
+      {/* Por debajo de 360 px no caben lado a lado sin partir el texto: van uno sobre otro */}
+      <div className="mt-4 flex gap-2 max-[359px]:flex-col">
         {href && (
           <Link prefetch={false} href={href} className="press inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-ink px-4 font-semibold text-on-ink hover:bg-ink-strong">
             Ver detalles <ArrowRight className="size-4" aria-hidden />

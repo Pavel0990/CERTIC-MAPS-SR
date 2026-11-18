@@ -30,7 +30,16 @@ export function DirectionsExtras({ entity, id, point }: { entity: Entity; id: st
         <button type="button" onClick={locate} disabled={state.status === 'locating'} className={link}>
           <MapPin className="size-4" aria-hidden /> {state.status === 'locating' ? 'Buscando tu ubicación…' : '¿A qué distancia estoy?'}
         </button>
-      ) : null}
+      ) : state.status === 'timeout' ? (
+        <button type="button" onClick={locate} className={link}>
+          <MapPin className="size-4" aria-hidden /> No encontramos tu ubicación. Intentar otra vez
+        </button>
+      ) : (
+        // Sin permiso o sin GPS: se dice por qué, en vez de que el botón desaparezca
+        <span role="status" className="inline-flex min-h-11 items-center gap-1.5 text-muted">
+          <MapPin className="size-4 shrink-0" aria-hidden /> {state.status === 'denied' ? 'Sin permiso para ver tu ubicación' : 'No pudimos saber dónde estás'}
+        </span>
+      )}
       <TrackedLink entity={entity} id={id} metric="directions" href={wazeUrl(point.lat, point.lng)} className={link}>
         Abrir en Waze
       </TrackedLink>

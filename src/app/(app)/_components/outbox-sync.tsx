@@ -21,11 +21,12 @@ export function OutboxSync() {
       if (flushing || !navigator.onLine) return;
       flushing = true;
       try {
-        const { sent, rejected } = await flushOutbox((entity, id, blobs) => uploadPhotos(entity, id, blobs));
+        const { sent, rejected, photoErrors } = await flushOutbox((entity, id, blobs) => uploadPhotos(entity, id, blobs));
         if (sent > 0) {
           toast.show(sent === 1 ? 'Enviamos el reporte que tenías pendiente.' : `Enviamos ${sent} reportes que tenías pendientes.`);
           router.refresh();
         }
+        if (photoErrors > 0) toast.show('El reporte llegó, pero no pudimos subir su foto.', 'error');
         // Un reporte guardado que el municipio no acepta (fuera de la provincia, límite de envíos…) se avisa con el motivo
         for (const reason of rejected) toast.show(`Un reporte guardado no se pudo enviar: ${reasonMessage(reason)}`, 'error');
       } catch {
@@ -36,7 +37,9 @@ export function OutboxSync() {
     };
     void sync();
     window.addEventListener('online', sync);
-    return () => window.removeEventListener('online', sync);
+    // Si falló el servidor (no la señal) no llega ningún evento 'online': se reintenta cada 2 minutos
+    const retry = window.setInterval(sync, 120_000);
+    return () => { window.removeEventListener('online', sync); window.clearInterval(retry); };
   }, [toast, router]);
 
   return null;

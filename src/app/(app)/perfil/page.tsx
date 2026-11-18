@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Bell, ChevronRight, LayoutDashboard, MapPinPlus, Route, Store } from 'lucide-react';
+import { Bell, ChevronRight, Download, LayoutDashboard, MapPinPlus, Route, Store } from 'lucide-react';
 import { countUnread, getPreferences, TOPICS } from '@/modules/notifications/server';
 import { PageShell } from '@/components/shared/page';
 import { Card, Eyebrow } from '@/components/ui/primitives';
@@ -63,6 +63,7 @@ export default async function ProfilePage() {
             <MenuLink href="/negocios/registrar" icon={<Store className="size-5" />} label="Registrar un negocio" />
             <MenuLink href="/proponer" icon={<MapPinPlus className="size-5" />} label="Proponer un lugar" />
             <MenuLink href="/proponer?que=ruta" icon={<Route className="size-5" />} label="Proponer una ruta" />
+            <MenuLink href="/instalar" icon={<Download className="size-5" />} label="Instalar la app en el teléfono" />
           </Card>
           <Card className="p-5">
             <ThemePicker initial={theme} />

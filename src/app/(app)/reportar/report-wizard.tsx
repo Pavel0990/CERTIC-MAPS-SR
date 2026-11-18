@@ -324,7 +324,7 @@ function Done({ result, flow, headingRef }: { result: SendResult; flow: 'traffic
   const sent = result.outcome === 'sent' ? result : null;
   const published = sent?.response.report_status === 'active';
   const message =
-    result.outcome === 'queued' ? 'Lo guardamos en tu teléfono. Se enviará solo cuando vuelva la señal.'
+    result.outcome === 'queued' ? 'Lo guardamos en tu teléfono. Se enviará solo en cuanto se pueda, aunque cierres la app.'
     : result.outcome === 'needs_login' ? 'Tu sesión venció. Entra de nuevo y lo enviaremos.'
     : flow === 'traffic' ? (published ? 'Ya aparece en el mapa para avisar a todos.' : 'Un moderador lo confirmará pronto y aparecerá en el mapa.')
     : 'El municipio lo recibió. Te avisaremos cada vez que cambie su estado.';

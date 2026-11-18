@@ -38,7 +38,9 @@ export function speechChunks(text: string, max = 180) {
 }
 
 export function ListenButton({ text, variant = 'block', className }: { text: string; variant?: 'block' | 'compact'; className?: string }) {
-  const supported = useSyncExternalStore(subscribe, hasSpeech, () => false);
+  // En el servidor se da por hecho que hay voz (casi todos los teléfonos la tienen): así el botón ya ocupa su lugar
+  // y la ficha no salta al aparecer. Si el navegador no tiene voz, se quita al hidratar.
+  const supported = useSyncExternalStore(subscribe, hasSpeech, () => true);
   const [speaking, setSpeaking] = useState(false);
   const runId = useRef(0);
 
