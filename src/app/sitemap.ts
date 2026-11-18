@@ -10,5 +10,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/negocios`, changeFrequency: 'daily', priority: 0.8 },
     { url: `${base}/turismo`, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${base}/rutas`, changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${base}/instalar`, changeFrequency: 'monthly', priority: 0.5 },
   ];
 }

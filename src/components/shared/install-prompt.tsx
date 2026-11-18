@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { Download, Share, SquarePlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { isIos, isStandalone } from '@/lib/pwa';
+import { cn } from '@/utils/cn';
 
 /** Evento de Chrome/Android para instalar la app (no está en los tipos de TypeScript) */
 interface InstallEvent extends Event {
@@ -45,7 +46,25 @@ function snooze(forever = false) {
   }
 }
 
-type Kind = 'prompt' | 'ios' | 'in_app' | 'menu';
+export type InstallKind = 'prompt' | 'ios' | 'in_app' | 'menu';
+
+/** Cómo se instala en este navegador. Se llama en el cliente, después de montar. */
+export function installKind(): InstallKind {
+  // En iPhone el navegador de WhatsApp sí es Safari por dentro, pero no tiene «Añadir a pantalla de inicio»
+  return IN_APP.test(navigator.userAgent) ? 'in_app' : deferred ? 'prompt' : isIos() ? 'ios' : 'menu';
+}
+
+/** Abre la ventana de instalación del teléfono. `null` si el navegador ya no la ofrece (usar los pasos del menú). */
+export async function promptInstall() {
+  const e = deferred;
+  if (!e) return null;
+  deferred = null;
+  await e.prompt();
+  const { outcome } = await e.userChoice;
+  if (outcome === 'accepted') snooze(true);
+  else snooze();
+  return outcome;
+}
 
 /**
  * En el teléfono, ofrece instalar SR Conecta en la pantalla de inicio (abre más rápido y funciona sin señal).
@@ -54,7 +73,7 @@ type Kind = 'prompt' | 'ios' | 'in_app' | 'menu';
  */
 export function InstallPrompt() {
   const pathname = usePathname();
-  const [kind, setKind] = useState<Kind | null>(null);
+  const [kind, setKind] = useState<InstallKind | null>(null);
   const [closed, setClosed] = useState(false);
 
   useEffect(() => {
@@ -62,11 +81,7 @@ export function InstallPrompt() {
     if (!phone || isStandalone() || snoozed()) return;
     const onInstalled = () => { snooze(true); setKind(null); };
     window.addEventListener('appinstalled', onInstalled);
-    const t = window.setTimeout(() => {
-      const ua = navigator.userAgent;
-      // En iPhone el navegador de WhatsApp sí es Safari por dentro, pero no tiene «Añadir a pantalla de inicio»
-      setKind(IN_APP.test(ua) ? 'in_app' : deferred ? 'prompt' : isIos() ? 'ios' : 'menu');
-    }, DELAY_MS);
+    const t = window.setTimeout(() => setKind(installKind()), DELAY_MS);
     return () => { window.clearTimeout(t); window.removeEventListener('appinstalled', onInstalled); };
   }, []);
 
@@ -77,13 +92,7 @@ export function InstallPrompt() {
     setClosed(true);
   }
   async function install() {
-    const e = deferred;
-    if (!e) return setKind('menu');
-    deferred = null;
-    await e.prompt();
-    const { outcome } = await e.userChoice;
-    if (outcome === 'accepted') snooze(true);
-    else snooze();
+    if (!(await promptInstall())) return setKind('menu');
     setClosed(true);
   }
 
@@ -111,26 +120,36 @@ export function InstallPrompt() {
           <Button className="flex-1" onClick={install}><Download className="size-5" aria-hidden /> Instalar</Button>
         </div>
       )}
-      {kind === 'ios' && (
-        <ol className="mt-3 flex flex-col gap-2 text-[16px]">
+      {kind !== 'prompt' && <InstallSteps kind={kind} className="mt-3" />}
+      {kind !== 'prompt' && <Button variant="ghost" size="sm" className="mt-2 w-full text-muted" onClick={later}>Ahora no</Button>}
+    </div>
+  );
+}
+
+/** Los pasos a mano cuando el navegador no ofrece su ventana de instalación (también en /instalar). */
+export function InstallSteps({ kind, className }: { kind: Exclude<InstallKind, 'prompt'>; className?: string }) {
+  if (kind === 'in_app') {
+    return (
+      <p className={cn('rounded-[14px] bg-canvas p-3 text-[16px]', className)}>
+        Estás dentro de otra app. Toca el menú <strong>⋮</strong> o <strong>···</strong> y elige <strong>Abrir en el navegador</strong> (Chrome o Safari). Desde ahí podrás instalarla.
+      </p>
+    );
+  }
+  return (
+    <ol className={cn('flex flex-col gap-2 text-[16px]', className)}>
+      {kind === 'ios' ? (
+        <>
           <li className="flex items-start gap-2"><Step n={1} /><span>Toca <Share className="inline size-5 align-[-4px] text-brand" aria-label="Compartir" /> abajo en Safari</span></li>
           <li className="flex items-start gap-2"><Step n={2} /><span>Baja y toca <SquarePlus className="inline size-5 align-[-4px]" aria-hidden /> <strong>Añadir a pantalla de inicio</strong></span></li>
           <li className="flex items-start gap-2"><Step n={3} /><span>Toca <strong>Añadir</strong></span></li>
-        </ol>
-      )}
-      {kind === 'menu' && (
-        <ol className="mt-3 flex flex-col gap-2 text-[16px]">
+        </>
+      ) : (
+        <>
           <li className="flex items-start gap-2"><Step n={1} /><span>Toca el menú <strong className="text-[20px] leading-none">⋮</strong> arriba a la derecha</span></li>
           <li className="flex items-start gap-2"><Step n={2} /><span>Toca <strong>Instalar app</strong> o <strong>Añadir a pantalla de inicio</strong></span></li>
-        </ol>
+        </>
       )}
-      {kind === 'in_app' && (
-        <p className="mt-3 rounded-[14px] bg-canvas p-3 text-[16px]">
-          Estás dentro de otra app. Toca el menú <strong>⋮</strong> o <strong>···</strong> y elige <strong>Abrir en el navegador</strong> (Chrome o Safari). Desde ahí podrás instalarla.
-        </p>
-      )}
-      {kind !== 'prompt' && <Button variant="ghost" size="sm" className="mt-2 w-full text-muted" onClick={later}>Ahora no</Button>}
-    </div>
+    </ol>
   );
 }
 
