@@ -5,7 +5,7 @@
 ## 0. Al 17/11/2026 (10 días para congelar)
 
 - **Integrado del 04/11 al 17/11:** hoja inferior del mapa en el teléfono (#25), "Cómo llegar" con distancia y Waze, y la capa Rutas que oculta también los trazados (#26), auditoría integral (#27) y 10 actualizaciones de dependencias, entre ellas Next 16.4.5 y MapLibre 6.17.0 (#29: `check`, `build` y `test:db` 207/207 en verde). El #30 se cerró porque ya venía dentro del #29.
-- **Publicado el 17/11:** el sitio sirve la versión nueva (MapLibre 6.17.0, salud "ok"). Ojo: cuando `feat/app-mvp` recibe un commit que ya se publicó como vista previa desde `main`, Vercel no lo vuelve a publicar en producción; hizo falta un commit nuevo. Cambiar la rama de producción a `main` (§5.2) lo evita.
+- **Publicado el 17/11:** el sitio sirve la versión nueva (MapLibre 6.17.0, salud "ok"). Desde el 18/11, Vercel publica desde `main` (§5.2).
 - **Rutas:** las 3 todavía muestran en público "conviene validarlo con el municipio". Corrección lista: `npm run backup` y después `npx supabase db query --remote -f supabase/ops/fix_route_validation_note.sql`. Validarlas en el terreno sigue pendiente ([salida de campo](salida-de-campo.md)).
 - **Datos de prueba en la base:** el contenido de demostración ya no está. Quedan 10 alertas de tránsito de prueba (texto sin sentido o "Para prueba nomás!"), que no se ven en el mapa (vencidas, rechazadas o resueltas) pero sí cuentan en el panel y en el PDF; 3 cuentas `@example.*` de las pruebas E2E, que deben quedarse; y **0 reportes al municipio**, cuando para la demo hace falta al menos uno real en la bandeja (§5.3).
 - **Atrasado:** validación de rutas (06/11) y ronda 1 con vecinos (08/11). Si no da tiempo para las dos rondas, conviene hacer una sola con 3–5 personas para tener cifras en la diapositiva 6.
@@ -115,7 +115,7 @@ La limpieza del 21/10 quitó código muerto, unificó ayudas repetidas y puso al
 
 | Tarea | Detalle |
 |---|---|
-| **Rama de producción en Vercel** | Hoy Vercel publica desde `feat/app-mvp`, no desde `main` (comprobado el 26/10). Cambiarlo en *Settings → Git → Production Branch* → `main`, con una cuenta dueña del equipo `certic-sr-maps`. Mientras tanto, cada cambio de `main` se lleva también a `feat/app-mvp` ([DEPLOYMENT.md §4.1](../DEPLOYMENT.md#41-estado-actual-05102026)) |
+| ✅ ~~**Rama de producción en Vercel**~~ | Hecho el 18/11: Vercel publica desde `main` ([DEPLOYMENT.md §4.1](../DEPLOYMENT.md#41-estado-actual-05102026)) |
 | **Supabase de producción** | Hoy la app publicada usa la base de staging. Pasos: [DEPLOYMENT.md §3](../DEPLOYMENT.md#3-supabase-de-producción) |
 | **Correo con Resend y dominio propio** | Hoy los correos de acceso salen por un Gmail personal |
 | **Cloudflare** | Para el captcha (gratis). El código ya está; pasos en [DEPLOYMENT.md §4](../DEPLOYMENT.md#4-vercel) |
@@ -174,7 +174,7 @@ Solo si sobra tiempo después de §5.1–§5.3:
 - Un *issue* por problema en GitHub, con la etiqueta `contenido`, `ux` o `plataforma`.
 - Antes de cada push: `npm run check`, `npm run test:db` y `npm run test:e2e`.
 - Nadie toca la base a mano ni publica en Vercel desde su computadora: el contenido se edita en el panel y el código entra por `main`.
-- Migraciones: `npm run backup` → `npx supabase db push --remote --dry-run` → `npx supabase db push --remote` → y después el código a `main` y `feat/app-mvp`. Sin `--remote`, la CLI v3 trabaja sobre la base local.
+- Migraciones: `npm run backup` → `npx supabase db push --remote --dry-run` → `npx supabase db push --remote` → y después el código a `main`. Sin `--remote`, la CLI v3 trabaja sobre la base local.
 - Secretos solo en `.env.local` y en los secretos de GitHub, Vercel y Supabase; nunca en el chat ni en los commits. Nunca `push --force` a `main`.
 
 ## 8. Fuera de alcance
