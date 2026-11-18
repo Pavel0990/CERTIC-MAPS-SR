@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Download, Share, SquarePlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,8 +16,8 @@ interface InstallEvent extends Event {
 const HIDDEN_KEY = 'sr-instalar-oculto';
 /** "Ahora no" lo calla una semana; después se vuelve a ofrecer */
 const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
-/** Espera antes de ofrecerlo: primero que la persona vea la app */
-const DELAY_MS = 4000;
+/** Espera antes de ofrecerlo: primero que la persona use la app (a los 4 s tapaba el mapa recién abierto) */
+const DELAY_MS = 30000;
 /** Solo en las pantallas de explorar, nunca a mitad de un formulario */
 const PAGES = ['/', '/mapa', '/negocios', '/turismo', '/rutas'];
 /** Navegadores dentro de otras apps: desde ahí no se puede instalar */
@@ -68,8 +69,8 @@ export async function promptInstall() {
 
 /**
  * En el teléfono, ofrece instalar SR Conecta en la pantalla de inicio (abre más rápido y funciona sin señal).
- * Android/Chrome: un toque abre la ventana de instalación del teléfono. iPhone: los pasos de Safari.
- * Desde WhatsApp o Instagram: pide abrir el enlace en el navegador, porque ahí no se puede instalar.
+ * Android/Chrome: un toque abre la ventana de instalación del teléfono. En los demás casos (iPhone, otro navegador,
+ * dentro de WhatsApp o Instagram), "Ver cómo" lleva a /instalar, que explica los pasos de cada uno.
  */
 export function InstallPrompt() {
   const pathname = usePathname();
@@ -107,21 +108,24 @@ export function InstallPrompt() {
         <img src="/icons/icon-192.png" alt="" width={48} height={48} className="size-12 shrink-0 rounded-[12px]" />
         <div className="min-w-0 flex-1">
           <p id="instalar-titulo" className="text-[17px] font-bold leading-tight">¿Quieres instalar SR Conecta?</p>
-          <p className="mt-0.5 text-[15px] text-muted">Queda como app en tu teléfono, abre más rápido y funciona sin señal. Es gratis.</p>
+          <p className="mt-0.5 text-[15px] text-muted">Abre más rápido y funciona sin señal. Gratis.</p>
         </div>
         <button type="button" onClick={later} aria-label="Cerrar" className="press -mr-1 -mt-1 flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-canvas">
           <X className="size-5" />
         </button>
       </div>
 
-      {kind === 'prompt' && (
-        <div className="mt-3 flex gap-2">
-          <Button variant="ghost" className="flex-1" onClick={later}>Ahora no</Button>
+      {/* Compacto para no tapar el mapa: los pasos a mano (iPhone, otros navegadores) están en /instalar */}
+      <div className="mt-3 flex gap-2">
+        <Button variant="ghost" className="flex-1" onClick={later}>Ahora no</Button>
+        {kind === 'prompt' ? (
           <Button className="flex-1" onClick={install}><Download className="size-5" aria-hidden /> Instalar</Button>
-        </div>
-      )}
-      {kind !== 'prompt' && <InstallSteps kind={kind} className="mt-3" />}
-      {kind !== 'prompt' && <Button variant="ghost" size="sm" className="mt-2 w-full text-muted" onClick={later}>Ahora no</Button>}
+        ) : (
+          <Link prefetch={false} href="/instalar" onClick={later} className="press inline-flex h-11 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[15px] font-semibold text-on-brand shadow-sm hover:bg-brand-strong">
+            Ver cómo
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
@@ -145,7 +149,7 @@ export function InstallSteps({ kind, className }: { kind: Exclude<InstallKind, '
         </>
       ) : (
         <>
-          <li className="flex items-start gap-2"><Step n={1} /><span>Toca el menú <strong className="text-[20px] leading-none">⋮</strong> arriba a la derecha</span></li>
+          <li className="flex items-start gap-2"><Step n={1} /><span>Toca el menú del navegador (<strong className="text-[20px] leading-none">⋮</strong> o <strong className="text-[20px] leading-none">≡</strong>)</span></li>
           <li className="flex items-start gap-2"><Step n={2} /><span>Toca <strong>Instalar app</strong> o <strong>Añadir a pantalla de inicio</strong></span></li>
         </>
       )}

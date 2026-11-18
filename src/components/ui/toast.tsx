@@ -17,7 +17,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (message: string, tone: ToastTone = 'ok') => {
       const id = ++seq.current;
       setItems((xs) => [...xs.slice(-2), { id, tone, message }]);
-      setTimeout(() => dismiss(id), tone === 'error' ? 7000 : 4000);
+      // Tiempo para leer con calma (lectura lenta): 7 s los avisos, 12 s los errores; siempre se pueden cerrar antes
+      setTimeout(() => dismiss(id), tone === 'error' ? 12000 : 7000);
     },
     [dismiss],
   );
@@ -40,8 +41,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             >
               <I className="size-5 shrink-0" aria-hidden />
               <span className="flex-1">{t.message}</span>
-              <button type="button" onClick={() => dismiss(t.id)} aria-label="Cerrar aviso" className="rounded-full p-1 hover:bg-white/15">
-                <X className="size-4" />
+              <button type="button" onClick={() => dismiss(t.id)} aria-label="Cerrar aviso" className="-my-2 -mr-2 flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-white/15">
+                <X className="size-5" />
               </button>
             </div>
           );

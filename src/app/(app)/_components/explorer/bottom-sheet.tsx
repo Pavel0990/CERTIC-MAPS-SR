@@ -22,7 +22,6 @@ export function BottomSheet({ title, aside, children, labelledBy }: {
 }) {
   const sheet = useRef<HTMLElement>(null);
   const head = useRef<HTMLDivElement>(null);
-  const body = useRef<HTMLDivElement>(null);
   const content = useRef<HTMLDivElement>(null);
   const [mobile, setMobile] = useState(false);
   const [open, setOpen] = useState(false);
@@ -107,6 +106,8 @@ export function BottomSheet({ title, aside, children, labelledBy }: {
       className={cn(
         'flex flex-col overflow-hidden bg-surface shadow-[var(--shadow-float)]',
         'rounded-t-[22px] md:rounded-[22px]',
+        // Antes de medir (en el servidor y hasta hidratar) ya sale plegada en el teléfono: si no, la pantalla saltaba
+        !mobile && 'max-md:max-h-[74px]',
         dragH === null && 'transition-[height] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none',
       )}
     >
@@ -130,7 +131,7 @@ export function BottomSheet({ title, aside, children, labelledBy }: {
         </div>
       </div>
       {/* Plegada, el contenido no se puede enfocar con el teclado ni lo lee el lector de pantalla */}
-      <div ref={body} inert={mobile && !open && dragH === null} className={cn('min-h-0 flex-1 px-4 pb-4', mobile ? 'overflow-y-auto overscroll-contain' : '')}>
+      <div inert={mobile && !open && dragH === null} className={cn('min-h-0 flex-1 px-4 pb-4', mobile ? 'overflow-y-auto overscroll-contain' : '')}>
         <div ref={content}>{children}</div>
       </div>
     </section>

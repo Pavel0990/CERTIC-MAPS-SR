@@ -140,17 +140,20 @@ export default function MaplibreCanvas({
     };
 
     map.on('load', async () => {
-      // En mapas pequeños la atribución (© OpenStreetMap) queda plegada en el botón "i": abierta tapaba media ficha
-      if (container.current && container.current.clientWidth < 640) {
+      // En mapas pequeños o bajos (teléfono en horizontal) la atribución (© OpenStreetMap) queda plegada en el botón "i":
+      // abierta tapaba media ficha o el botón de ubicación
+      if (container.current && (container.current.clientWidth < 640 || container.current.clientHeight < 500)) {
         container.current.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
       }
-      // Íconos de los marcadores (uno por capa, en alta resolución)
-      await Promise.all(
+      // Íconos de los marcadores (uno por capa, en alta resolución). Si uno falla, el resto del mapa se pinta igual
+      await Promise.allSettled(
         LAYERS.map(async (l) => {
           const img = await loadImage(markerSvg(l.color, ICON_PATHS[l.id], 88), 88);
           if (!map.hasImage(`pin-${l.id}`)) map.addImage(`pin-${l.id}`, img, { pixelRatio: 2 });
         }),
       );
+      // La persona pudo salir de la pantalla mientras cargaban: el mapa ya se destruyó
+      if (mapRef.current !== map) return;
 
       map.addSource('municipalities', { type: 'geojson', data: current().staticLayers?.municipalities ?? { type: 'FeatureCollection', features: [] } });
       map.addLayer({ id: 'muni-fill', type: 'fill', source: 'municipalities', paint: { 'fill-color': '#2563eb', 'fill-opacity': 0.03 } });
