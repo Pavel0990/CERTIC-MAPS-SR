@@ -2,6 +2,14 @@
 
 > **Al 21/10/2026, con los PR #7 a #14 integrados** (diapositivas, simulacro de restauración, navegación rápida, contenido de lugares, E2E repetibles, captcha, revisión de UX y aviso de reporte parecido) y la limpieza de código. Documento único de seguimiento: reemplaza al antiguo reparto de trabajo (que planeaba con fechas equivocadas, de octubre) y deja fuera todo lo ya resuelto. Lo resuelto se ve en el historial de git y en el [cambio de versiones de ARCHITECTURE.md](../ARCHITECTURE.md).
 
+## 0. Al 17/11/2026 (10 días para congelar)
+
+- **Integrado del 04/11 al 17/11:** hoja inferior del mapa en el teléfono (#25), "Cómo llegar" con distancia y Waze, y la capa Rutas que oculta también los trazados (#26), auditoría integral (#27) y 10 actualizaciones de dependencias, entre ellas Next 16.4.5 y MapLibre 6.17.0 (#29: `check`, `build` y `test:db` 207/207 en verde). El #30 se cerró porque ya venía dentro del #29.
+- **Publicación pendiente:** `feat/app-mvp` ya apunta al mismo commit que `main` (7466ba9), pero Vercel solo armó una vista previa. El sitio sigue en la versión del 05/11 (606b531) y funciona. Para publicar: en Vercel, *Deployments →* el último de `feat/app-mvp` *→ Redeploy*, o (mejor) cambiar la rama de producción a `main` (§5.2).
+- **Rutas:** las 3 todavía muestran en público "conviene validarlo con el municipio". Corrección lista: `npm run backup` y después `npx supabase db query --remote -f supabase/ops/fix_route_validation_note.sql`. Validarlas en el terreno sigue pendiente ([salida de campo](salida-de-campo.md)).
+- **Datos de prueba en la base:** el contenido de demostración ya no está. Quedan 10 alertas de tránsito de prueba (texto sin sentido o "Para prueba nomás!"), que no se ven en el mapa (vencidas, rechazadas o resueltas) pero sí cuentan en el panel y en el PDF; 3 cuentas `@example.*` de las pruebas E2E, que deben quedarse; y **0 reportes al municipio**, cuando para la demo hace falta al menos uno real en la bandeja (§5.3).
+- **Atrasado:** validación de rutas (06/11) y ronda 1 con vecinos (08/11). Si no da tiempo para las dos rondas, conviene hacer una sola con 3–5 personas para tener cifras en la diapositiva 6.
+
 ## 1. Fechas oficiales
 
 Según las [bases del reto](https://conectasr.com/#bases):
