@@ -33,7 +33,7 @@ En este orden, antes del 27/11:
 
 1. **Captcha** (Cloudflare Turnstile): sin él, cualquiera puede agotar el cupo de correos de acceso y nadie podría entrar durante la demo. Pasos en [DEPLOYMENT.md §4](../../DEPLOYMENT.md#4-vercel).
 2. **Correo de acceso**: hoy sale de un Gmail personal. Resend con dominio propio o, como mínimo, un Gmail de la organización. Dejar abiertas de antemano las sesiones de los teléfonos de la demo.
-3. **Limpiar la base**: 10 alertas de tránsito de prueba y el negocio "MMG" (aprobado el 28/10, no viene de OSM) cuentan en el panel y en el PDF. Copia (`npm run backup`) y script revisado en `supabase/ops/`.
+3. **Limpiar la base**: ✅ las 10 alertas de tránsito de prueba se borraron el 19/11 (`supabase/ops/remove_test_traffic_reports.sql`, con 19 avisos y 5 fotos; copia previa `backups/staging-202611190213.json`). Quedan 0 alertas hasta la primera real. **Falta decidir** el negocio "MMG" (aprobado el 28/10, no viene de OSM): si es de prueba, archivarlo desde el panel.
 4. **Copia de seguridad**: repetir `npm run backup:check` con la copia del 18/11 y guardar `BACKUP_PASSPHRASE` en el gestor de contraseñas de la organización. Las fotos de Storage no entran en la copia diaria.
 5. **Segundo dueño**: invitar un *Owner* en Supabase y un administrador en GitHub. Transferir cuentas después de la demo.
 6. **Monitor y errores**: UptimeRobot o Better Stack contra `/api/v1/health`, y `SENTRY_DSN` en Vercel.
